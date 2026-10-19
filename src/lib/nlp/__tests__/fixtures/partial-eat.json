@@ -1,0 +1,1266 @@
+[
+ {
+  "src": "s240 seg draw 0",
+  "line": "a sandwich, i gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a bowl of soup, i left most of it",
+  "input": [
+   {
+    "rawText": "a bowl of soup",
+    "normalizedForm": "soup"
+   }
+  ],
+  "expectRawTexts": [
+   "1/4 bowl of soup"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a muffin, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 muffin"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a burrito, shared half with my brother",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 burrito"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a slice of cake, left some",
+  "input": [
+   {
+    "rawText": "a slice of cake",
+    "normalizedForm": "cake"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 slice of cake"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a pizza, split it with my wife",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a bagel, only ate half",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bagel"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a sandwich and chips, i gave half the sandwich to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a large fries, couldnt finish it",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a large fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a bowl of ramen, i ate most of it",
+  "input": [
+   {
+    "rawText": "a bowl of ramen",
+    "normalizedForm": "ramen"
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of ramen"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a cookie, gave the rest to my kid",
+  "input": [
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "a cookie"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw 0",
+  "line": "a steak, i left about a third",
+  "input": [
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "a steak"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left some for later",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 sandwich"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "chips, gave half to the dog",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a cake, left most of it at work",
+  "input": [
+   {
+    "rawText": "a cake",
+    "normalizedForm": "cake"
+   }
+  ],
+  "expectRawTexts": [
+   "1/4 cake"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "soup, left some room for dessert",
+  "input": [
+   {
+    "rawText": "soup",
+    "normalizedForm": "soup"
+   }
+  ],
+  "expectRawTexts": [
+   "soup"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a bagel, split it and toasted it with butter",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "butter"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "an english muffin, split it and toasted",
+  "input": [
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "an english muffin"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a baked potato, split it open with butter",
+  "input": [
+   {
+    "rawText": "a baked potato",
+    "normalizedForm": "baked potato"
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter"
+   }
+  ],
+  "expectRawTexts": [
+   "a baked potato",
+   "butter"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pita, split it and stuffed it with hummus",
+  "input": [
+   {
+    "rawText": "a pita",
+    "normalizedForm": "pita"
+   },
+   {
+    "rawText": "hummus",
+    "normalizedForm": "hummus"
+   }
+  ],
+  "expectRawTexts": [
+   "a pita",
+   "hummus"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, i give half to my dog every day",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a steak, left some on the plate",
+  "input": [
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 steak"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a steak, left some fat",
+  "input": [
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "a steak"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "burger, fries, left some",
+  "input": [
+   {
+    "rawText": "burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "burger",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "eggs, toast, i shared half",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "toast"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a burger and fries, left some",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pizza, split it with my wife and a coke",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "a coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pizza, had the top",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a big mac, gave half to my son",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 big mac"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a large pizza, split it with my wife",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a couple of cookies, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a couple of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "a couple of cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a dozen wings, shared half",
+  "input": [
+   {
+    "rawText": "a dozen wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen wings"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a few chips, left some",
+  "input": [
+   {
+    "rawText": "a few chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a few chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a half sandwich, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a half sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a half sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a 12 oz steak, left some",
+  "input": [
+   {
+    "rawText": "a 12 oz steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "a 12 oz steak"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a 6 inch sub, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a 6 inch sub",
+    "normalizedForm": "sub"
+   }
+  ],
+  "expectRawTexts": [
+   "a 6 inch sub"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "one slice of cake, left some",
+  "input": [
+   {
+    "rawText": "one slice of cake",
+    "normalizedForm": "cake"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 slice of cake"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "an egg, gave half to the dog",
+  "input": [
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 egg"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a glass of wine, left some",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of wine"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a swig of soda, left some",
+  "input": [
+   {
+    "rawText": "a swig of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 swig of soda"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a splash of milk, left most",
+  "input": [
+   {
+    "rawText": "a splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "1/4 splash of milk"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "my moms lasagna, ate the top only",
+  "input": [
+   {
+    "rawText": "my moms lasagna",
+    "normalizedForm": "lasagna"
+   }
+  ],
+  "expectRawTexts": [
+   "my moms lasagna"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "the leftover pizza, gave half to my roommate",
+  "input": [
+   {
+    "rawText": "the leftover pizza",
+    "normalizedForm": "leftover pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "the leftover pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "some fries, left most",
+  "input": [
+   {
+    "rawText": "some fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "some fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a medium latte, left some",
+  "input": [
+   {
+    "rawText": "a medium latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 medium latte"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a cup of soup, left some",
+  "input": [
+   {
+    "rawText": "a cup of soup",
+    "normalizedForm": "soup"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 cup of soup"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pound of crawfish, shared half",
+  "input": [
+   {
+    "rawText": "a pound of crawfish",
+    "normalizedForm": "crawfish"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pound of crawfish"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a whole pizza, split it with my wife",
+  "input": [
+   {
+    "rawText": "a whole pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a whole pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a box of mac and cheese, split it with my wife",
+  "input": [
+   {
+    "rawText": "a box of mac and cheese",
+    "normalizedForm": "mac and cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of mac and cheese"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a slice of pizza and a coke, gave half the pizza to my friend",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a slice of pizza",
+   "a coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, gave half to my friend, and chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pizza, split it 2 ways",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pizza, split it two ways",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pizza, split it in half",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a chipotle bowl, ate the top only",
+  "input": [
+   {
+    "rawText": "a chipotle bowl",
+    "normalizedForm": "bowl"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 chipotle bowl"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a bowl, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a bowl",
+    "normalizedForm": "bowl"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bowl"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a muffin, i ate the top",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a muffin, only had the top",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, i gave the other half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, gave half of the sandwich to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, gave half my sandwich away",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "half a sandwich, gave half away",
+  "input": [
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "half a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a mcdonalds big mac, gave half to my son",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "mcdonalds"
+   }
+  ],
+  "expectRawTexts": [
+   "a big mac"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, shared half and half with",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "coffee with half and half, left some",
+  "input": [
+   {
+    "rawText": "coffee with half and half",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with half and half"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left a little",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left a bit of crust",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left a little bread",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left some crust",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, left the crust",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, i left most of the bread",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "oatmeal, left some for my son",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich (half)",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich (half)"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a muffin, a coffee, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "a coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "fries, split them with my wife",
+  "input": [
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "chicken, left some in the fridge",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "chicken"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "pasta, left some for tomorrow",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "expectRawTexts": [
+   "pasta"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, split it constructor",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a pasta, left some for tomorrow",
+  "input": [
+   {
+    "rawText": "a pasta",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "expectRawTexts": [
+   "3/4 pasta"
+  ],
+  "expectKinds": [
+   "partial"
+  ]
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a burger, left some room for dessert",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a sandwich, shared half and half with my coffee",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "pizza, split it 3 ways",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 probe",
+  "line": "a bagel, only ate half",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bagel"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ }
+]

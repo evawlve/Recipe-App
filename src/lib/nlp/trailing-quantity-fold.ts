@@ -19,6 +19,17 @@
  * guard (the target has no quantity of its own, shares a head noun with the clause, or is
  * alone in its comma piece) exists to keep `two cookies` after `a turkey sandwich` apart.
  *
+ * PARTIAL EAT (S240, MGR route 4, default taken). The segmenter also DROPS a partial-eat clause
+ * (`a sandwich, i gave half to my friend` -> [a sandwich]) and the item bills in full. MGR's five
+ * phrases scale the item they follow: `gave half` / `shared half` x1/2, `left most` x1/4, `left some`
+ * x3/4, `ate the top only` x1/2 (leads i/we/and/but/then/so/just/also skipped). The target must read
+ * `a|an|one X` with no stated amount, and the scaled text (`1/2 sandwich`) must parse to the SAME unit
+ * at exactly factor x the original quantity, else nothing fires. A clause that names a food must
+ * covers() the owner; a clause naming none fires only on a ONE-item line. Fold kind `partial`.
+ * Named misses: phrases outside the table, multi-item lines with an unnamed clause, a clause the
+ * segmenter emits as its own item, stated-amount targets (`two slices of pizza, i gave half away`),
+ * short comma-less lines (fast path).
+ *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
  * case/punctuation variant that shares its key. Pure; imports only parseIngredientLine;
@@ -29,7 +40,7 @@ import { parseIngredientLine } from '@/lib/parse/ingredient-line';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
-  kind: 'segment' | 'gap';
+  kind: 'segment' | 'gap' | 'partial';
   /** Index of the folded-into item in the ORIGINAL input array. */
   targetIndex: number;
   /** The clause text (a segment's rawText, or the gap piece's tokens). */
@@ -245,6 +256,73 @@ function rewrite(item: Item, clause: Clause): string {
     : `${formatValue(clause.value)} ${food}`;
 }
 
+// S240 (MGR route 4, 2026-10-19; default taken, organic 0): a PARTIAL-EAT clause the segmenter drops
+// (`a sandwich, i gave half to my friend`) scales the ONE item it follows instead of vanishing. MGR's table only:
+// gave half, shared half x1/2; left most x1/4; ate the top only x1/2; left some x3/4.
+const PE_LEAD = new Set(['i', 'we', 'and', 'but', 'then', 'so', 'just', 'also']);
+const PE_STOP = new Set(['to', 'with', 'for', 'away', 'because', 'cause', 'since', 'and', 'but', 'so', 'in', 'on', 'at']);
+const PE_IT = new Set(['it', 'that', 'them', 'this']);
+
+export interface PartialEat {
+  factor: number;
+  /** A food the clause names (`gave half the sandwich`), [] when it names none. */
+  food: string[];
+}
+
+function foodAfter(rest: string[]): string[] | null {
+  let k = 0;
+  if (rest[k] === 'of') k++;
+  if (PE_IT.has(rest[k] ?? '')) return [];
+  if (rest[k] === 'the' || rest[k] === 'my') k++;
+  const food: string[] = [];
+  for (; k < rest.length && !PE_STOP.has(rest[k]); k++) food.push(rest[k]);
+  return food.length > 3 ? null : food;
+}
+
+/** A dropped partial-eat clause and its factor, or null. MGR's five phrases, nothing else. */
+export function parsePartialEat(group: string[]): PartialEat | null {
+  let g = group;
+  while (g.length && PE_LEAD.has(g[0])) g = g.slice(1);
+  const at = (k: number) => g[k] ?? '';
+  let factor: number;
+  let rest: string[];
+  if ((at(0) === 'gave' || at(0) === 'shared') && at(1) === 'half') { factor = 0.5; rest = g.slice(2); }
+  else if (at(0) === 'left' && at(1) === 'most') { factor = 0.25; rest = g.slice(2); }
+  else if (at(0) === 'left' && at(1) === 'some') { factor = 0.75; rest = g.slice(2); }
+  else if (at(0) === 'ate' && at(1) === 'the' && at(2) === 'top' && at(3) === 'only') { factor = 0.5; rest = g.slice(4); }
+  else return null;
+  // `shared half and half` is the creamer, not a half.
+  if (rest[0] === 'and' && rest[1] === 'half') return null;
+  const food = foodAfter(rest);
+  return food === null ? null : { factor, food };
+}
+
+const PE_FRAC: Record<number, string> = { 0.25: '1/4', 0.5: '1/2', 0.75: '3/4' };
+
+/**
+ * `a|an|one X` scaled by `factor`, or null. Null when X states an amount of its own (`a dozen wings`, `a 12 oz
+ * steak`, `a couple of tacos`), when the target is not article-led (`chips` - a bare plural would leave its serving
+ * rung), and when the scaled text does not parse to the SAME unit at exactly factor x the original quantity
+ * (`a glass of wine` parses unitless, `3/4 glass of wine` parses a glass).
+ */
+function scaleByFactor(item: Item, factor: number): string | null {
+  const raw = item.rawText.trim();
+  const m = /^(?:a|an|one)\s+(.+)$/i.exec(raw);
+  if (!m) return null;
+  if (/\d/.test(m[1]) || words(m[1]).some(x => QTY_WORDS.has(x))) return null;
+  const scaled = `${PE_FRAC[factor]} ${m[1]}`;
+  try {
+    const before = parseIngredientLine(raw);
+    const after = parseIngredientLine(scaled);
+    if (!before || !after) return null;
+    if ((before.unit ?? null) !== (after.unit ?? null)) return null;
+    if (Math.abs(after.qty * after.multiplier - factor * before.qty * before.multiplier) > 1e-9) return null;
+  } catch {
+    return null;
+  }
+  return scaled;
+}
+
 export function foldTrailingQuantityClauses<T extends Item>(
   lineKey: string,
   items: T[],
@@ -314,7 +392,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
   // Gap fold (shape C).
   for (let t = 0; t < n; t++) {
     const sp = spans[t];
-    if (!sp || removed.has(t) || folded.has(t) || !isValidTarget(items[t])) continue;
+    if (!sp || removed.has(t) || folded.has(t)) continue;
     let end: number;
     if (t === n - 1) end = toks.length;
     else if (spans[t + 1]) end = spans[t + 1]!.start;
@@ -331,6 +409,17 @@ export function foldTrailingQuantityClauses<T extends Item>(
       return true;
     });
     if (!first) continue;
+    const pe = parsePartialEat(first);
+    if (pe) {
+      // A clause that names no food belongs to a ONE-item line only (`a muffin, a coffee, ate the top only` is ambiguous).
+      if (pe.food.length > 0 ? !covers(items[t], pe.food) : n !== 1) continue;
+      const scaled = scaleByFactor(items[t], pe.factor);
+      if (scaled === null) continue;
+      folds.push({ kind: 'partial', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after: scaled });
+      folded.set(t, scaled);
+      continue;
+    }
+    if (!isValidTarget(items[t])) continue;
     const clause = parseClause(first);
     if (!clause) continue;
     if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(items[t], clause.food)) continue;

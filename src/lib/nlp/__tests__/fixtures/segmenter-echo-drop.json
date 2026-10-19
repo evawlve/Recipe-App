@@ -1,0 +1,567 @@
+[
+ {
+  "src": "segcache organic",
+  "line": "salad with chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad with chicken"
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken"
+  ],
+  "note": "DROP: the organic echo (SegmentationCache row)"
+ },
+ {
+  "src": "c170 #107 truth 1",
+  "line": "kraft mayo with olive oil",
+  "input": [
+   {
+    "rawText": "kraft mayo with olive oil",
+    "mealType": "snacks",
+    "brand": "kraft",
+    "normalizedForm": "mayo with olive oil"
+   },
+   {
+    "rawText": "olive oil",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "olive oil"
+   }
+  ],
+  "expectRawTexts": [
+   "kraft mayo with olive oil"
+  ],
+  "note": "DROP: host identity already names olive oil"
+ },
+ {
+  "src": "seg30 shape (n constructed)",
+  "line": "bagel with lox",
+  "input": [
+   {
+    "rawText": "bagel with lox",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "bagel with lox"
+   },
+   {
+    "rawText": "lox",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "lox"
+   }
+  ],
+  "expectRawTexts": [
+   "bagel with lox"
+  ],
+  "note": "DROP"
+ },
+ {
+  "src": "seg30 shape (n constructed)",
+  "line": "omlette with spinich",
+  "input": [
+   {
+    "rawText": "omlette with spinich",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "omlette with spinich"
+   },
+   {
+    "rawText": "spinich",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "spinich"
+   }
+  ],
+  "expectRawTexts": [
+   "omlette with spinich"
+  ],
+  "note": "DROP"
+ },
+ {
+  "src": "seg30 shape (n constructed)",
+  "line": "blt with extra bacon",
+  "input": [
+   {
+    "rawText": "blt with extra bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "blt with extra bacon"
+   },
+   {
+    "rawText": "extra bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "blt with extra bacon",
+   "extra bacon"
+  ],
+  "note": "KEEP: an amount word (extra) in the echo - the BLT record does not hold the extra bacon (refute-r1 #3)"
+ },
+ {
+  "src": "constructed",
+  "line": "kraft mayo with olive oil and toast",
+  "input": [
+   {
+    "rawText": "kraft mayo with olive oil",
+    "mealType": "snacks",
+    "brand": "kraft",
+    "normalizedForm": "mayo with olive oil"
+   },
+   {
+    "rawText": "toast",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "olive oil",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "olive oil"
+   }
+  ],
+  "expectRawTexts": [
+   "kraft mayo with olive oil",
+   "toast"
+  ],
+  "note": "DROP: non-adjacent echo"
+ },
+ {
+  "src": "constructed, host without normalizedForm",
+  "line": "salad with chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "mealType": "snacks",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken"
+  ],
+  "note": "DROP: no host normalizedForm -> rawText rule alone"
+ },
+ {
+  "src": "c170 #73 truth 2",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk",
+   "milk"
+  ],
+  "note": "KEEP: host identity is coffee, milk is billed once"
+ },
+ {
+  "src": "c170 #85 truth 2",
+  "line": "granola with almonds",
+  "input": [
+   {
+    "rawText": "granola with almonds",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "granola"
+   },
+   {
+    "rawText": "almonds",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "almonds"
+   }
+  ],
+  "expectRawTexts": [
+   "granola with almonds",
+   "almonds"
+  ],
+  "note": "KEEP"
+ },
+ {
+  "src": "c170 #180 (n excludes part)",
+  "line": "yogurt parfait with granola",
+  "input": [
+   {
+    "rawText": "yogurt parfait with granola",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "yogurt parfait"
+   },
+   {
+    "rawText": "granola",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "granola"
+   }
+  ],
+  "expectRawTexts": [
+   "yogurt parfait with granola",
+   "granola"
+  ],
+  "note": "KEEP: status quo (a known over-split, not this row)"
+ },
+ {
+  "src": "s240 fresh draw",
+  "line": "blt with extra bacon",
+  "input": [
+   {
+    "rawText": "blt with extra bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "blt"
+   },
+   {
+    "rawText": "extra bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "blt with extra bacon",
+   "extra bacon"
+  ],
+  "note": "KEEP: host identity is blt"
+ },
+ {
+  "src": "base-segv2-r1 #105 d3 truth 2",
+  "line": "popeyes chicken sandwich with half a biscuit",
+  "input": [
+   {
+    "rawText": "popeyes chicken sandwich with half a biscuit",
+    "mealType": "snacks",
+    "brand": "popeyes",
+    "normalizedForm": "chicken sandwich with half a biscuit"
+   },
+   {
+    "rawText": "half a biscuit",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "biscuit"
+   }
+  ],
+  "expectRawTexts": [
+   "popeyes chicken sandwich with half a biscuit",
+   "half a biscuit"
+  ],
+  "note": "KEEP: a quantified echo is its own item"
+ },
+ {
+  "src": "segcache duplicate",
+  "line": "12.7 ounces of real chicken tenders with 1.5 servings of noodles with chicken two slices of inked keto sourdough bread and 1 tablespoon of sugar-free strawberry jam",
+  "input": [
+   {
+    "rawText": "12.7 ounces of Real chicken tenders",
+    "mealType": "snacks",
+    "brand": "Real",
+    "normalizedForm": "chicken tenders"
+   },
+   {
+    "rawText": "1.5 servings of Noodles with chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "noodles"
+   },
+   {
+    "rawText": "1.5 servings of Noodles with chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "Two slices of inked keto sourdough bread",
+    "mealType": "snacks",
+    "brand": "inked",
+    "normalizedForm": "keto sourdough bread"
+   },
+   {
+    "rawText": "1 tablespoon Of sugar-free strawberry jam",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "sugar-free strawberry jam"
+   }
+  ],
+  "expectRawTexts": [
+   "12.7 ounces of Real chicken tenders",
+   "1.5 servings of Noodles with chicken",
+   "1.5 servings of Noodles with chicken",
+   "Two slices of inked keto sourdough bread",
+   "1 tablespoon Of sugar-free strawberry jam"
+  ],
+  "note": "KEEP: status quo (host normalizedForm noodles excludes chicken; quantified)"
+ },
+ {
+  "src": "constructed",
+  "line": "salad with chicken and more chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad with chicken"
+   },
+   {
+    "rawText": "more chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "more chicken"
+  ],
+  "note": "KEEP: the second chicken has its own span"
+ },
+ {
+  "src": "constructed",
+  "line": "chicken and rice",
+  "input": [
+   {
+    "rawText": "chicken and rice",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken and rice"
+   },
+   {
+    "rawText": "rice",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectRawTexts": [
+   "chicken and rice",
+   "rice"
+  ],
+  "note": "KEEP: no with in the host"
+ },
+ {
+  "src": "fresh draw",
+  "line": "salad with chicken",
+  "input": [
+   {
+    "rawText": "salad",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad",
+   "chicken"
+  ],
+  "note": "KEEP: a clean split"
+ },
+ {
+  "src": "constructed",
+  "line": "salad with chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad with chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken"
+  ],
+  "note": "KEEP: one item"
+ },
+ {
+  "src": "constructed",
+  "line": "chicken salad, chicken",
+  "input": [
+   {
+    "rawText": "chicken salad",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken salad"
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "chicken salad",
+   "chicken"
+  ],
+  "note": "KEEP: own span"
+ },
+ {
+  "src": "refute-r1 #3",
+  "line": "popeyes chicken sandwich with half a biscuit",
+  "input": [
+   {
+    "rawText": "popeyes chicken sandwich with half a biscuit",
+    "mealType": "snacks",
+    "brand": "popeyes",
+    "normalizedForm": "chicken sandwich with half a biscuit"
+   },
+   {
+    "rawText": "biscuit",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "biscuit"
+   }
+  ],
+  "expectRawTexts": [
+   "popeyes chicken sandwich with half a biscuit",
+   "biscuit"
+  ],
+  "note": "KEEP: an amount (half a) between the host with and the part"
+ },
+ {
+  "src": "refute-r1 #3",
+  "line": "salad with 4 oz chicken",
+  "input": [
+   {
+    "rawText": "salad with 4 oz chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad with 4 oz chicken"
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad with 4 oz chicken",
+   "chicken"
+  ],
+  "note": "KEEP: a digit in the host with-phrase"
+ },
+ {
+  "src": "refute-r1 #3",
+  "line": "salad with \u00bd cup chicken",
+  "input": [
+   {
+    "rawText": "salad with \u00bd cup chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "salad with chicken"
+   },
+   {
+    "rawText": "chicken",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "salad with \u00bd cup chicken",
+   "chicken"
+  ],
+  "note": "KEEP: a vulgar fraction in the host"
+ },
+ {
+  "src": "refute-r1 #3",
+  "line": "blt with extra bacon",
+  "input": [
+   {
+    "rawText": "blt with extra bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "blt with extra bacon"
+   },
+   {
+    "rawText": "bacon",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "blt with extra bacon",
+   "bacon"
+  ],
+  "note": "KEEP: extra between the host with and the part"
+ },
+ {
+  "src": "refute-r1 #3",
+  "line": "toast with more butter",
+  "input": [
+   {
+    "rawText": "toast with more butter",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "toast with more butter"
+   },
+   {
+    "rawText": "more butter",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "butter"
+   }
+  ],
+  "expectRawTexts": [
+   "toast with more butter",
+   "more butter"
+  ],
+  "note": "KEEP: an amount word in the echo"
+ },
+ {
+  "src": "refute-r1 #6",
+  "line": "turkey sandwich with cheese and mozz sticks",
+  "input": [
+   {
+    "rawText": "turkey sandwich with cheese",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "turkey sandwich with cheese"
+   },
+   {
+    "rawText": "mozzarella sticks",
+    "mealType": "snacks",
+    "brand": "",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "turkey sandwich with cheese",
+   "mozzarella sticks"
+  ],
+  "note": "KEEP: the echo is matched on its rawText words only"
+ }
+]
