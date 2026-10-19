@@ -92,7 +92,12 @@ const FRESH_PRODUCE_PATTERN = new RegExp(
         'spinach', 'lettuce', 'kale', 'arugula', 'chard', 'watercress', 'cabbage', 'bok choy', 'collard', 'romaine',
         // Vegetables
         'broccoli', 'cauliflower', 'celery', 'cucumber', 'zucchini', 'courgette', 'tomato(?:es)?',
-        'bell pepper', 'carrot', 'onion', 'mushroom', 'asparagus', 'green bean', 'radish',
+        'bell pepper',
+        // PLURAL ONLY, never `pepper` (black pepper, pepper jack, pepperoni, peppercorn must not match).
+        // The save gate keys singular/token-sorted (`pepper`), so for `peppers` lines this reason acts at
+        // rank time (floor-hit partition) and Step 3d, not at the save gate. Organic population 0 (C68 probes).
+        'peppers',
+        'carrot', 'onion', 'mushroom', 'asparagus', 'green bean', 'radish',
         'beet', 'turnip', 'eggplant', 'aubergine', 'pumpkin', 'squash', 'leek', 'okra', 'snap pea',
         // Fresh fruit
         'apple', 'orange', 'strawberr(?:y|ies)', 'blueberr(?:y|ies)', 'raspberr(?:y|ies)', 'blackberr(?:y|ies)',
@@ -215,7 +220,10 @@ function isFreshProduceContext(query: string, combinedNames: string): boolean {
     return FRESH_PRODUCE_PATTERN.test(query)
         && !CONCENTRATED_FORM_PATTERN.test(combinedNames)
         && !PREPARED_DISH_PATTERN.test(combinedNames)
-        && !MAIN_PROTEIN_NOUN_PATTERN.test(combinedNames);
+        && !MAIN_PROTEIN_NOUN_PATTERN.test(combinedNames)
+        // QUERY only: `stuffed peppers` / `stuffed mushrooms` are dishes. Not in PREPARED_DISH_PATTERN, which
+        // is matched against candidate names too and also gates the lean-cut protein floor.
+        && !/\bstuffed\b/i.test(query);
 }
 
 /**
