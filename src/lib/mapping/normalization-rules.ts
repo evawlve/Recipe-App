@@ -485,6 +485,8 @@ export function isBrandLedProductName(accentStripped: string): boolean {
  * crisps, squash, rocket and jacket potato are deliberately NOT here (held for Diego).
  * Every guard below exists because a real corpus line would otherwise be rewritten wrongly
  * (refute m2/m3): `cuppa noodles`, `parma ham`, `chip butty`.
+ * `cuppa` -> `black tea` (not bare `tea`: bare `tea` resolved to a sweetened 100 kcal/100 g panel,
+ * while the `black tea` key lands on plain tea); `cuppa tea` -> `black tea`, never `black tea tea`.
  *
  * Two other British->American tables exist and cannot serve this row: BRITISH_TO_AMERICAN in
  * ai-synonym-generator.ts (EXACT bare lines only, a frozen input) and the one in
@@ -510,7 +512,9 @@ export function rewriteRegionalDishWords(text: string): string {
       case 'cuppas': {
         const atEnd = /^\W*$/.test(afterStr);
         if (!(atEnd || after === 'tea' || after === 'with' || after === 'and')) return match;
-        return w === 'cuppas' ? 'teas' : 'tea';
+        // A UK/AU cuppa is black tea (the `black tea` key resolves to a plain-tea record).
+        if (after === 'tea') return 'black';
+        return w === 'cuppas' ? 'black teas' : 'black tea';
       }
       case 'bickies':
       case 'biccies':

@@ -89,8 +89,8 @@ import { mapIngredientWithFallback } from '../map-ingredient-with-fallback';
 const TARGETS: Array<[string, string, string]> = [
     ["a bacon butty", "a bacon sandwich", "butty"],
     ["bacon butties", "bacon sandwiches", "butties"],
-    ["a cuppa", "a tea", "cuppa"],
-    ["cuppa with milk and one sugar", "tea with milk and one sugar", "cuppa"],
+    ["a cuppa", "a black tea", "cuppa"],
+    ["cuppa with milk and one sugar", "black tea with milk and one sugar", "cuppa"],
     ["two bickies", "two cookies", "bickies"],
     ["chicken parmy and chips", "chicken parmigiana and chips", "parmy"],
     ["chicken parma", "chicken parmigiana", "parma"]
@@ -134,8 +134,9 @@ describe('rewriteRegionalDishWords()', () => {
     it('is case-insensitive and handles the remaining table words', () => {
         expect(rewriteRegionalDishWords('A Bacon BUTTY')).toBe('A Bacon sandwich');
         expect(rewriteRegionalDishWords('ham sarnies')).toBe('ham sandwiches');
-        expect(rewriteRegionalDishWords('a cuppa tea')).toBe('a tea tea');
-        expect(rewriteRegionalDishWords('three cuppas')).toBe('three teas');
+        expect(rewriteRegionalDishWords('a cuppa tea')).toBe('a black tea');
+        expect(rewriteRegionalDishWords('three cuppas')).toBe('three black teas');
+        expect(rewriteRegionalDishWords('a black tea')).toBe('a black tea');
         expect(rewriteRegionalDishWords('a bicky and two biccies')).toBe('a cookie and two cookies');
         expect(rewriteRegionalDishWords('veal parmi')).toBe('veal parmigiana');
         expect(rewriteRegionalDishWords('eggplant parma')).toBe('eggplant parmigiana');
@@ -155,7 +156,7 @@ describe('normalizeIngredientName() carries the rewrite', () => {
 
     it('KNOWN SKIP: a brand-led line (`one sugar` reads as the ONE brand) keeps its regional word in cleaned', () => {
         expect(normalizeIngredientName('cuppa with milk and one sugar').cleaned).toBe('cuppa with milk and one sugar');
-        expect(normalizeIngredientName('a cuppa with milk').cleaned).toBe('a tea with milk');
+        expect(normalizeIngredientName('a cuppa with milk').cleaned).toBe('a black tea with milk');
     });
 
     it.each(CONTROLS)('%s: cleaned equals the origin/master value', (input, masterCleaned) => {
@@ -173,7 +174,7 @@ describe('M1: the LLM stages receive the rewritten text', () => {
     });
 
     it.each([
-        ['a cuppa', 'tea', 'cuppa'],
+        ['a cuppa', 'black tea', 'cuppa'],
         ['a bacon butty', 'sandwich', 'butty'],
     ])('aiNormalizeIngredient(%s) gets the American word', async (line, american, regional) => {
         mockShouldNormalize.mockReturnValue({ shouldCallLlm: true, reason: 'test', confidence: 0.5 });
@@ -185,7 +186,7 @@ describe('M1: the LLM stages receive the rewritten text', () => {
     });
 
     it.each([
-        ['a cuppa', 'tea', 'cuppa'],
+        ['a cuppa', 'black tea', 'cuppa'],
         ['a bacon butty', 'sandwich', 'butty'],
     ])('aiSimplifyIngredient(%s) gets the American word', async (line, american, regional) => {
         await mapIngredientWithFallback(line);
@@ -212,7 +213,7 @@ describe('fold: parsed.name (searchQuery) carries the rewrite', () => {
     it.each([
         ['bickies', 'cookies'],
         ['two bickies', 'cookies'],
-        ['a cuppa', 'tea'],
+        ['a cuppa', 'black tea'],
         ['a bacon butty', 'bacon sandwich'],
         ['chicken parmy and chips', 'parmigiana'],
     ])('%s -> parsed.name contains %s', async (line, american) => {
