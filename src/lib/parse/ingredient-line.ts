@@ -341,6 +341,37 @@ function normalizeFractionalMeasure(mergedTokens: string[]): void {
   }
 }
 
+// A spoken multiplier on a portion: "a double portion of mashed potatoes".
+//
+// Nothing read `double`/`triple`, so the line parsed as qty 1, no unit, name
+// "a double portion of mashed potatoes" and billed ONE portion. The shape
+// collapses to its numeric twin, "2 servings of mashed potatoes", which already
+// parses as qty 2 of the count unit `serving` through the partitive `of` path.
+//
+// Same POSITIONAL discipline as normalizeFractionalMeasure above (same hedge
+// offset `f`): (a|an|one) + (double|triple) + a portion noun + `of` + a
+// FOLLOWER token (a truncated "a double portion of" is left alone, mirroring
+// consumePartitiveOf()'s only-with-a-follower guard). The portion nouns are
+// portion/serving/helping only: `order` is deliberately absent ("a double order
+// of fries" would land on a 250 g package and bill 500 g, while "half an order"
+// bills 50 g on another rung), and `shot` is absent so "a double shot of
+// espresso" keeps its product reading.
+//
+// Lives here, not in unit.ts: its multipliers block is a held PR's hunk, and a
+// unit-table `double` would also fire on "a double cheeseburger", "a double
+// espresso", "double chocolate muffin" (controls pinned in double-portion.test.ts).
+// Owner: C70 S239 flag (1), snapshots/s239/flags/design.md.
+const PORTION_MULTIPLIERS = new Map([['double', '2'], ['triple', '3']]);
+const PORTION_NOUNS = new Set(['portion', 'portions', 'serving', 'servings', 'helping', 'helpings']);
+function rewriteDoublePortion(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
+  if ((LEADING_ARTICLES.has(at(0)) || at(0) === 'one') && PORTION_MULTIPLIERS.has(at(1)) &&
+      PORTION_NOUNS.has(at(2)) && at(3) === 'of' && mergedTokens[f + 4] !== undefined) {
+    mergedTokens.splice(f, 3, PORTION_MULTIPLIERS.get(at(1))!, 'servings');
+  }
+}
+
 // A leading mass/volume word that OPENS A FOOD NAME rather than measuring one:
 // `pound cake`, `cup noodles`. The line has no quantity and no article, so the
 // word sits at mergedTokens[0], and until this guard every one of the three
@@ -665,7 +696,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
-  if (hhCursor < 0) normalizeFractionalMeasure(mergedTokens);
+  if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); }
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
