@@ -64,4 +64,24 @@ describe('restoreLeadingPour - topping class', () => {
     const r = restoreLeadingPour('a dash of hot sauce on my chili', mk('hot sauce', 'on the border queso'));
     expect(r.items[1].rawText).toBe('on the border queso');
   });
+  test('G10: the strip touches only the line second food (clause cut)', () => {
+    const t = (line: string, raw: string[]) => restoreLeadingPour(line, mk(...raw)).items.map(i => i.rawText);
+    expect(t('a splash of milk in my coffee and in n out fries', ['milk', 'coffee', 'in n out fries'])[2]).toBe('in n out fries');
+    expect(t('a splash of hot sauce on my eggs, on the border chips', ['a splash of hot sauce', 'eggs', 'on the border chips'])[2]).toBe('on the border chips');
+    expect(t('a splash of syrup on pancakes and two over easy eggs', ['a splash of syrup', 'pancakes', 'over easy eggs'])[2]).toBe('over easy eggs');
+    const r = t('a splash of syrup on pancakes and two over easy eggs', ['a splash of syrup', 'on pancakes', 'two over easy eggs']);
+    expect(r[1]).toBe('pancakes');
+    expect(r[2]).toBe('two over easy eggs');
+  });
+});
+
+describe('isPourOntoSecondFood - non-food objects (G14)', () => {
+  test.each([
+    'a sip of tea in bed',
+    'a sip of wine on vacation',
+    'a splash of milk in my mug',
+    'a swig of whiskey in one go',
+  ])('false: %s', line => {
+    expect(isPourOntoSecondFood(line)).toBe(false);
+  });
 });

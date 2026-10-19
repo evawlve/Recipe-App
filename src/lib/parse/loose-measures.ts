@@ -84,7 +84,7 @@ function singular(word: string): string {
 // possessive noun; an article-led object (`in a glass`, `in the morning`, `on the side`) and a
 // pronoun / `top` object are not a second food.
 const POUR_VEHICLE_RX =
-  /\s(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?!(?:a|an|the|top|it|them|there|this|that|pan|pot|skillet|wok|bowl|cup|mug|glass|plate|jar|blender|total|cooking|everything|both)\b)\p{L}/iu;
+  /\s(?:on|onto|over|in|into)\s+(?!(?:(?:my|your|his|her|our|their)\s+)?(?:a|an|the|top|it|them|there|this|that|pan|pot|skillet|wok|bowl|cup|mug|glass|plate|jar|blender|total|cooking|everything|both|bed|vacation|holiday|break|work|school|class|office|car|train|plane|bus|one|go|morning|night|evening|lunch|dinner|breakfast|bulk)\b)(?:(?:my|your|his|her|our|their)\s+)?\p{L}/iu;
 
 /** A leading pour whose rest pours it onto / into a second food. */
 export function isPourOntoSecondFood(text: string): boolean {
@@ -131,7 +131,9 @@ export function restoreLeadingPour<T extends { rawText: string }>(lineKey: strin
   const word = m[3].toLowerCase();
   const bare = (t: string): string => t.trim().toLowerCase().replace(/^(?:a|an|the|some)\s+/, '');
   // The line's own second food: the text after the vehicle word, bare (articles / possessives dropped).
+  // Cut at the first clause break (`,` `;` ` and ` ` with ` ` then ` ` plus ` ` & ` ` + `) so only the second food remains.
   const objectBare = ((' ' + rest).slice(v.index + v[0].length))
+    .split(/\s*[,;]\s*|\s+(?:and|with|then|plus|&|\+)\s+/i)[0]
     .trim().toLowerCase().replace(/^(?:(?:my|your|his|her|our|their|a|an|the|some)\s+)+/, '');
   let restored = 0;
   let pourDone = false;
