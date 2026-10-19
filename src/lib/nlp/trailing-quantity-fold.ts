@@ -42,6 +42,9 @@
  * quarters, two thirds) parse only under the opt-in `parseClause(t, { fractions: true })`, as a PURE fraction; no other
  * caller passes it, so self-correction is byte-unchanged. Fold kind `stock`. Named misses: food-named counts
  * (`ate 20 chips` in some shapes), `the kids ate 4`, word-number stocks (`two bags`), size stocks.
+ * A stock whose parsed unit is the food's own count noun (`6 eggs` -> unit `egg`) is still a count stock, so `6 eggs, had 2`
+ * re-counts to `2 eggs`; `had 2 more` adds and is never a re-count (S240, cloud-38 D13). Named misses: `6 large eggs, had 2`
+ * (size read as the unit), `3 eggs, and had 2 later`.
  * On a one-item line a stock whose clause the plain reader cannot parse (`drank half`, `finished 2`, `eaten 2`) is still
  * re-counted / scaled through the consumed-count reading; a valid target is never rewritten that way (S240, cloud-38 D7).
  * Named misses: `i've eaten 2`, a trailing time word (`drank half last night`).
@@ -66,6 +69,7 @@
  */
 
 import { parseIngredientLine } from '@/lib/parse/ingredient-line';
+import { normalizeUnitToken } from '@/lib/parse/unit';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
@@ -451,6 +455,12 @@ function replaceStock(item: Item, c: Clause): string | null {
   try {
     const p = parseIngredientLine(item.rawText.replace(/^\s*(a|an|one)\s+/i, '1 '));
     if (p && !p.unit) stockCount = p.qty * p.multiplier;
+    // S240 (cloud-38 D13): the parser reads a count noun as its unit (`6 eggs` -> unit `egg`); when that unit IS the food's own
+    // head, the stock is still a count (`6 eggs, had 2` -> `2 eggs`).
+    else if (p && p.unit && fw.length > 0) {
+      const h = normalizeUnitToken(fw[fw.length - 1]);
+      if (h.kind === 'count' && h.unit === p.unit) stockCount = p.qty * p.multiplier;
+    }
   } catch { /* no cap */ }
   if (!c.unit) {
     // a unitless count needs a COUNT stock
@@ -593,7 +603,8 @@ export function foldTrailingQuantityClauses<T extends Item>(
         const lineVerb = pre.length > 0 && CONSUME.has(pre[pre.length - 1]) && (pre.length < 2 || SUBJECT_OK.has(pre[pre.length - 2]) || toks[spans[j]!.start - 2]?.piece !== toks[spans[j]!.start - 1]?.piece);
         // `had 2 left` / `2 remaining` is what is LEFT, not what was eaten.
         const after = spans[j] ? toks[spans[j]!.end]?.w : undefined;
-        const leftover = after === 'left' || after === 'remaining' || after === 'over';
+        // `had 2 more` adds to the stock, it is no re-count (S240, cloud-38 D13 refute m2).
+        const leftover = after === 'left' || after === 'remaining' || after === 'over' || after === 'more';
         const cc = leftover ? null : own ? parseClause(own) : lineVerb ? clause : null;
         if (cc) st = replaceStock(W[t], cc);
       }

@@ -1,6 +1,6 @@
 /**
  * Stock-consumed fold (S240, MGR reserve R1+R3): a consumed fraction or count after a STOCK item bills what was eaten.
- * Table-driven over fixtures/stock-consumed.json (a copy of snapshots/s240/rowR1/fixture-stock.json: 252 cases, 70 stock).
+ * Table-driven over fixtures/stock-consumed.json (a copy of snapshots/s240/rowR1/fixture-stock.json: 252 cases, 72 stock).
  */
 
 import { foldTrailingQuantityClauses, parseClause } from '../trailing-quantity-fold';
@@ -17,9 +17,9 @@ interface Case {
 const CASES = fixture as Case[];
 
 describe('stock-consumed fixture', () => {
-  test('fixture shape: 252 cases, 70 stock', () => {
+  test('fixture shape: 252 cases, 72 stock', () => {
     expect(CASES).toHaveLength(252);
-    expect(CASES.filter(c => c.expectKinds.includes('stock'))).toHaveLength(70);
+    expect(CASES.filter(c => c.expectKinds.includes('stock'))).toHaveLength(72);
   });
 
   test.each(CASES.map(c => [`${c.src}: ${c.line}`, c] as const))('%s', (_name, c) => {
