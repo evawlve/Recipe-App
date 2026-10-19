@@ -17,6 +17,8 @@
  *   - When in doubt, don't flag.
  */
 
+import { detectBrandInQuery } from './brand-detector';
+
 export interface MacroPlausibilityInput {
     kcal?: number | null;
     calories?: number | null;
@@ -92,12 +94,7 @@ const FRESH_PRODUCE_PATTERN = new RegExp(
         'spinach', 'lettuce', 'kale', 'arugula', 'chard', 'watercress', 'cabbage', 'bok choy', 'collard', 'romaine',
         // Vegetables
         'broccoli', 'cauliflower', 'celery', 'cucumber', 'zucchini', 'courgette', 'tomato(?:es)?',
-        'bell pepper',
-        // PLURAL ONLY, never `pepper` (black pepper, pepper jack, pepperoni, peppercorn must not match).
-        // The save gate keys singular/token-sorted (`pepper`), so for `peppers` lines this reason acts at
-        // rank time (floor-hit partition) and Step 3d, not at the save gate. Organic population 0 (C68 probes).
-        'peppers',
-        'carrot', 'onion', 'mushroom', 'asparagus', 'green bean', 'radish',
+        'bell pepper', 'carrot', 'onion', 'mushroom', 'asparagus', 'green bean', 'radish',
         'beet', 'turnip', 'eggplant', 'aubergine', 'pumpkin', 'squash', 'leek', 'okra', 'snap pea',
         // Fresh fruit
         'apple', 'orange', 'strawberr(?:y|ies)', 'blueberr(?:y|ies)', 'raspberr(?:y|ies)', 'blackberr(?:y|ies)',
@@ -215,9 +212,23 @@ const PREPARED_DISH_PATTERN =
 const MAIN_PROTEIN_NOUN_PATTERN =
     /\b(chicken|beef|pork|turkey|lamb|duck|shrimp|prawns?|fish|salmon|tuna|tofu|sausage|bacon|ham|steak|meatballs?|brisket|schnitzel)\b/i;
 
+/**
+ * Bare plural `peppers` queried as produce. PLURAL ONLY, never `pepper` (black pepper, pepper jack,
+ * pepperoni, peppercorn must not match). Not in FRESH_PRODUCE_PATTERN because a branded product name
+ * ("mama lil's peppers", a jarred peppers-in-oil at 600 kcal/100 g) must not be judged by the produce
+ * ceiling, so possessive and detected-brand queries are skipped on this path only. The save gate keys
+ * singular/token-sorted (`pepper`), so for `peppers` lines this reason acts at rank time (floor-hit
+ * partition) and Step 3d, not at the save gate. Organic population 0 (C68 probes).
+ */
+function barePeppersQuery(query: string): boolean {
+    return /\bpeppers\b/i.test(query)
+        && !/'s\b|\u2019s\b/i.test(query)
+        && !detectBrandInQuery(query).isBranded;
+}
+
 /** Fresh produce queried by name, and not actually a dish that merely mentions it. */
 function isFreshProduceContext(query: string, combinedNames: string): boolean {
-    return FRESH_PRODUCE_PATTERN.test(query)
+    return (FRESH_PRODUCE_PATTERN.test(query) || barePeppersQuery(query))
         && !CONCENTRATED_FORM_PATTERN.test(combinedNames)
         && !PREPARED_DISH_PATTERN.test(combinedNames)
         && !MAIN_PROTEIN_NOUN_PATTERN.test(combinedNames)

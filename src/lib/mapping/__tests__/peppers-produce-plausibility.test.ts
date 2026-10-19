@@ -35,6 +35,9 @@ describe('peppers change — does not fire', () => {
         ['black pepper', 'Black Pepper', m(251, 10, 64, 3)],
         ['pepper jack cheese', 'Pepper Jack', m(380, 24, 2, 31)],
         ['pepperoni', 'Pepperoni', m(500, 20, 1, 45)],
+        // branded product names are not judged by the produce ceiling
+        ["mama lil's peppers", 'Peppers', m(600, 2, 20, 63)],
+        ["trader joe's peppers", 'Peppers', m(300, 2, 10, 30)],
         ['peppercorns', 'Black Peppercorns', m(255, 10, 64, 3)],
     ])('%s / %s', (q, name, macros) => {
         expect(assessMacroPlausibility(q, name, macros).reasons).toEqual([]);
