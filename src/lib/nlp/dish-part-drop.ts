@@ -17,6 +17,7 @@
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
+ * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12).
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
  * with the parts gone the fold can attach `two slices` to the dish. The SegmentationCache keeps the
@@ -106,6 +107,8 @@ const CLAUSE = new Set([
 ]);
 // A clause word right after one of these is a part's provenance (`chicken from dinner`), not a new clause.
 const PROVENANCE = new Set(['from', 'since', 'over']);
+const JOINERS = new Set(['and', 'or', 'plus', 'with']);
+const STEP = new Set(['then', 'later', 'after', 'afterwards', 'afterward', 'followed']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
   'grilled', 'shredded', 'diced', 'sliced', 'chopped', 'fried', 'crispy', 'fresh', 'roasted', 'sauteed', 'melted',
@@ -174,6 +177,7 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
   if (items.length < 2) return none;
   const ptoks = tokenizeWithPieces(lineKey);
   const toks = ptoks.map(t => t.w);
+  const bounds = sentTokBounds(lineKey);
   const spans: Array<Span | null> = [];
   let cur = 0;
   for (const it of items) {
@@ -227,7 +231,20 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
       // never count, so a trailing meal tag (`… cheese and salsa for breakfast`) keeps base behaviour.
       let gs = m;
       for (let k = d; k < j; k++) if (spans[k] && spans[k]!.end > gs) gs = spans[k]!.end;
-      if (toks.slice(gs, js.start).some((w, i) => CLAUSE.has(w) && !PROVENANCE.has(toks[gs + i - 1]))) break;
+      // S240 (cloud-36 C12): a provenance phrase (`from last night's dinner`, `from lunch yesterday`) runs from from/since/over to
+      // the next joiner, step word, sentence boundary or comma piece, and no word inside it counts. A clause word outside it (a step
+      // word included) still ends the list (`… from lunch. later steak` keeps the steak).
+      const g = toks.slice(gs, js.start);
+      let inProv = false;
+      let clause = false;
+      for (let i = 0; i < g.length; i++) {
+        const w = g[i];
+        const q = gs + i;
+        if (inProv && (JOINERS.has(w) || STEP.has(w) || bounds.has(q) || ptoks[q]?.piece !== ptoks[q - 1]?.piece)) inProv = false;
+        if (PROVENANCE.has(w)) { inProv = true; continue; }
+        if (!inProv && CLAUSE.has(w)) { clause = true; break; }
+      }
+      if (clause) break;
       // A new comma piece whose FIRST lineKey token (after an optional `and`) is a determiner/number ends the list.
       if (ptoks[js.start] && ptoks[m] && ptoks[js.start].piece > ptoks[m].piece) {
         let f = ptoks.findIndex(t => t.piece === ptoks[js.start].piece);
@@ -256,4 +273,16 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
     };
   }
   return none;
+}
+
+/** Token indexes that open a new sentence (after `.` / `:` / ` - `, not between digits) in the lineKey. */
+function sentTokBounds(lineKey: string): Set<number> {
+  const out = new Set<number>();
+  const parts = lineKey.split(/(?<!\d)[.:](?!\d)|\s-\s/);
+  let n = 0;
+  for (let p = 0; p < parts.length; p++) {
+    if (p > 0) out.add(n);
+    n += tokenizeWithPieces(parts[p]).length;
+  }
+  return out;
 }
