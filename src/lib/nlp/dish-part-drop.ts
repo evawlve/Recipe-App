@@ -9,6 +9,7 @@
  * TRIGGER. The dish item is followed in the line by `made with` / `i made with`, or (when the line says
  * `homemade` / `home made` / `i made a ...`) by `with` / `on <bread>`. A blend-class dish (smoothie,
  * pancakes, french toast) takes only the `made with` form.
+ * readMadeWithHeads() (S240, MGR 18:44Z (2)) reads an item that carries its own personal `i/we made (it) with` marker, or `made with` on a homemade item, as its head for retrieval; label claims stay; it runs in the route after the echo drop.
  *
  * DEFAULT-KEEP POSTURE. An item after the marker is dropped only when it is a BARE KNOWN PART of the dish's
  * class (a filling, a protein, a bread, a sauce, ... per class table). Anything else stays and keeps its
@@ -319,3 +320,66 @@ function sentTokBounds(lineKey: string): Set<number> {
   }
   return out;
 }
+
+/**
+ * S240 (MGR 18:44Z (2), narrowed 19:44Z): an item that carries its OWN personal made-with marker (`pasta i made with olive oil`,
+ * `a homemade smoothie bowl made with frozen berries`) is the dish (Option A inside one item): its normalizedForm becomes the head,
+ * so retrieval never answers the whole phrase (`Green olive paste … for pasta`). rawText is kept. A bare `made with` on a non-homemade
+ * item is a label claim (`cookies made with almond flour`, `gummies made with real fruit juice`) and stays as typed.
+ */
+export interface MadeWithHead {
+  index: number;
+  rawText: string;
+  head: string;
+}
+
+const MW_LEAD = new Set(['a', 'an', 'the', 'some', 'my', 'homemade', 'home', 'made']);
+const MW_REL = new Set(['that', 'which']);
+const MW_STOP = new Set(['what', 'something', 'stuff', 'thing', 'things', 'one', 'it', 'this', 'that', 'which', 'who', 'dinner', 'lunch',
+  'breakfast', 'brunch', 'supper', 'snack', 'meal', 'leftovers', 'food', 'i', 'we', 'just', 'my', 'our', 'mom', 'dad', 'home', 'style']);
+const MW_COUNT = new Set(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'twelve', 'dozen', 'half', 'couple', 'few']);
+
+export function readMadeWithHeads<T extends Item>(lineKey: string, items: T[]): { items: T[]; heads: MadeWithHead[] } {
+  const heads: MadeWithHead[] = [];
+  const lk = words(lineKey);
+  // `homemade` counts on the item or right before its span, never anywhere in the line (`homemade bread and gummies made with
+  // real fruit juice` keeps the gummies' label claim).
+  const homeBefore = (w0: string[]): boolean => {
+    for (let s = 0; s + w0.length <= lk.length; s++) {
+      if (w0.every((x, i) => lk[s + i] === x)) return lk[s - 1] === 'homemade' || (lk[s - 1] === 'made' && lk[s - 2] === 'home');
+    }
+    return false;
+  };
+  const out = items.map((it, index) => {
+    if (it.brand && it.brand.trim()) return it;
+    const w = words(it.rawText);
+    let at = -1;
+    let personal = false;
+    for (let k = 1; k + 1 < w.length; k++) {
+      if (w[k] !== 'made') continue;
+      const next = w[k + 1] === 'it' ? w[k + 2] : w[k + 1];
+      if (next !== 'with') continue;
+      personal = w[k - 1] === 'i' || w[k - 1] === 'we';
+      at = personal ? k - 1 : k;
+      break;
+    }
+    if (at < 1) return it;
+    if (!personal && !homeBefore(w) && !w.slice(0, at).some(x => x === 'homemade') && !(w.slice(0, at).join(' ').includes('home made'))) return it;
+    // Only a normalizedForm that still carries the phrase (or none) is rewritten; one the segmenter already digested
+    // (`chicken burrito`, `turkey sandwich`, `chicken` for `dinner i made with chicken`) is kept.
+    const nfw = words(it.normalizedForm ?? '');
+    if (nfw.length && !nfw.includes('with') && !nfw.includes('made')) return it;
+    const headWords = w.slice(0, at);
+    // the head's own count stays in rawText for the parser (`2 pancakes i made with oat flour` -> `pancakes`)
+    while (headWords.length && (MW_LEAD.has(headWords[0]) || /^[\d/.]+$/.test(headWords[0]) || MW_COUNT.has(headWords[0]))) headWords.shift();
+    while (headWords.length && MW_REL.has(headWords[headWords.length - 1])) headWords.pop();
+    // A head that is not a food (`what`, `dinner`, `leftovers`) or still holds a clause is refused.
+    if (!headWords.length || headWords.some(x => /\d/.test(x) || MW_STOP.has(x))) return it;
+    const head = headWords.join(' ');
+    if ((it.normalizedForm ?? '').trim() === head) return it;
+    heads.push({ index, rawText: it.rawText, head });
+    return { ...it, normalizedForm: head };
+  });
+  return { items: out, heads };
+}
+
