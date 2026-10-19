@@ -341,6 +341,75 @@ function normalizeFractionalMeasure(mergedTokens: string[]): void {
   }
 }
 
+// A spoken multiplier on a portion: "a double portion of mashed potatoes".
+//
+// Nothing read `double`/`triple`, so the line parsed as qty 1, no unit, name
+// "a double portion of mashed potatoes" and billed ONE portion. The shape
+// collapses to its numeric twin, "2 servings of mashed potatoes", which already
+// parses as qty 2 of the count unit `serving` through the partitive `of` path.
+//
+// Same POSITIONAL discipline as normalizeFractionalMeasure above (same hedge
+// offset `f`): (a|an|one) + (double|triple) + a portion noun + `of` + a
+// FOLLOWER token (a truncated "a double portion of" is left alone, mirroring
+// consumePartitiveOf()'s only-with-a-follower guard). The portion nouns are
+// portion/serving/helping only: `order` is deliberately absent ("a double order
+// of fries" would land on a 250 g package and bill 500 g, while "half an order"
+// bills 50 g on another rung), and `shot` is absent so "a double shot of
+// espresso" keeps its product reading.
+//
+// Lives here, not in unit.ts: its multipliers block is a held PR's hunk, and a
+// unit-table `double` would also fire on "a double cheeseburger", "a double
+// espresso", "double chocolate muffin" (controls pinned in double-portion.test.ts).
+// Owner: C70 S239 flag (1), snapshots/s239/flags/design.md.
+const PORTION_MULTIPLIERS = new Map([['double', '2'], ['triple', '3']]);
+const PORTION_NOUNS = new Set(['portion', 'portions', 'serving', 'servings', 'helping', 'helpings']);
+function rewriteDoublePortion(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
+  if ((LEADING_ARTICLES.has(at(0)) || at(0) === 'one') && PORTION_MULTIPLIERS.has(at(1)) &&
+      PORTION_NOUNS.has(at(2)) && at(3) === 'of' && mergedTokens[f + 4] !== undefined) {
+    mergedTokens.splice(f, 3, PORTION_MULTIPLIERS.get(at(1))!, 'servings');
+  }
+}
+
+// "a stack of pancakes" is a COUNT of pancakes, not one: it parsed as qty 1,
+// name "a stack of pancakes" and billed ONE 30 g pancake while its numeric twin
+// "3 pancakes" bills 114 g (measured, MEL). The shape collapses to that twin.
+//
+// Same POSITIONAL discipline and hedge offset `f` as rewriteDoublePortion above:
+// (a|an|one) + [short|full|tall] + stack + `of` + only pancake modifiers + the
+// noun `pancakes`/`pancake` as the LAST token (end-anchored, so "a stack of
+// pancakes with syrup" keeps its dish reading). PANCAKES ONLY: flapjacks resolve
+// to an oat bar, hotcakes and crepes have no count seed, and their digit twins
+// mis-bill (the same exclusion #529 made).
+//
+// DEFAULTS, stated as defaults: a bare stack = 3 is a convention; IHOP's full
+// stack is 5 (FS "Original Buttermilk Pancakes (3)" and "(5)"), so
+// short = 3, full = tall = 5. `tall` has no record behind it and is read as full.
+// PANCAKE_STACK_MODS restates PANCAKE_MODS in servings/bare-query-guard.ts (#529);
+// keep the two in step. Owner: C70 S239 run-5 row (7), snapshots/s239/run5/stack-refute.md.
+const PANCAKE_STACK_MODS = new Set([
+  'buttermilk', 'blueberry', 'chocolate', 'chip', 'banana', 'strawberry', 'protein',
+  'whole', 'wheat', 'gluten', 'free', 'gluten-free', 'homemade', 'plain', 'frozen',
+  'fluffy', 'vegan', 'oatmeal', 'pumpkin',
+]);
+const PANCAKE_STACK_COUNTS = new Map([['', '3'], ['short', '3'], ['full', '5'], ['tall', '5']]);
+function rewriteStackOfPancakes(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
+  if (!(LEADING_ARTICLES.has(at(0)) || at(0) === 'one')) return;
+  const size = PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '' ? 1 : 0;
+  if (at(1 + size) !== 'stack' || at(2 + size) !== 'of') return;
+  const nounAt = mergedTokens.length - 1;
+  const noun = mergedTokens[nounAt]?.toLowerCase();
+  const first = f + 3 + size;
+  if ((noun !== 'pancakes' && noun !== 'pancake') || nounAt < first) return;
+  for (let k = first; k < nounAt; k++) {
+    if (!PANCAKE_STACK_MODS.has(mergedTokens[k].toLowerCase())) return;
+  }
+  mergedTokens.splice(f, 3 + size, PANCAKE_STACK_COUNTS.get(size ? at(1) : '')!);
+}
+
 // A leading mass/volume word that OPENS A FOOD NAME rather than measuring one:
 // `pound cake`, `cup noodles`. The line has no quantity and no article, so the
 // word sits at mergedTokens[0], and until this guard every one of the three
@@ -425,18 +494,61 @@ const HEDGED_NUMBER_UNIT_RE = new RegExp(`(\\d)\\s*(${HEDGEABLE_UNIT_SOURCE})[-\
 // `about a cup of rice`) goes, so the line parses as its un-hedged form. leadingHedgePrecedesQuantity() handles a digit or word
 // number. Gated on an explicit unit list followed by `of`, a comma, `(` or the end (refute A1-A3): `like a pound cake`,
 // `about a cup or two of rice`, `like a second helping` and `about a dozen eggs` stay as they were.
-const LEADING_HEDGE_ARTICLE_RE = new RegExp(
-  '^(\\s*)(?:about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+(?=(?:a|an)\\s+' +
-    `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)` +
-    '(?:\\s+of\\b|\\s*[,(]|\\s*$))',
+const LEADING_HEDGE_PREFIX_RE = /^(\s*)(?:about|around|roughly|approximately|approx|nearly|almost|like|maybe)\s+(?=\S)/i;
+function stripHedgeBeforeArticleMeasure(line: string): string {
+  const m = LEADING_HEDGE_PREFIX_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  return articleMeasureFollows(rest) ? m[1] + rest : line;
+}
+// C70 row (viii)-A: a qualifier that never changes the measure is dropped before parsing. Two shapes, one rule.
+// Shape 2 (filler adjective): `a good pound of pasta`, `a full cup of milk` -> the article-led measure without the adjective. Only
+// after an article and before the SAME unit list + tail #518 uses; fires at the line start or right after ONE approximator /
+// LEADING_HEDGES word (`about a good pound of pasta`). `heaping` is deliberately absent: it changes the dose.
+// Shape 1 (multi-word approximator): `just over a pound of shrimp`, `a bit over 2 cups of popcorn`. Stripped ONLY when an
+// article-led measure follows, or a quantity that parseQuantityTokens() reads and that is itself followed by a measure token
+// (refute A1: `under 100 calorie bar` and `at least 85 percent dark chocolate` must stay). `just` alone is never a qualifier.
+const APPROXIMATOR_SOURCE =
+  'just\\s+over|just\\s+under|just\\s+shy\\s+of|a\\s+bit\\s+over|a\\s+bit\\s+under|a\\s+little\\s+over|a\\s+little\\s+under|' +
+  'slightly\\s+over|slightly\\s+under|a\\s+tad\\s+over|a\\s+tad\\s+under|a\\s+touch\\s+over|a\\s+touch\\s+under|' +
+  'upwards\\s+of|at\\s+least|at\\s+most|close\\s+to|over|under';
+const ARTICLE_MEASURE_UNIT_SOURCE =
+  `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)\\.?` +
+  '(?:\\s+of\\b|\\s*[,(]|\\s*$)';
+const FILLER_ADJECTIVE_RE = new RegExp(
+  `^(\\s*(?:(?:${APPROXIMATOR_SOURCE}|about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+)?(?:a|an)\\s+)` +
+    `(?:good|full|solid|generous|scant)\\s+(?=${ARTICLE_MEASURE_UNIT_SOURCE})`,
   'i',
 );
-function stripHedgeBeforeArticleMeasure(line: string): string {
-  const m = LEADING_HEDGE_ARTICLE_RE.exec(line);
-  return m ? m[1] + line.slice(m[0].length) : line;
+const APPROXIMATOR_RE = new RegExp(`^(\\s*)(?:${APPROXIMATOR_SOURCE})\\s+(?=\\S)`, 'i');
+const ARTICLE_MEASURE_RE = new RegExp(`^(?:a|an)\\s+${ARTICLE_MEASURE_UNIT_SOURCE}`, 'i');
+// An article-led measure: a listed unit (optionally with its abbreviating period) + the `of`/comma/`(`/end tail, or a COUNT-NOUN measure
+// isMeasureToken() accepts (`a slice of pizza`) which must be followed by `of` (`maybe a slice` and `like a pound cake` stay as they were).
+const ARTICLE_COUNT_MEASURE_RE = /^(?:a|an)\s+([a-z]+)\s+of\b/i;
+function articleMeasureFollows(rest: string): boolean {
+  if (ARTICLE_MEASURE_RE.test(rest)) return true;
+  const c = ARTICLE_COUNT_MEASURE_RE.exec(rest);
+  return c !== null && isMeasureToken(c[1]);
+}
+function stripFillerAdjective(line: string): string {
+  return line.replace(FILLER_ADJECTIVE_RE, '$1');
+}
+function stripApproximatorBeforeMeasure(line: string): string {
+  const m = APPROXIMATOR_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  if (articleMeasureFollows(rest)) return m[1] + rest;
+  const tokens = rest.split(/\s+/);
+  const q = parseQuantityTokens(tokens);
+  if (!q) return line;
+  let k = q.consumed;
+  const attached = /^[\d.,/\u00BC-\u00BE\u2150-\u215E]+([a-z]+)$/i.exec(tokens[k - 1] ?? '');
+  if (attached) return isMeasureToken(attached[1]) ? m[1] + rest : line;
+  if (/^(?:a|an)$/i.test(tokens[k] ?? '')) k += 1;
+  return isMeasureToken(tokens[k]) ? m[1] + rest : line;
 }
 function stripQuantityHedges(line: string): string {
-  return stripHedgeBeforeArticleMeasure(line)
+  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(line)))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
     .replace(/~\s*(?=\d)/g, '')
     .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
@@ -665,7 +777,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
-  if (hhCursor < 0) normalizeFractionalMeasure(mergedTokens);
+  if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
