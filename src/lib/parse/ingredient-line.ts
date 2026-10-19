@@ -456,18 +456,61 @@ const HEDGED_NUMBER_UNIT_RE = new RegExp(`(\\d)\\s*(${HEDGEABLE_UNIT_SOURCE})[-\
 // `about a cup of rice`) goes, so the line parses as its un-hedged form. leadingHedgePrecedesQuantity() handles a digit or word
 // number. Gated on an explicit unit list followed by `of`, a comma, `(` or the end (refute A1-A3): `like a pound cake`,
 // `about a cup or two of rice`, `like a second helping` and `about a dozen eggs` stay as they were.
-const LEADING_HEDGE_ARTICLE_RE = new RegExp(
-  '^(\\s*)(?:about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+(?=(?:a|an)\\s+' +
-    `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)` +
-    '(?:\\s+of\\b|\\s*[,(]|\\s*$))',
+const LEADING_HEDGE_PREFIX_RE = /^(\s*)(?:about|around|roughly|approximately|approx|nearly|almost|like|maybe)\s+(?=\S)/i;
+function stripHedgeBeforeArticleMeasure(line: string): string {
+  const m = LEADING_HEDGE_PREFIX_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  return articleMeasureFollows(rest) ? m[1] + rest : line;
+}
+// C70 row (viii)-A: a qualifier that never changes the measure is dropped before parsing. Two shapes, one rule.
+// Shape 2 (filler adjective): `a good pound of pasta`, `a full cup of milk` -> the article-led measure without the adjective. Only
+// after an article and before the SAME unit list + tail #518 uses; fires at the line start or right after ONE approximator /
+// LEADING_HEDGES word (`about a good pound of pasta`). `heaping` is deliberately absent: it changes the dose.
+// Shape 1 (multi-word approximator): `just over a pound of shrimp`, `a bit over 2 cups of popcorn`. Stripped ONLY when an
+// article-led measure follows, or a quantity that parseQuantityTokens() reads and that is itself followed by a measure token
+// (refute A1: `under 100 calorie bar` and `at least 85 percent dark chocolate` must stay). `just` alone is never a qualifier.
+const APPROXIMATOR_SOURCE =
+  'just\\s+over|just\\s+under|just\\s+shy\\s+of|a\\s+bit\\s+over|a\\s+bit\\s+under|a\\s+little\\s+over|a\\s+little\\s+under|' +
+  'slightly\\s+over|slightly\\s+under|a\\s+tad\\s+over|a\\s+tad\\s+under|a\\s+touch\\s+over|a\\s+touch\\s+under|' +
+  'upwards\\s+of|at\\s+least|at\\s+most|close\\s+to|over|under';
+const ARTICLE_MEASURE_UNIT_SOURCE =
+  `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)\\.?` +
+  '(?:\\s+of\\b|\\s*[,(]|\\s*$)';
+const FILLER_ADJECTIVE_RE = new RegExp(
+  `^(\\s*(?:(?:${APPROXIMATOR_SOURCE}|about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+)?(?:a|an)\\s+)` +
+    `(?:good|full|solid|generous|scant)\\s+(?=${ARTICLE_MEASURE_UNIT_SOURCE})`,
   'i',
 );
-function stripHedgeBeforeArticleMeasure(line: string): string {
-  const m = LEADING_HEDGE_ARTICLE_RE.exec(line);
-  return m ? m[1] + line.slice(m[0].length) : line;
+const APPROXIMATOR_RE = new RegExp(`^(\\s*)(?:${APPROXIMATOR_SOURCE})\\s+(?=\\S)`, 'i');
+const ARTICLE_MEASURE_RE = new RegExp(`^(?:a|an)\\s+${ARTICLE_MEASURE_UNIT_SOURCE}`, 'i');
+// An article-led measure: a listed unit (optionally with its abbreviating period) + the `of`/comma/`(`/end tail, or a COUNT-NOUN measure
+// isMeasureToken() accepts (`a slice of pizza`) which must be followed by `of` (`maybe a slice` and `like a pound cake` stay as they were).
+const ARTICLE_COUNT_MEASURE_RE = /^(?:a|an)\s+([a-z]+)\s+of\b/i;
+function articleMeasureFollows(rest: string): boolean {
+  if (ARTICLE_MEASURE_RE.test(rest)) return true;
+  const c = ARTICLE_COUNT_MEASURE_RE.exec(rest);
+  return c !== null && isMeasureToken(c[1]);
+}
+function stripFillerAdjective(line: string): string {
+  return line.replace(FILLER_ADJECTIVE_RE, '$1');
+}
+function stripApproximatorBeforeMeasure(line: string): string {
+  const m = APPROXIMATOR_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  if (articleMeasureFollows(rest)) return m[1] + rest;
+  const tokens = rest.split(/\s+/);
+  const q = parseQuantityTokens(tokens);
+  if (!q) return line;
+  let k = q.consumed;
+  const attached = /^[\d.,/\u00BC-\u00BE\u2150-\u215E]+([a-z]+)$/i.exec(tokens[k - 1] ?? '');
+  if (attached) return isMeasureToken(attached[1]) ? m[1] + rest : line;
+  if (/^(?:a|an)$/i.test(tokens[k] ?? '')) k += 1;
+  return isMeasureToken(tokens[k]) ? m[1] + rest : line;
 }
 function stripQuantityHedges(line: string): string {
-  return stripHedgeBeforeArticleMeasure(line)
+  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(line)))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
     .replace(/~\s*(?=\d)/g, '')
     .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
