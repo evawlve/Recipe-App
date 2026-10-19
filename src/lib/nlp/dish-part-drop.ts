@@ -65,7 +65,8 @@ const FILL = [
   'mustard', 'ketchup', 'sauce', 'salsa', 'pesto', 'peppers', 'pepper', 'jalapenos', 'jalapeno', 'spinach',
   'mushrooms', 'mushroom', 'olives', 'sour cream',
 ];
-const PROT = [
+/** Protein part words. Also read by extra-portion.ts (S240). */
+export const PROT = [
   'chicken', 'beef', 'turkey', 'ham', 'bacon', 'steak', 'pork', 'sausage', 'pepperoni', 'patty', 'patties',
   'egg', 'eggs', 'tuna', 'salmon', 'shrimp', 'tofu', 'carnitas', 'chorizo', 'fish',
 ];

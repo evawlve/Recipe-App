@@ -259,6 +259,7 @@ export async function POST(req: NextRequest) {
     const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
+    const { rewriteExtraPortions } = await import('@/lib/nlp/extra-portion');
     const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -480,6 +481,12 @@ export async function POST(req: NextRequest) {
         }
         // A `with` part the host's own name already holds ("salad with chicken" + "chicken") is billed twice; dropped
         // before the trailing-quantity fold so a following "2 cups" still joins the host. The cache keeps the undropped split.
+        // S240 (MGR 17:30Z relay 1): a split-off `double meat` reads as the host's protein, not a "Double Meat" record.
+        const ep = rewriteExtraPortions(lineKey, items);
+        items = ep.items;
+        if (ep.rewrites.length > 0) {
+          logger.info('nlp_parse.extra_portion', { count: ep.rewrites.length });
+        }
         const se = dropSegmenterEchoes(lineKey, items);
         items = se.items;
         if (se.echoes.length > 0) {
