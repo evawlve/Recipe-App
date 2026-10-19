@@ -868,6 +868,12 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['macaroni', 'pasta', 'elbow macaroni', 'penne', 'spaghetti'],
         excludeIfContains: ['cracker', 'crackers', 'saltines', 'saltine']
     },
+    // Bread-carrier sandwich vs cracker sandwiches (C70 S239)
+    {
+        query: ['bagel sandwich', 'bagel sandwiches', 'croissant sandwich', 'croissant sandwiches', 'english muffin sandwich',
+            'english muffin sandwiches', 'sub sandwich', 'sub sandwiches'],
+        excludeIfContains: ['cracker', 'crackers']
+    },
     // === NEW: Plant-based cheese vs Meat balls ===
     {
         query: ['rice cheese', 'vegan cheese', 'mozzarella style'],

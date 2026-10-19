@@ -40,6 +40,7 @@ import {
     isBareUnitlessQty1,
     usableBareLabelServing,
     isBarePluralRequest,
+    barePairTwin,
     isDoseAnchoredBareQuery,
     BARE_LABEL_MIN_GRAMS,
     BARE_LABEL_MAX_GRAMS,
@@ -194,7 +195,49 @@ function annotateGroundMeatName(foodName: string, query: string): string {
 // Hydration & Serving Selection
 // ============================================================
 
+/**
+ * Per-piece tiers a bare-pair twin may bill on (C70 / S239). Anything else
+ * (a stack/order record, a label default, a flat 100 g) means the twin would
+ * multiply a whole serving, so the ordinary bare dispatch answers instead.
+ */
+const TWIN_TIER_ALLOW = new Set([
+    'seed_count_default', 'label_count_derived', 'fs_label_count', 'fs_default_serving',
+]);
+
+/**
+ * Hydrate the winner and pick its serving. For a bare pair line (see
+ * barePairTwin() in servings/bare-query-guard.ts) the dispatch first runs on
+ * the DIGIT TWIN's inputs (local copy, qty 2, "2 "-prefixed rawLine) and that
+ * result is kept only when it billed per piece; otherwise the ordinary bare
+ * dispatch (dispatchServing, unchanged) runs. The caller's `parsed` is never
+ * mutated by the twin run. KNOWN COSTS: bare `eggs` stays 1 egg; wire quantity
+ * stays 1 with 2-piece grams; waffles / sausage links / tortillas / hotcakes /
+ * deviled eggs are out; a wrong-identity winner gets 2x of its piece; a
+ * rejected twin costs a second builder run (any AI call it made is spent).
+ */
 export async function hydrateAndSelectServing(
+    candidate: UnifiedCandidate,
+    parsed: ParsedIngredient | null,
+    confidence: number,
+    rawLine: string,
+    aiHydrationBudget?: AiNutritionBudget,
+): Promise<FatsecretMappedIngredient | null> {
+    if (parsed && barePairTwin(parsed, rawLine)) {
+        const twinParsed: ParsedIngredient = { ...parsed, qty: 2 };
+        const twin = await dispatchServing(candidate, twinParsed, confidence, `2 ${rawLine}`, aiHydrationBudget);
+        const tier = twin?.servingTier;
+        const oneServingLabel = /^\s*[\d.]+\s+servings?\b/i.test(twin?.servingDescription ?? '');
+        const keep = !!twin && !!tier && TWIN_TIER_ALLOW.has(tier)
+            && !(tier === 'fs_default_serving' && oneServingLabel);
+        logger.info('serving.bare_pair_twin', { outcome: keep ? 'kept' : 'rejected', tier: tier ?? null, foodId: candidate.id });
+        if (keep && twin) {
+            return { ...twin, rawLine };
+        }
+    }
+    return dispatchServing(candidate, parsed, confidence, rawLine, aiHydrationBudget);
+}
+
+async function dispatchServing(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,

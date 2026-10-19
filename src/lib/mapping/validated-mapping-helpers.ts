@@ -1407,6 +1407,13 @@ function classifyFailureType(
 // v2 and 342 at v3 are already unreadable), so the bump costs at most 81 re-derivations,
 // one purpose:'normalize' call each, lazily, only for rows actually read again.
 // Owner: sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md (mobile).
+//
+// NO bump is needed when a computeNormalizedKey() change only MOVES keys away from stale rows
+// (2026-10-19, C70 row 4, rewriteRegionalDishWords()): every AiNormalizeCache reader and writer
+// keys through computeNormalizedKey(), so rows stored under the old regional-word key become
+// unreachable and nothing sits at the new key. A bump is for a change that leaves a stale row
+// REACHABLE at an unchanged key (the 2-5 bumps above). Precedent: #114's
+// collapseAdjacentRepeatedRuns() moved 15 keys at v5 with no bump.
 export const RULES_VERSION = 5;
 
 /**
