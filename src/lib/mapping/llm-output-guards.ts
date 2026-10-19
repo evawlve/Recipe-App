@@ -388,3 +388,78 @@ export function restoreNutritionModifiers(
 
     return { restored: `${added.join(' ')} ${base}`.trim(), added };
 }
+
+/**
+ * Identities the AI prompts hand the model as WORKED EXAMPLES, kept as a CLOSED,
+ * hand-maintained list (C70, 2026-10-19). Owners — a prompt edit that drops or
+ * renames one of these examples must update this list:
+ *   - `SYSTEM_PROMPT` in `ai-normalize.ts`: "1 cup reduced fat colby jack cheese" ->
+ *     `reduced fat colby jack cheese`; "2 cup stberry halves" -> `strawberry halves`.
+ *   - `SYSTEM_PROMPT` in `ai-simplify.ts`: "reduced fat colby and monterey jack cheese" ->
+ *     `Reduced Fat Colby Jack Cheese` (same identity as the first entry, lowercased).
+ *
+ * Why it exists: given a line that names no food (`scoops`, `from the 24 hour
+ * diner`) the model sometimes answers with an example's name instead of setting
+ * `error`; the answer was cached and then minted as a food. MEASURED 2026-10-19:
+ * AiNormalizeCache rows `scoops`, `maybe a few spoonfuls`, `from the 24 hour diner`.
+ *
+ * `strawberries` (the example's canonical_base) is deliberately NOT listed: the
+ * live row `fresas` -> canonicalBase `strawberries` is a correct translation. Only
+ * normalized_name / the simplified name is ever compared, never canonical_base.
+ * Deriving the list from the prompt is refuted (`dos huevos` -> `eggs` is real).
+ */
+export const PROMPT_EXAMPLE_IDENTITIES: readonly string[] = [
+    'reduced fat colby jack cheese',
+    'strawberry halves',
+];
+
+/** Reason string carried on the normalizer's error result for an echo. */
+export const PROMPT_EXAMPLE_ECHO_REASON = 'prompt_example_echo';
+
+function letterTokens(text: string): string[] {
+    return text
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter((t) => t.length > 0);
+}
+
+function editDistance(a: string, b: string): number {
+    const prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        let diag = prev[0];
+        prev[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+            const up = prev[j];
+            prev[j] = Math.min(
+                prev[j] + 1,
+                prev[j - 1] + 1,
+                diag + (a[i - 1] === b[j - 1] ? 0 : 1),
+            );
+            diag = up;
+        }
+    }
+    return prev[b.length];
+}
+
+/**
+ * True iff `answer` is a prompt-example identity the INPUT gave no reason to
+ * produce: the lowercased/trimmed answer EQUALS a listed identity AND no input
+ * token (letters only) equals an identity token or sits within edit distance 2
+ * of one. The tolerance applies only when both tokens are >= 4 letters, so a
+ * short filler word (`a`, `to`) cannot shield an echo by being near `fat`.
+ * Typos stay legitimate (`stberry halves`, `colby`); a translation sharing no
+ * token with the example (`queso colby`) shares `colby`; `fresas` -> `fresas`
+ * never equals a listed identity.
+ */
+export function isPromptExampleEcho(input: string, answer: string): boolean {
+    const a = (answer ?? '').toLowerCase().trim();
+    if (!PROMPT_EXAMPLE_IDENTITIES.includes(a)) return false;
+    const identityTokens = letterTokens(a);
+    for (const t of letterTokens(input ?? '')) {
+        for (const it of identityTokens) {
+            if (t === it) return false;
+            if (t.length >= 4 && it.length >= 4 && editDistance(t, it) <= 2) return false;
+        }
+    }
+    return true;
+}

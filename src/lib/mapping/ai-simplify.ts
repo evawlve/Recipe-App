@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { callStructuredLlm } from '../ai/structured-client';
 import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
+import { isPromptExampleEcho } from './llm-output-guards';
 
 const CACHE_PREFIX = 'SIMPLIFY:';
 
@@ -82,6 +83,8 @@ export async function aiSimplifyIngredient(
     // 1. Check Cache
     const cached = await getAiNormalizeCache(rawLine, { namespace });
     if (cached && cached.normalizedName) {
+        // Prompt-example echo (C70): a poisoned cached row is refused like a fresh one.
+        if (isPromptExampleEcho(rawLine, cached.normalizedName)) return null;
         return {
             simplified: cached.normalizedName,
             rationale: 'from_cache',
@@ -113,6 +116,10 @@ export async function aiSimplifyIngredient(
         const rationale = result.content.rationale as string;
 
         if (!simplified) return null;
+
+        // Prompt-example echo (C70): the colby-jack example given back for a no-food
+        // line. Do not cache it, do not return it.
+        if (isPromptExampleEcho(rawLine, simplified)) return null;
 
         // Save to cache. synonyms/prepPhrases/sizePhrases are left UNDEFINED, not []:
         // saveAiNormalizeCache's update: clause now writes them, and [] would blank a row
