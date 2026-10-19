@@ -1,6 +1,6 @@
 /**
  * dish-part-drop - S192 row 4 (seat C69 S202 row 2). Every case of the r5 fixture
- * (fixtures/dish-part-drop-r5.json, a copy of snapshots/s202/row2/r5/expected-r5.json: 240 cases, 106 firing)
+ * (fixtures/dish-part-drop-r5.json, a copy of snapshots/s202/row2/r5/expected-r5.json: 240 cases, 107 firing since S240 re-pinned 4 cases under MGR 18:44Z)
  * is run through the shipped function; `src` names where the input came from.
  */
 
