@@ -1,0 +1,2179 @@
+[
+ {
+  "src": "refute-r1 V1",
+  "line": "a burger with no regrets and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V1b",
+  "line": "a burger with no regrets and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "regrets",
+    "normalizedForm": "regrets",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V2",
+  "line": "coffee, no meat monday: tofu and rice",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tofu",
+    "normalizedForm": "tofu",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tofu",
+   "rice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V2b",
+  "line": "coffee and no meat monday tofu",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no meat monday tofu",
+    "normalizedForm": "no meat monday tofu",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "no meat monday tofu"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V3",
+  "line": "a sandwich, skipped the mayo but had chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "chips"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V3b",
+  "line": "a sandwich, skipped the mayo but had chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "chips"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V3c",
+  "line": "a sandwich, skipped the mayo but had chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the mayo but had chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "skipped the mayo but had chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V4",
+  "line": "coffee, skipped lunch, had a burger",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped lunch",
+    "normalizedForm": "lunch",
+    "brand": ""
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "a burger"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V4b",
+  "line": "coffee, skipped lunch, had a burger",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V4c",
+  "line": "coffee, skipped lunch then had a burger",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped lunch then had a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "skipped lunch then had a burger"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V5",
+  "line": "a burger, i left off the bun and ate the patty",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "patty",
+    "normalizedForm": "patty",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "patty"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V5b",
+  "line": "a burger, i left off the bun and ate the patty",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "left off the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the patty",
+    "normalizedForm": "patty",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "ate the patty"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V5c",
+  "line": "a burger, i left off the bun and ate the patty",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "left off the bun and ate the patty",
+    "normalizedForm": "patty",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "left off the bun and ate the patty"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V6",
+  "line": "coffee with no sugar or tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V6b",
+  "line": "a muffin, coffee with no sugar, or tea",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "coffee",
+   "tea"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V7",
+  "line": "a salad and no cheese or pepperoni pizza",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni pizza",
+    "normalizedForm": "pepperoni pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "pepperoni pizza"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V7b",
+  "line": "a salad with no cheese or pepperoni pizza",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese or pepperoni pizza",
+    "normalizedForm": "cheese or pepperoni pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "cheese or pepperoni pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V8",
+  "line": "a burger, no bun, or fries please",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V8b",
+  "line": "a burger, no bun, or fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V9",
+  "line": "pasta with no yolks noodles",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta",
+    "brand": ""
+   },
+   {
+    "rawText": "no yolks noodles",
+    "normalizedForm": "no yolks noodles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta",
+   "no yolks noodles"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V9b",
+  "line": "pasta sauce and no yolks noodles",
+  "input": [
+   {
+    "rawText": "pasta sauce",
+    "normalizedForm": "pasta sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "no yolks noodles",
+    "normalizedForm": "no yolks noodles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta sauce",
+   "no yolks noodles"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V9c",
+  "line": "pasta sauce and no yolks noodles",
+  "input": [
+   {
+    "rawText": "pasta sauce",
+    "normalizedForm": "pasta sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "no yolks noodles",
+    "normalizedForm": "no yolks noodles",
+    "brand": "No Yolks"
+   }
+  ],
+  "expectRawTexts": [
+   "pasta sauce",
+   "no yolks noodles"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V9d",
+  "line": "pasta sauce and no yolks noodles",
+  "input": [
+   {
+    "rawText": "pasta sauce",
+    "normalizedForm": "pasta sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "no yolks noodles",
+    "normalizedForm": "egg noodles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta sauce",
+   "no yolks noodles"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V10",
+  "line": "milk and no bake cookies",
+  "input": [
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "no bake cookies",
+    "normalizedForm": "no bake cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "milk",
+   "no bake cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V10b",
+  "line": "milk and no-bake cookies",
+  "input": [
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "no-bake cookies",
+    "normalizedForm": "no-bake cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "milk",
+   "no-bake cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V10c",
+  "line": "milk and no bake cookies",
+  "input": [
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "bake cookies",
+    "normalizedForm": "bake cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "milk"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V11",
+  "line": "toast with no sugar added jam",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "no sugar added jam",
+    "normalizedForm": "no sugar added jam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "no sugar added jam"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V11b",
+  "line": "toast with no sugar added jam",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar added jam",
+    "normalizedForm": "sugar added jam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "sugar added jam"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V11c",
+  "line": "rice and no salt added black beans",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "no salt added black beans",
+    "normalizedForm": "no salt added black beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "no salt added black beans"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V11d",
+  "line": "rice and no salt added black beans",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "black beans"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V12",
+  "line": "a coffee and hold the cone",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "hold the cone",
+    "normalizedForm": "hold the cone",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V13",
+  "line": "a banana and no cow bar",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "no cow bar",
+    "normalizedForm": "no cow bar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "no cow bar"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V14",
+  "line": "a no-foam latte and a muffin",
+  "input": [
+   {
+    "rawText": "a no-foam latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a no-foam latte",
+   "a muffin"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V14b",
+  "line": "a muffin and no-foam latte",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "no-foam latte",
+    "normalizedForm": "no-foam latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "no-foam latte"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V14c",
+  "line": "a muffin and no foam latte",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "no foam latte",
+    "normalizedForm": "no foam latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "no foam latte"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V14d",
+  "line": "a muffin and no foam latte",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "latte"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V15",
+  "line": "coffee and zero sugar coke",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "zero sugar coke",
+    "normalizedForm": "zero sugar coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "zero sugar coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V15b",
+  "line": "coffee and sugar free red bull",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar free red bull",
+    "normalizedForm": "sugar free red bull",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "sugar free red bull"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V16",
+  "line": "eggs, none of the toast",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "toast"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V16b",
+  "line": "eggs, not the toast, bacon",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "bacon"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V17",
+  "line": "coffee and no more than two cookies",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no more than two cookies",
+    "normalizedForm": "no more than two cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "no more than two cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V18",
+  "line": "a large fries no medium fries",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "large fries",
+    "brand": ""
+   },
+   {
+    "rawText": "medium fries",
+    "normalizedForm": "medium fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large fries",
+   "medium fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V18b",
+  "line": "a coke no sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "sprite"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V18c",
+  "line": "coffee no tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V18d",
+  "line": "a coke, no, sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "sprite"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V19",
+  "line": "salad with no chicken, chicken on the side",
+  "input": [
+   {
+    "rawText": "salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V19b",
+  "line": "a salad with no dressing and dressing on the side",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "dressing on the side",
+    "normalizedForm": "dressing",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "dressing on the side"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V20",
+  "line": "a burger without the bun and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "the bun",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V20b",
+  "line": "a burger minus the bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "the bun"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V21",
+  "line": "oatmeal with no sugar or honey",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "honey",
+    "normalizedForm": "honey",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V22",
+  "line": "a burrito with no rice or beans and a coke",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito",
+   "a coke"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V22b",
+  "line": "a burrito with no rice or beans, chips",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito",
+   "chips"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V23",
+  "line": "eggs with no cheese, or toast",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "toast"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V24",
+  "line": "a bagel with cream cheese or butter, no jam",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "cream cheese",
+   "butter"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V25",
+  "line": "coffee, no sugar or milk, and a croissant",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a croissant",
+    "normalizedForm": "croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "a croissant"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V25b",
+  "line": "coffee, no sugar or milk, croissant",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "croissant",
+    "normalizedForm": "croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "croissant"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V26",
+  "line": "coffee with no sugar, two of them",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no sugar",
+    "normalizedForm": "no sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V27",
+  "line": "a sandwich, removed the crust and ate it",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "removed the crust",
+    "normalizedForm": "crust",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V28",
+  "line": "a smoothie, left out the banana, two cups",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "left out the banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V29",
+  "line": "a sandwich, skipped the mayo",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V29b",
+  "line": "a sandwich, picked off the tomato, chips",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V30",
+  "line": "a burger and fries, no ketchup, no mayo or mustard, and a shake",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "ketchup",
+    "normalizedForm": "ketchup",
+    "brand": ""
+   },
+   {
+    "rawText": "mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   },
+   {
+    "rawText": "mustard",
+    "normalizedForm": "mustard",
+    "brand": ""
+   },
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries",
+   "a shake"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V31",
+  "line": "a latte with no milk or oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V32",
+  "line": "pasta with no cheese or garlic bread",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "garlic bread",
+    "normalizedForm": "garlic bread",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta",
+   "garlic bread"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V33",
+  "line": "coffee, black no sugar or cream, plus 2 donuts",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   },
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "sugar",
+   "cream",
+   "2 donuts"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V34",
+  "line": "no cheese, a burger and fries",
+  "input": [
+   {
+    "rawText": "no cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "no cheese",
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V35",
+  "line": "a bowl of oatmeal, no brown sugar or raisins or walnuts",
+  "input": [
+   {
+    "rawText": "a bowl of oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "brown sugar",
+    "normalizedForm": "brown sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "raisins",
+    "normalizedForm": "raisins",
+    "brand": ""
+   },
+   {
+    "rawText": "walnuts",
+    "normalizedForm": "walnuts",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of oatmeal"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 V36",
+  "line": "a bowl of ramen, skipped the egg, ate the pork",
+  "input": [
+   {
+    "rawText": "a bowl of ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "pork",
+    "normalizedForm": "pork",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of ramen",
+   "pork"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V37",
+  "line": "a hot dog, left off the bun, onions",
+  "input": [
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   },
+   {
+    "rawText": "left off the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a hot dog",
+   "onions"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "refute-r1 V38",
+  "line": "a coffee no sugar milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "sugar",
+   "milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 V39",
+  "line": "a pizza, no anchovies, or olives, extra cheese",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   },
+   {
+    "rawText": "olives",
+    "normalizedForm": "olives",
+    "brand": ""
+   },
+   {
+    "rawText": "extra cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "olives",
+   "extra cheese"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 H1",
+  "line": "a sandwich, skipped the mayo but had chips",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 H2",
+  "line": "coffee, skipped lunch then had a burger",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 H3",
+  "line": "a burger, left off the bun, ate the patty and fries",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 H4",
+  "line": "eggs, skipped the toast but ate bacon",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 H5",
+  "line": "pasta, removed the crust, garlic bread",
+  "input": [
+   {
+    "rawText": "HEUR",
+    "normalizedForm": "HEUR",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "HEUR"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 N1",
+  "line": "a chicken burrito with no cheese",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheddar cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken burrito"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 N2",
+  "line": "a chicken burrito with no cheese or sour cream",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheddar cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken burrito",
+   "sour cream"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "refute-r1 N3",
+  "line": "a burger with no cheese, and a coke",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a coke"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a chicken burrito with no sour cream or cheese",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheddar cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken burrito"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a bowl of ramen, skipped the egg",
+  "input": [
+   {
+    "rawText": "a bowl of ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of ramen"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a slice of pepperoni pizza, picked off the pepperoni",
+  "input": [
+   {
+    "rawText": "a slice of pepperoni pizza",
+    "normalizedForm": "pepperoni pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "picked off the pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a slice of pepperoni pizza"
+  ],
+  "expectKinds": [
+   "removed"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "coffee with milk, no sugar",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "no sugar",
+    "normalizedForm": "no sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a burger with no bun and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "oatmeal with no sugar or 2 bananas",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "2 bananas",
+    "normalizedForm": "bananas",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal",
+   "2 bananas"
+  ],
+  "expectKinds": [
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "toast with no butter or jam or a coffee",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "a coffee"
+  ],
+  "expectKinds": [
+   "negated",
+   "negated"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a coffee, no, a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "chips and no-bake cookies",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "no-bake cookies",
+    "normalizedForm": "no-bake cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chips",
+   "no-bake cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "toast with no sugar added jam",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar added jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "sugar added jam"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "a latte no cappuccino",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "cappuccino",
+    "normalizedForm": "cappuccino",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cappuccino"
+  ],
+  "expectKinds": []
+ }
+]

@@ -123,13 +123,13 @@ describe('/api/nlp/parse lone no', () => {
       else llmReturns(c.split);
     };
 
-    test('`pizza, no anchovies` keeps the host: both reach the mapper (the removal is the next PR)', async () => {
+    test('`pizza, no anchovies` keeps the host and drops the negated part: the mapper is called once with `pizza`', async () => {
       arm(PIZZA);
       const response = await POST(parseRequest({ text: PIZZA.text }));
       expect(response.status).toBe(200);
       if (hit) expect(callStructuredLlm).not.toHaveBeenCalled();
-      expect(mapIngredientWithFallback).toHaveBeenCalledTimes(2);
-      expect(aiCalls()).toEqual(['pizza', 'anchovies']);
+      expect(mapIngredientWithFallback).toHaveBeenCalledTimes(1);
+      expect(aiCalls()).toEqual(['pizza']);
     });
 
     test('control: `a coffee, no, a tea` still swaps: the mapper is called once with `a tea`', async () => {
