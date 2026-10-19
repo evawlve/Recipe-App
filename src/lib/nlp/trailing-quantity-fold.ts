@@ -43,6 +43,19 @@
  * caller passes it, so self-correction is byte-unchanged. Fold kind `stock`. Named misses: food-named counts
  * (`ate 20 chips` in some shapes), `the kids ate 4`, word-number stocks (`two bags`), size stocks.
  *
+ * DOSE (S240, MGR 16:36Z). The segmenter emits the food-less dose of a protein shake (`two scoops`, `2 scoops`, or
+ * `two scoops in milk`) as its own item and the mapper invents a food for `scoops` (a phantom strawberry record). Only a
+ * PROTEIN shake (protein / whey / casein + shake|shakes; smoothies are out, their fruit would vanish) directly followed by
+ * `with <count> scoop(s)` fires, and it becomes `<n> scoop(s) of protein powder` with normalizedForm `protein powder`:
+ * the ready-to-drink shake record that `2 scoops of protein shake` retrieves bills 18-36 kcal where powder bills ~260.
+ * LIQUID REMAINDER: an `in <liquid>` tail (milk / water / juice, with milk modifiers, bare or measured `8 oz of milk`)
+ * stays its own item (rawText = the remainder, normalizedForm = the liquid's own words, never `scoops in milk`) and later
+ * folds read it; a non-food tail (`it`, `total`, `a shaker bottle`, `the morning`) is removed with the dose; any other tail
+ * (`my oatmeal`, `milk and a banana`) means no fire. NON-FIRES: every other host (sundae, coffee + packets, rice +
+ * servings, a plain shake), a host that already states a quantity, a host that is itself a `with` part (`a protein shake
+ * with milk with 2 scoops`), a dose naming a food. Fold kind `dose`. Named miss: `... in milk, 1 cup` leaves `1 cup`
+ * (the milk shares the shake's comma piece).
+ *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
  * case/punctuation variant that shares its key. Pure; imports only parseIngredientLine;
@@ -53,7 +66,7 @@ import { parseIngredientLine } from '@/lib/parse/ingredient-line';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
-  kind: 'segment' | 'gap' | 'partial' | 'stock';
+  kind: 'segment' | 'gap' | 'partial' | 'stock' | 'dose';
   /** Index of the folded-into item in the ORIGINAL input array. */
   targetIndex: number;
   /** The clause text (a segment's rawText, or the gap piece's tokens). */
@@ -92,6 +105,15 @@ const UNITS = new Set([
 const TAILOF_WORDS = new Set(['them', 'those', 'these', 'it', 'that']);
 const TAIL_SINGLE = new Set(['too', 'total', 'ish', 'worth']);
 const NEGATION = new Set(['no', 'not', 'nope', 'wait', 'sorry', 'actually', 'scratch', 'that', 'instead']);
+const PROTEIN_WORDS = new Set(['protein', 'whey', 'casein']);
+// A liquid a protein shake is mixed IN (the `in <liquid>` remainder survives only as one of these).
+const LIQUID_MODS = new Set(['almond', 'oat', 'skim', 'whole', 'soy', 'coconut', 'cashew', 'lactose', 'free', 'fat', 'nonfat', '2', '1', 'percent', 'low', 'unsweetened', 'vanilla', 'chocolate']);
+const REST_NONFOOD = new Set(['it', 'total', 'a', 'an', 'one', 'shaker', 'bottle', 'cup', 'glass', 'blender', 'morning', 'afternoon', 'evening', 'night', 'gym', 'car', 'all']);
+function isLiquid(w: string[]): boolean {
+  const last = w[w.length - 1];
+  if (!['milk', 'water', 'juice'].includes(last) || w.length > 3) return false;
+  return w.slice(0, -1).every(x => LIQUID_MODS.has(x) || (last === 'juice' && ['orange', 'apple'].includes(x)));
+}
 const FRACTION_WORDS: Record<string, number> = { quarter: 0.25, fourth: 0.25, third: 1 / 3 };
 const QTY_WORDS = new Set([...Object.keys(NUM_WORDS), 'half', 'couple', 'dozen', 'few', 'several']);
 const HEAD_STOP = new Set(['with', 'and', 'in', 'on', 'over', 'topped', 'plus']);
@@ -478,6 +500,8 @@ export function foldTrailingQuantityClauses<T extends Item>(
 
   const removed = new Set<number>();
   const folded = new Map<number, string>();
+  const dose = new Map<number, string>();
+  const doseNf = new Map<number, string>();
 
   const aloneInPiece = (t: number, also?: number): boolean => {
     const sp = spans[t];
@@ -491,10 +515,51 @@ export function foldTrailingQuantityClauses<T extends Item>(
     return true;
   };
 
+  // S240 (MGR 16:36Z, C70 flag 3): `a protein shake with two scoops in milk` - the segmenter emits the food-less dose (`two scoops`,
+  // `2 scoops`, `two scoops in milk`) as its own item and the mapper invents a food for `scoops`. A PROTEIN shake (protein / whey /
+  // casein + shake) right before `with <count> scoop(s)` is that many scoops of protein POWDER (measured: `2 scoops of protein shake`
+  // retrieves a ready-to-drink shake and bills 18-36 kcal; protein powder bills ~260). An `in <liquid>` remainder stays its own item
+  // (rawText AND normalizedForm = the liquid); any other remainder (`in total`, `in a shaker`) goes. Every other host is unchanged, and
+  // a host that is itself a `with` part (`a protein shake with milk with 2 scoops`) never fires.
+  for (let j = 1; j < n; j++) {
+    const h = j - 1;
+    const sh = spans[h];
+    const sj = spans[j];
+    if (!sh || !sj || removed.has(h) || folded.has(h)) continue;
+    const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
+    if (gapW.length !== 1 || gapW[0] !== 'with') continue;
+    if (toks[sh.start - 1]?.w === 'with' || toks[sh.start - 2]?.w === 'with') continue;
+    const hw = words(`${items[h].normalizedForm ?? ''} ${items[h].rawText}`);
+    if (!hw.some(x => PROTEIN_WORDS.has(x)) || !hw.some(x => x === 'shake' || x === 'shakes')) continue;
+    const jw = words(items[j].rawText);
+    const inAt = jw.indexOf('in');
+    const c = parseClause(inAt > 0 ? jw.slice(0, inAt) : jw);
+    if (!c || c.food.length || !c.unit || c.unit.replace(/s$/, '') !== 'scoop') continue;
+    if (!isValidTarget(items[h])) continue;
+    // The remainder after `in`: a liquid (bare or measured: `8 oz of milk`) survives as its own item; a non-food (`it`, `total`,
+    // `a shaker bottle`, `the morning`) goes; anything else (`my oatmeal`, `milk and a banana`) means do NOT fire.
+    const rest = inAt > 0 ? jw.slice(inAt + 1).filter(x => x !== 'my' && x !== 'the' && x !== 'some') : [];
+    const rc = rest.length ? parseClause(rest) : null;
+    const liquid = rest.length && isLiquid(rest) ? rest : rc && rc.food.length && isLiquid(rc.food) ? rc.food : null;
+    if (rest.length && !liquid && rest.some(x => !REST_NONFOOD.has(x))) continue;
+    const after = `${formatValue(c.value)} ${c.unit} of protein powder`;
+    folds.push({ kind: 'dose', targetIndex: h, clause: items[j].rawText, before: items[h].rawText, after });
+    folded.set(h, after);
+    doseNf.set(h, 'protein powder');
+    if (liquid) {
+      dose.set(j, rest.join(' '));
+      doseNf.set(j, liquid.join(' '));
+    } else {
+      removed.add(j);
+    }
+  }
+  // Later folds see the rewritten liquid (`… in milk, 1 cup` still folds the cup onto the milk).
+  const W: T[] = items.map((it, i) => (dose.has(i) ? { ...it, rawText: dose.get(i)!, normalizedForm: doseNf.get(i) ?? it.normalizedForm } : it));
+
   // Segment fold (shapes A, B).
   for (let j = 1; j < n; j++) {
     if (removed.has(j) || folded.has(j)) continue;
-    const jt = words(items[j].rawText);
+    const jt = words(W[j].rawText);
     const jc = consumedTokens(jt);
     const plain = parseClause(jt) ?? parseClause(jt, { fractions: true });
     const clause = plain ?? (jc && n === 2 ? parseClause(jc) ?? parseClause(jc, { fractions: true }) : null);
@@ -507,38 +572,38 @@ export function foldTrailingQuantityClauses<T extends Item>(
     } else {
       for (let k = j - 1; k >= 0; k--) {
         if (removed.has(k)) continue;
-        if (covers(items[k], clause.food)) { t = k; break; }
+        if (covers(W[k], clause.food)) { t = k; break; }
       }
     }
     if (t < 0 || removed.has(t) || folded.has(t)) continue;
     if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
-    if (!isValidTarget(items[t])) {
+    if (!isValidTarget(W[t])) {
       // S240 R3: a pure fraction over a STOCK item, on a two-item line (the stock and the clause) only; never an ADDITION
       // (`a cup of rice, and a half` is 1.5 cups).
-      const jw0 = words(items[j].rawText)[0];
+      const jw0 = words(W[j].rawText)[0];
       const additive = jw0 === 'and' || jw0 === 'plus' || (spans[j] && ['and', 'plus'].includes(toks[spans[j]!.start - 1]?.w ?? ''));
-      let st = isPureFraction(clause) && n === 2 && !additive ? scaleStock(items[t], clause.value) : null;
+      let st = isPureFraction(clause) && n === 2 && !additive ? scaleStock(W[t], clause.value) : null;
       if (st === null && n === 2) {
         // S240 R1: a consumed count, its verb in the segment or the two line tokens before it (`… , ate 2` -> [`2`]).
-        const own = consumedTokens(words(items[j].rawText));
+        const own = consumedTokens(words(W[j].rawText));
         const pre = spans[j] ? toks.slice(Math.max(0, spans[j]!.start - 3), spans[j]!.start).map(x => x.w) : [];
         const lineVerb = pre.length > 0 && CONSUME.has(pre[pre.length - 1]) && (pre.length < 2 || SUBJECT_OK.has(pre[pre.length - 2]) || toks[spans[j]!.start - 2]?.piece !== toks[spans[j]!.start - 1]?.piece);
         // `had 2 left` / `2 remaining` is what is LEFT, not what was eaten.
         const after = spans[j] ? toks[spans[j]!.end]?.w : undefined;
         const leftover = after === 'left' || after === 'remaining' || after === 'over';
         const cc = leftover ? null : own ? parseClause(own) : lineVerb ? clause : null;
-        if (cc) st = replaceStock(items[t], cc);
+        if (cc) st = replaceStock(W[t], cc);
       }
       if (st === null) continue;
-      folds.push({ kind: 'stock', targetIndex: t, clause: items[j].rawText, before: items[t].rawText, after: st });
+      folds.push({ kind: 'stock', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: st });
       folded.set(t, st);
       removed.add(j);
       continue;
     }
     if (clause.fractionWord || viaConsume) continue;
     if (clause.food.length === 0 && !aloneInPiece(t, j)) continue;
-    const after = rewrite(items[t], clause);
-    folds.push({ kind: 'segment', targetIndex: t, clause: items[j].rawText, before: items[t].rawText, after });
+    const after = rewrite(W[t], clause);
+    folds.push({ kind: 'segment', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after });
     folded.set(t, after);
     removed.add(j);
   }
@@ -566,42 +631,43 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const pe = parsePartialEat(first);
     if (pe) {
       // A clause that names no food belongs to a ONE-item line only (`a muffin, a coffee, ate the top only` is ambiguous).
-      if (pe.food.length > 0 ? !covers(items[t], pe.food) : n !== 1) continue;
-      const scaled = scaleByFactor(items[t], pe.factor);
+      if (pe.food.length > 0 ? !covers(W[t], pe.food) : n !== 1) continue;
+      const scaled = scaleByFactor(W[t], pe.factor);
       if (scaled === null) continue;
-      folds.push({ kind: 'partial', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after: scaled });
+      folds.push({ kind: 'partial', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after: scaled });
       folded.set(t, scaled);
       continue;
     }
     const clause = parseClause(first) ?? parseClause(first, { fractions: true });
     if (!clause) continue;
     if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
-    if (!isValidTarget(items[t])) {
+    if (!isValidTarget(W[t])) {
       // S240 R3: a pure fraction over a STOCK item, on a one-item line only; never an ADDITION (`and a half`).
-      let st = isPureFraction(clause) && n === 1 && first[0] !== 'and' && first[0] !== 'plus' ? scaleStock(items[t], clause.value) : null;
+      let st = isPureFraction(clause) && n === 1 && first[0] !== 'and' && first[0] !== 'plus' ? scaleStock(W[t], clause.value) : null;
       if (st === null && n === 1) {
         const own = consumedTokens(first);
         const cc = own ? parseClause(own) ?? parseClause(own, { fractions: true }) : null;
-        if (cc && isPureFraction(cc)) st = scaleStock(items[t], cc.value);
-        else if (cc) st = replaceStock(items[t], cc);
+        if (cc && isPureFraction(cc)) st = scaleStock(W[t], cc.value);
+        else if (cc) st = replaceStock(W[t], cc);
       }
       if (st === null) continue;
-      folds.push({ kind: 'stock', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after: st });
+      folds.push({ kind: 'stock', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after: st });
       folded.set(t, st);
       continue;
     }
     if (clause.fractionWord) continue;
-    if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(items[t], clause.food)) continue;
-    const after = rewrite(items[t], clause);
-    folds.push({ kind: 'gap', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after });
+    if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(W[t], clause.food)) continue;
+    const after = rewrite(W[t], clause);
+    folds.push({ kind: 'gap', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after });
     folded.set(t, after);
   }
 
   const out: T[] = [];
-  items.forEach((it, idx) => {
+  W.forEach((it, idx) => {
     if (removed.has(idx)) return;
     const after = folded.get(idx);
-    out.push(after !== undefined ? { ...it, rawText: after } : it);
+    const nf = after !== undefined ? doseNf.get(idx) : undefined;
+    out.push(after !== undefined ? { ...it, rawText: after, ...(nf ? { normalizedForm: nf } : {}) } : it);
   });
   return { items: out, folds };
 }
