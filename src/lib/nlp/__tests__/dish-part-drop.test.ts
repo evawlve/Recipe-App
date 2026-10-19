@@ -19,9 +19,9 @@ interface Case {
 const CASES = fixture as Case[];
 
 describe('dropDishParts - r5 fixture', () => {
-  test('the fixture is the cut it claims to be: 240 cases, 106 firing', () => {
+  test('the fixture is the cut it claims to be: 240 cases, 107 firing', () => {
     expect(CASES).toHaveLength(240);
-    expect(CASES.filter(c => c.dropped.length > 0)).toHaveLength(106);
+    expect(CASES.filter(c => c.dropped.length > 0)).toHaveLength(107);
   });
 
   test.each(CASES.map((c, i) => [`${c.src} #${i}: ${c.line}`, c] as const))('%s', (_name, c) => {
