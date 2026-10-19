@@ -166,6 +166,57 @@ export function isBarePluralRequest(
 }
 
 /**
+ * Bare-pair twin (C70 / S239, 2026-10-19). Diego's rule: a bare plural of a
+ * countable prepared food bills 2 units ("pancakes" === "2 pancakes"). When
+ * this predicate is true, hydrateAndSelectServing() serves the line as its
+ * DIGIT TWIN (local parsed copy with qty 2, rawLine prefixed "2 ") and keeps
+ * the twin's answer only when the twin billed PER PIECE (TWIN_TIER_ALLOW in
+ * hydration-lane.ts).
+ *
+ * KNOWN COSTS: bare `eggs` stays ONE egg (the parser reads it as unit=egg, so
+ * isBarePluralRequest is false); the wire quantity stays 1 with 2-piece grams
+ * (route, not this file); waffles / sausage links / tortillas / hotcakes /
+ * deviled eggs are OUT (their digit twins mis-bill today); a wrong-identity
+ * winner gets 2x of its piece; a rejected twin costs a second builder run
+ * (and any AI call the twin made is spent).
+ */
+const BARE_PAIR_BLOCKED_TOKENS = new Set([
+    'and', '&', 'with', 'n', "'n'", 'plus', 'or', '+',
+    'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'dozen',
+]);
+
+const PANCAKE_MODS = new Set([
+    'buttermilk', 'blueberry', 'chocolate', 'chip', 'banana', 'strawberry', 'protein',
+    'whole', 'wheat', 'gluten', 'free', 'gluten-free', 'homemade', 'plain', 'frozen',
+    'fluffy', 'vegan', 'oatmeal', 'pumpkin',
+]);
+
+const EGG_PREP = new Set([
+    'scrambled', 'fried', 'boiled', 'hard', 'soft', 'hard-boiled', 'soft-boiled',
+    'hardboiled', 'softboiled', 'poached', 'over', 'easy', 'medium', 'sunny', 'side',
+    'up', 'sunnyside',
+]);
+
+export function barePairTwin(parsed: ParsedIngredient | null, rawLine: string): boolean {
+    if (!parsed) return false;
+    if (!isBarePluralRequest(parsed, rawLine, parsed.name)) return false;
+    if ((parsed.multiplier ?? 1) !== 1) return false;
+    const tokens = (parsed.name || '').trim().toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return false;
+    if (tokens.some(t => BARE_PAIR_BLOCKED_TOKENS.has(t))) return false;
+    const last = tokens[tokens.length - 1];
+    if (last === 'pancakes') {
+        return tokens.slice(0, -1).every(t => PANCAKE_MODS.has(t));
+    }
+    if (tokens.length === 2 && tokens[0] === 'hot' && last === 'dogs') return true;
+    if (last === 'eggs') {
+        const earlier = tokens.slice(0, -1);
+        return earlier.length >= 1 && earlier.every(t => EGG_PREP.has(t));
+    }
+    return false;
+}
+
+/**
  * The record's own label serving, when it is usable as THE answer to a bare
  * request: single-serving-scale (3–400g) and not a per-100g placeholder.
  *
