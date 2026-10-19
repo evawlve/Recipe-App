@@ -652,6 +652,16 @@ const BREWED_TEA_EXEMPT_PATTERN = new RegExp(
         'latte', 'fog', 'long', 'island',
     ].join('|')})\\b`
 );
+// Every word BEFORE the head `tea` must be a known brewed-tea modifier: an unknown word (a brand such as `peace`, `gold peak`, `twisted`,
+// `honest`, or `kombucha`) means the line is not a plain brewed-tea ask. brand-lexicon.json misses some tea brands, so this is the
+// mechanism; the detectBrandInQuery skip stays as belt and braces.
+const BREWED_TEA_MODS = new Set([
+    'a', 'an', 'the', 'my', 'some', 'one', 'cup', 'cups', 'mug', 'mugs', 'of', 'pot', 'hot', 'warm', 'plain', 'black', 'green', 'white',
+    'oolong', 'herbal', 'chamomile', 'camomile', 'mint', 'peppermint', 'spearmint', 'earl', 'grey', 'gray', 'english', 'breakfast', 'irish',
+    'scottish', 'jasmine', 'decaf', 'decaffeinated', 'rooibos', 'hibiscus', 'ginger', 'lemongrass', 'loose', 'leaf', 'brewed', 'builders',
+    'regular', 'normal', 'strong', 'weak', 'fresh', 'tulsi', 'darjeeling', 'assam', 'ceylon', 'sencha', 'genmaicha', 'hojicha', 'pu', 'erh',
+    'puerh', 'barley', 'yerba',
+]);
 function brewedTeaReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
     const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
     const kcal = raw == null ? NaN : Number(raw);
@@ -659,6 +669,7 @@ function brewedTeaReason(queryName: string, macrosPer100g?: MacroPlausibilityInp
     const words = headClauseWords(queryName);
     const last = words[words.length - 1];
     if (last !== 'tea' && last !== 'teas') return null;
+    if (!words.slice(0, -1).every((w) => BREWED_TEA_MODS.has(w))) return null;
     const lowered = [queryName, headLine].map((t) => (t || '').toLowerCase());
     if (lowered.some((t) => BREWED_TEA_EXEMPT_PATTERN.test(t))) return null;
     if (detectBrandInQuery(queryName).isBranded) return null;
