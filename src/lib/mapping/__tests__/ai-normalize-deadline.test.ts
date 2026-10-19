@@ -159,4 +159,28 @@ describe('aiNormalizeIngredient overall deadline', () => {
         expect(mockCallStructuredLlm).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
     });
+
+    it('expiry aborts the signal it handed to callStructuredLlm', async () => {
+        mockCallStructuredLlm.mockReturnValueOnce(new Promise(() => undefined));
+        const p = aiNormalizeIngredient(LINE);
+        await jest.advanceTimersByTimeAsync(AI_NORMALIZE_DEADLINE_MS - 1);
+
+        expect(mockCallStructuredLlm).toHaveBeenCalledTimes(1);
+        const { signal } = mockCallStructuredLlm.mock.calls[0][0] as { signal?: AbortSignal };
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal?.aborted).toBe(false);
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(signal?.aborted).toBe(true);
+        expect(await p).toEqual({ status: 'error', reason: AI_NORMALIZE_DEADLINE_REASON });
+    });
+
+    it('a call that settles in time leaves its signal un-aborted', async () => {
+        mockCallStructuredLlm.mockResolvedValueOnce(GOOD);
+        expect((await aiNormalizeIngredient(LINE)).status).toBe('success');
+        const { signal } = mockCallStructuredLlm.mock.calls[0][0] as { signal?: AbortSignal };
+        expect(signal?.aborted).toBe(false);
+        await jest.advanceTimersByTimeAsync(AI_NORMALIZE_DEADLINE_MS);
+        expect(signal?.aborted).toBe(false);
+    });
 });

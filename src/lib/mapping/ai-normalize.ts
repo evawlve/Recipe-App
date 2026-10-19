@@ -13,29 +13,37 @@ import { logger } from '../logger';
 // returns the same { status: 'error' } shape an all-providers-failed call returns, so every
 // caller continues exactly as on that path (no hint; no cache write). The race wraps ONLY the
 // callStructuredLlm() promise, armed after the cache read, so a cache hit never arms a timer.
-// The losing call cannot be aborted without touching structured-client.ts: it runs to the end
-// of its chain and its answer is dropped unread, so nothing is saved after the deadline.
-// Known risks (refute §8 item 3; follow-up owner MGR, in structured-client.ts):
-//  - An expired call still QUEUED in the normalize semaphore is not dequeued: it later takes a
-//    slot, runs a full provider chain for nobody, and bills. The degraded window outlasts an
-//    incident by the drain time of those queued orphans (one chain length only at alpha volume).
+// On expiry the call is also ABORTED through callStructuredLlm()'s `signal`: a call still queued
+// for a normalize slot leaves the queue without taking one, an in-flight fetch is aborted, and
+// no retry or provider fallback starts, so an expired line starts no further request and frees
+// its slot at once. (Whether a provider still bills the aborted in-flight request is UNVERIFIED.)
+// The race stays, so the deadline holds even if a provider ignores the abort; an answer that
+// still arrives is dropped unread, so nothing is saved after the deadline.
+// Known risks:
 //  - Caller back-pressure is lost: arrivals are no longer throttled by completions.
 //  - A line that hits the deadline is hint-less, and the winner retrieval then finds can still
 //    be saved to FoodMapping and outlive the incident, exactly as on the all-fail path.
-//  - The mapping-summary "Normalize: N" count (and /api/ok logicalSuccesses) includes late
-//    answers that were dropped.
+//  - An aborted in-flight attempt counts one /api/ok `failures` (an attempt with no 2xx, as that
+//    counter is defined), exactly as a timed-out attempt does.
 export const AI_NORMALIZE_DEADLINE_MS = 10_000;
 // Distinct from PROMPT_EXAMPLE_ECHO_REASON on purpose: that is the one error reason a caller acts on.
 export const AI_NORMALIZE_DEADLINE_REASON = 'normalize_deadline_exceeded';
 
-/** Resolve to the call's result, or to null once AI_NORMALIZE_DEADLINE_MS has passed. Always clears its timer. */
-async function withNormalizeDeadline<T>(call: Promise<T>): Promise<T | null> {
+/**
+ * Resolve to the call's result, or to null once AI_NORMALIZE_DEADLINE_MS has passed. On expiry it
+ * also aborts the signal it handed to `start`. Always clears its timer.
+ */
+async function withNormalizeDeadline<T>(start: (signal: AbortSignal) => Promise<T>): Promise<T | null> {
+  const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      call,
+      start(controller.signal),
       new Promise<null>((resolve) => {
-        timer = setTimeout(() => resolve(null), AI_NORMALIZE_DEADLINE_MS);
+        timer = setTimeout(() => {
+          resolve(null);
+          controller.abort();
+        }, AI_NORMALIZE_DEADLINE_MS);
       }),
     ]);
   } finally {
@@ -244,11 +252,12 @@ export async function aiNormalizeIngredient(
     .join('\n');
 
   try {
-    const result = await withNormalizeDeadline(callStructuredLlm({
+    const result = await withNormalizeDeadline((signal) => callStructuredLlm({
       schema: RESPONSE_SCHEMA,
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
       purpose: 'normalize',
+      signal,
     }));
 
     if (result === null) {
