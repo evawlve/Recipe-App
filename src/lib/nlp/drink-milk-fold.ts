@@ -24,6 +24,11 @@
  *
  * - Second use (S202 cloud-35 F7): an `and` milk followed by `for|in|into` (or `with` + a possessive) + a non-meal, non-time
  *   word (`for my cereal`, `for the baby`) is a second use of the milk, so it is KEPT; with no such evidence it still folds.
+ * - Ice (S240, MGR reserve R2): an item that is ONLY ice (`ice`, `some|extra|light|lots of|crushed ice`, `ice cubes`; rawText AND
+ *   normalizedForm, never branded, never item 0) is dropped when the previous LIVE item is a DRINK (a word-list head, milk included),
+ *   it shares that item's comma piece, and the gap from the IMMEDIATELY preceding item's span is `with`, `w`, `and`, `on`, `over`,
+ *   `plus` (or `with|and some`, `with extra`). Never an article-led `an ice` / `a ice` (a UK dessert) and never a mis-split
+ *   `ice | cream`. Drop only (kind `ice`): the drink is untouched; the mapper would bill the ice as Water 237 g.
  *
  * PASS ORDER. Runs AFTER dropDishParts and BEFORE foldTrailingQuantityClauses (drop, dish, drink, fold,
  * fill). The SegmentationCache keeps the unfolded split.
@@ -40,7 +45,7 @@ export interface DrinkMilkFold {
   rawText: string;
   /** The drink item's (unchanged) rawText. */
   drink: string;
-  kind: 'fold' | 'duplicate';
+  kind: 'fold' | 'duplicate' | 'ice';
 }
 
 interface Item {
@@ -167,5 +172,42 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
     folds.push({ index: j, rawText: items[j].rawText, drink: items[d].rawText, kind: 'fold' });
   }
 
+  // S240 (MGR reserve R2): `a glass of lemonade with ice` - the segmenter emits `ice` as its own item and the mapper bills it as
+  // Water 237 g. An item that is ONLY ice (`ice`, `some ice`, `crushed ice`, `ice cubes`, ...) joined to the previous live item in
+  // the same comma piece by with / and / on / over / plus is dropped; the drink is left untouched. Item 0 never drops.
+  for (let j = 1; j < items.length; j++) {
+    if (drop.has(j) || (items[j].brand ?? '').trim() || !isIceOnly(items[j].rawText) || (items[j].normalizedForm && !isIceOnly(items[j].normalizedForm!))) continue;
+    let k = j - 1;
+    while (k >= 0 && drop.has(k)) k--;
+    const sk = spans[k];
+    const sj = spans[j];
+    if (k < 0 || !sk || !sj) continue;
+    // ...only after a DRINK (`oysters on ice`, `cake and ice` keep theirs), never an article-led `an ice` (a dessert in UK English),
+    // and never a mis-split `ice | cream`.
+    if (!words(`${items[k].normalizedForm ?? ''} ${items[k].rawText}`).some(x => DRINK_WORDS.has(x))) continue;
+    if (/^\s*(an?|one)\s+ice\b/i.test(items[j].rawText)) continue;
+    if (j + 1 < items.length && words(items[j + 1].rawText)[0] === 'cream') continue;
+    if (ptoks[sk.end - 1]?.piece !== ptoks[sj.start]?.piece) continue;
+    // the gap is read from the IMMEDIATELY preceding item's span (a folded milk sits between the drink and its ice)
+    const sp = spans[j - 1];
+    if (!sp) continue;
+    const gap = toks.slice(sp.end, sj.start).join(' ');
+    if (!ICE_GAP.has(gap)) continue;
+    drop.add(j);
+    folds.push({ index: j, rawText: items[j].rawText, drink: items[k].rawText, kind: 'ice' });
+  }
+
   return { items: items.filter((_, i) => !drop.has(i)), folds };
+}
+
+const DRINK_WORDS = new Set([
+  'milk', 'coke', 'cola', 'pepsi', 'sprite', 'soda', 'pop', 'water', 'seltzer', 'coffee', 'latte', 'lattes', 'cappuccino', 'americano', 'espresso',
+  'mocha', 'macchiato', 'tea', 'matcha', 'lemonade', 'juice', 'smoothie', 'smoothies', 'shake', 'milkshake', 'beer', 'wine', 'whiskey',
+  'whisky', 'bourbon', 'vodka', 'gin', 'rum', 'tequila', 'margarita', 'cocktail', 'drink', 'drinks', 'soda', 'gatorade', 'powerade',
+  'kombucha', 'cider', 'sangria', 'mojito', 'spritz', 'refresher', 'frappuccino', 'frappe', 'chai', 'brew', 'icee', 'slushie',
+]);
+const ICE_GAP = new Set(['with', 'w', 'and', 'on', 'over', 'plus', 'with some', 'with extra', 'and some']);
+function isIceOnly(text: string): boolean {
+  const w = words(text).filter(x => !['some', 'extra', 'light', 'lots', 'of', 'a', 'an', 'little', 'crushed', 'cubed', 'the'].includes(x));
+  return w.length >= 1 && w.length <= 2 && w[0] === 'ice' && (w.length === 1 || w[1] === 'cubes' || w[1] === 'cube');
 }
