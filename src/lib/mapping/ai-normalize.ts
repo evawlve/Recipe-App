@@ -4,6 +4,12 @@ import {
 } from './config';
 import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
 import { callStructuredLlm } from '../ai/structured-client';
+import { isPromptExampleEcho, PROMPT_EXAMPLE_ECHO_REASON } from './llm-output-guards';
+
+// Prompt-example echo guard (C70): the model sometimes answers a no-food line with
+// an example's name from SYSTEM_PROMPT. aiNormalizeIngredient() refuses that answer,
+// cached or fresh, and never saves it. Other callers inherit the guard unchanged:
+// `auto-map.ts` (recipe auto-map) and `pattern-learner.ts` (learnPatternsFromAI).
 
 type AiNormalizeSuccess = {
   status: 'success';
@@ -175,6 +181,10 @@ export async function aiNormalizeIngredient(
   // Check persistent database cache first
   const cached = await getAiNormalizeCache(rawLine);
   if (cached) {
+    // A poisoned row written before the guard existed: refuse it on replay too.
+    if (isPromptExampleEcho(rawLine, cached.normalizedName)) {
+      return { status: 'error', reason: PROMPT_EXAMPLE_ECHO_REASON };
+    }
     // getAiNormalizeCache's projection supplies isBranded, isMultiIngredient and
     // splitIngredients directly; the column defaults cover rows written before those
     // columns existed. The `(cached as any)` casts that used to sit here read fields
@@ -244,6 +254,11 @@ export async function aiNormalizeIngredient(
       isMultiIngredient: (parsed.is_multi_ingredient as boolean) ?? false,
       splitIngredients: (parsed.split_ingredients as unknown[] | null)?.filter((s: unknown) => typeof s === 'string') as string[] ?? undefined,
     };
+
+    // Echo of a prompt example for a line that names no such food: fail, do NOT cache.
+    if (isPromptExampleEcho(rawLine, normalizeResult.normalizedName)) {
+      return { status: 'error', reason: PROMPT_EXAMPLE_ECHO_REASON };
+    }
 
     // Log warning if multi-ingredient detected (mapped to first ingredient only)
     if (normalizeResult.isMultiIngredient && normalizeResult.splitIngredients?.length) {
