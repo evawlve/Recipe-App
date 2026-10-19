@@ -9,10 +9,13 @@
  * quantity, restates the same food or swaps a part, but never swaps one food for another.
  * The weak markers also include `no i mean`, `oh wait i mean`, `wait i mean`, `oh wait`, `i meant` and `correction`:
  * `no i mean` left the `no` as an impure gap word (so both values billed), and `correction` was absent.
+ * `ok fine` / `okay fine` and a lone `wait` comma piece (any punctuation around it) are weak too: they correct a
+ * quantity or restate the food, never swap one food for another.
  *
  * KINDS (each correction names the ORIGINAL index of the item it acted on).
  * - qty: a quantity-only item after the marker ("a bagel, actually make that two") rewrites the previous item's
- *   number ("2 bagel"); the quantity item goes.
+ *   number ("2 bagel"); the quantity item goes. It keeps the earlier item's unit when the new number is within
+ *   1/4..4x of it ("three slices of bacon, wait, four" -> "4 slices of bacon").
  * - qty-on-qty: the previous item is itself quantity-only ("two of them" then "three") - its number is rebuilt.
  * - restate-qty: the same head noun again with a quantity ("pizza ... actually 2 slices of pizza").
  * - restate-replace: the same head noun again with other words - the earlier item goes.
@@ -22,7 +25,8 @@
  * - trailing: the marker follows the last item ("two eggs, three eggs, actually").
  *
  * GUARDS. The gap between the two items must be a pure marker gap (no leftover words, no addition word such as
- * also / too / plus / another / extra / forgot / again / more, no `and`); a negated j ("no pickles") is left to
+ * also / too / plus / another / extra / forgot / again / more / second / third / fourth / 2nd / 3rd / 4th, no `and`;
+ * the trailing kind also skips a last item that holds an addition word); a negated j ("no pickles") is left to
  * the negated-part drop (row 3); a size-word j ("make it a double") is never a replacer unless quantity-only;
  * a dish that carries an on / with / in phrase is never swapped away; a determiner-led earlier item needs a
  * determiner-led (or branded) correction; the earlier item's brand carries to the correction only for a
@@ -72,9 +76,12 @@ const STRONG = [
   'wait no', 'no wait', 'scratch that', 'make that', 'make it', 'i mean', 'well actually', 'actually', 'sorry',
   'more like', 'but i only had', 'i only had',
   'no i mean', 'oh wait i mean', 'wait i mean', 'oh wait', 'i meant', 'correction',
+  // S240 (C68 S238 run 3, post-deploy 1): `a pint of ice cream, ok fine half a pint` - weak (never a food swap).
+  'ok fine', 'okay fine',
 ].map(m => m.split(' '));
 const SWAP_OK = new Set(['wait no', 'no wait', 'scratch that', 'make that', 'make it', '<no>']);
-const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more']);
+// S240: an ordinal is an addition (`a beer, wait, a second beer` is two beers).
+const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
 const SIZE_J = new Set([
   'double', 'triple', 'single', 'large', 'small', 'medium', 'big', 'regular', 'one', 'another', 'refill', 'grande',
   'venti', 'tall',
@@ -160,6 +167,12 @@ function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Se
   for (const [, ks] of byPiece) {
     if (ks.length === 1 && gap[ks[0]].w === 'no') {
       found.push('<no>');
+      covered.add(ks[0]);
+    }
+    // S240 (C68 S238 run 3): a comma piece that is exactly `wait` (`three slices of bacon, wait, four`) - weak: it corrects a
+    // quantity or restates the food, never swaps one food for another (it is not in SWAP_OK).
+    if (ks.length === 1 && gap[ks[0]].w === 'wait') {
+      found.push('<wait>');
       covered.add(ks[0]);
     }
   }
@@ -272,7 +285,10 @@ export function resolveSelfCorrections<T extends Item>(
         continue;
       }
       if (!alone) continue;
-      const nr = rewriteQ(cj, foodMinusQty(cur(t).rawText));
+      // S240: a unitless correction keeps the earlier item's own unit (`three slices of bacon, wait, four` -> 4 slices of bacon).
+      // Only within 1/4..4x of the earlier number: `a handful of almonds, actually 15` is 15 almonds, not 15 handfuls.
+      const inherit = !cj.unit && !!ct?.unit && ct.value > 0 && cj.value / ct.value >= 0.25 && cj.value / ct.value <= 4;
+      const nr = rewriteQ(inherit ? { ...cj, unit: ct!.unit } : cj, foodMinusQty(cur(t).rawText));
       note('qty', t, cur(t).rawText, nr);
       rew.set(t, { ...cur(t), rawText: nr });
       removed.add(j);
@@ -360,7 +376,8 @@ export function resolveSelfCorrections<T extends Item>(
   if (n >= 2 && sl && !removed.has(L)) {
     const tail = toks.slice(sl.end);
     const mk = markersIn(tail, STRONG);
-    if (mk.found.length && tail.length === mk.covered.size) {
+    // S240: an addition word in the last item (`two eggs, two more eggs, wait`) is not a correction.
+    if (mk.found.length && tail.length === mk.covered.size && !words(items[L].rawText).some(w => ADD.has(w))) {
       const hl = headOf(items[L]);
       const cl = parseClause(words(items[L].rawText));
       for (let k = L - 1; k >= 0; k--) {
