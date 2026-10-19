@@ -1,0 +1,1805 @@
+{
+ "about": "S240 C69 rowMeat: rewriteExtraPortions() cases; seg-draw = live segmenter draws 2026-10-19, refute-r1 = hand-made attack splits, lane-stop = quantity-clause hosts (lane s288 STOP)",
+ "cases": [
+  {
+   "src": "seg-draw",
+   "line": "a turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub with double meat",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub with double meat",
+     "normalizedForm": "turkey sub"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "seg-draw",
+   "line": "a turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a chicken burrito with double meat",
+   "input": [
+    {
+     "rawText": "a chicken burrito with double meat",
+     "normalizedForm": "chicken burrito with double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken burrito with double meat",
+     "normalizedForm": "chicken burrito with double meat"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "seg-draw",
+   "line": "a chicken burrito with double meat",
+   "input": [
+    {
+     "rawText": "a chicken burrito",
+     "normalizedForm": "chicken burrito",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken burrito",
+     "normalizedForm": "chicken burrito"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "chicken"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a steak bowl with double protein",
+   "input": [
+    {
+     "rawText": "a steak bowl",
+     "normalizedForm": "steak bowl",
+     "brand": ""
+    },
+    {
+     "rawText": "double protein",
+     "normalizedForm": "double protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a steak bowl",
+     "normalizedForm": "steak bowl"
+    },
+    {
+     "rawText": "double protein",
+     "normalizedForm": "steak"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a ham sandwich with extra meat",
+   "input": [
+    {
+     "rawText": "a ham sandwich",
+     "normalizedForm": "ham sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a ham sandwich",
+     "normalizedForm": "ham sandwich"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "ham"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a sub with double meat",
+   "input": [
+    {
+     "rawText": "a sub with double meat",
+     "normalizedForm": "sub with double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a sub with double meat",
+     "normalizedForm": "sub with double meat"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "seg-draw",
+   "line": "a sub with double meat",
+   "input": [
+    {
+     "rawText": "a sub with double meat",
+     "normalizedForm": "sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a sub with double meat",
+     "normalizedForm": "sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a chipotle bowl with double chicken",
+   "input": [
+    {
+     "rawText": "a chipotle bowl",
+     "normalizedForm": "chipotle bowl",
+     "brand": "Chipotle"
+    },
+    {
+     "rawText": "double chicken",
+     "normalizedForm": "chicken",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chipotle bowl",
+     "normalizedForm": "chipotle bowl"
+    },
+    {
+     "rawText": "double chicken",
+     "normalizedForm": "chicken"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "seg-draw",
+   "line": "a chipotle bowl with double chicken",
+   "input": [
+    {
+     "rawText": "a chipotle bowl",
+     "normalizedForm": "chipotle bowl",
+     "brand": "Chipotle"
+    },
+    {
+     "rawText": "double chicken",
+     "normalizedForm": "double chicken",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chipotle bowl",
+     "normalizedForm": "chipotle bowl"
+    },
+    {
+     "rawText": "double chicken",
+     "normalizedForm": "chicken"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a burger with double meat",
+   "input": [
+    {
+     "rawText": "a burger with double meat",
+     "normalizedForm": "burger with double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a burger with double meat",
+     "normalizedForm": "burger with double meat"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "seg-draw",
+   "line": "a footlong turkey sub with double meat and cheese",
+   "input": [
+    {
+     "rawText": "a footlong turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "cheese",
+     "normalizedForm": "cheese",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a footlong turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "cheese",
+     "normalizedForm": "cheese"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "a footlong turkey sub with double meat and cheese",
+   "input": [
+    {
+     "rawText": "a footlong turkey sub",
+     "normalizedForm": "footlong turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "cheese",
+     "normalizedForm": "cheese",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a footlong turkey sub",
+     "normalizedForm": "footlong turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "cheese",
+     "normalizedForm": "cheese"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "seg-draw",
+   "line": "chicken caesar wrap with extra protein",
+   "input": [
+    {
+     "rawText": "chicken caesar wrap with extra protein",
+     "normalizedForm": "chicken caesar wrap",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "chicken caesar wrap with extra protein",
+     "normalizedForm": "chicken caesar wrap"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "eggs and extra lean beef",
+   "input": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs",
+     "brand": ""
+    },
+    {
+     "rawText": "extra lean beef",
+     "normalizedForm": "extra lean beef",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs"
+    },
+    {
+     "rawText": "extra lean beef",
+     "normalizedForm": "extra lean beef"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "eggs and extra lean beef",
+   "input": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs",
+     "brand": ""
+    },
+    {
+     "rawText": "extra lean beef",
+     "normalizedForm": "lean beef",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs"
+    },
+    {
+     "rawText": "extra lean beef",
+     "normalizedForm": "lean beef"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger with double bacon",
+   "input": [
+    {
+     "rawText": "a burger",
+     "normalizedForm": "burger",
+     "brand": ""
+    },
+    {
+     "rawText": "double bacon",
+     "normalizedForm": "double bacon",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a burger",
+     "normalizedForm": "burger"
+    },
+    {
+     "rawText": "double bacon",
+     "normalizedForm": "bacon"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "pancakes with triple berry",
+   "input": [
+    {
+     "rawText": "pancakes",
+     "normalizedForm": "pancakes",
+     "brand": ""
+    },
+    {
+     "rawText": "triple berry",
+     "normalizedForm": "triple berry",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "pancakes",
+     "normalizedForm": "pancakes"
+    },
+    {
+     "rawText": "triple berry",
+     "normalizedForm": "triple berry"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a biscuit and extra crispy chicken",
+   "input": [
+    {
+     "rawText": "a biscuit",
+     "normalizedForm": "biscuit",
+     "brand": ""
+    },
+    {
+     "rawText": "extra crispy chicken",
+     "normalizedForm": "extra crispy chicken",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a biscuit",
+     "normalizedForm": "biscuit"
+    },
+    {
+     "rawText": "extra crispy chicken",
+     "normalizedForm": "extra crispy chicken"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a coffee and a double chocolate",
+   "input": [
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee",
+     "brand": ""
+    },
+    {
+     "rawText": "a double chocolate",
+     "normalizedForm": "double chocolate",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee"
+    },
+    {
+     "rawText": "a double chocolate",
+     "normalizedForm": "double chocolate"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a smoothie with extra protein",
+   "input": [
+    {
+     "rawText": "a smoothie",
+     "normalizedForm": "smoothie",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a smoothie",
+     "normalizedForm": "smoothie"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "oatmeal with extra protein",
+   "input": [
+    {
+     "rawText": "oatmeal",
+     "normalizedForm": "oatmeal",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "oatmeal",
+     "normalizedForm": "oatmeal"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a protein shake with extra protein",
+   "input": [
+    {
+     "rawText": "a protein shake",
+     "normalizedForm": "protein shake",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a protein shake",
+     "normalizedForm": "protein shake"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "greek yogurt with double protein",
+   "input": [
+    {
+     "rawText": "greek yogurt",
+     "normalizedForm": "greek yogurt",
+     "brand": ""
+    },
+    {
+     "rawText": "double protein",
+     "normalizedForm": "double protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "greek yogurt",
+     "normalizedForm": "greek yogurt"
+    },
+    {
+     "rawText": "double protein",
+     "normalizedForm": "double protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "an iced latte with extra protein",
+   "input": [
+    {
+     "rawText": "an iced latte",
+     "normalizedForm": "iced latte",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "an iced latte",
+     "normalizedForm": "iced latte"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a salad with extra protein",
+   "input": [
+    {
+     "rawText": "a salad",
+     "normalizedForm": "salad",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a salad",
+     "normalizedForm": "salad"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sandwich and a double meat burrito",
+   "input": [
+    {
+     "rawText": "a turkey sandwich",
+     "normalizedForm": "turkey sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "a double meat burrito",
+     "normalizedForm": "double meat burrito",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sandwich",
+     "normalizedForm": "turkey sandwich"
+    },
+    {
+     "rawText": "a double meat burrito",
+     "normalizedForm": "double meat burrito"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sandwich and a burrito with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sandwich",
+     "normalizedForm": "turkey sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "a burrito",
+     "normalizedForm": "burrito",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sandwich",
+     "normalizedForm": "turkey sandwich"
+    },
+    {
+     "rawText": "a burrito",
+     "normalizedForm": "burrito"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a chicken of the sea tuna sandwich with extra meat",
+   "input": [
+    {
+     "rawText": "a chicken of the sea tuna sandwich",
+     "normalizedForm": "tuna sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken of the sea tuna sandwich",
+     "normalizedForm": "tuna sandwich"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "tuna"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a chicken of the sea tuna sandwich with extra meat",
+   "input": [
+    {
+     "rawText": "a chicken of the sea tuna sandwich",
+     "normalizedForm": "chicken of the sea tuna sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken of the sea tuna sandwich",
+     "normalizedForm": "chicken of the sea tuna sandwich"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a hamburger with double meat",
+   "input": [
+    {
+     "rawText": "a hamburger",
+     "normalizedForm": "hamburger",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a hamburger",
+     "normalizedForm": "hamburger"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey bacon club with double meat",
+   "input": [
+    {
+     "rawText": "a turkey bacon club",
+     "normalizedForm": "turkey bacon club",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey bacon club",
+     "normalizedForm": "turkey bacon club"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "beef jerky and a sub with double meat",
+   "input": [
+    {
+     "rawText": "beef jerky",
+     "normalizedForm": "beef jerky",
+     "brand": ""
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "beef jerky",
+     "normalizedForm": "beef jerky"
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a coke and a double chicken",
+   "input": [
+    {
+     "rawText": "a coke",
+     "normalizedForm": "coke",
+     "brand": ""
+    },
+    {
+     "rawText": "a double chicken",
+     "normalizedForm": "double chicken",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a coke",
+     "normalizedForm": "coke"
+    },
+    {
+     "rawText": "a double chicken",
+     "normalizedForm": "chicken"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a coffee and an extra ham",
+   "input": [
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee",
+     "brand": ""
+    },
+    {
+     "rawText": "an extra ham",
+     "normalizedForm": "extra ham",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee"
+    },
+    {
+     "rawText": "an extra ham",
+     "normalizedForm": "ham"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a ham and turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a ham and turkey sub",
+     "normalizedForm": "ham and turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a ham and turkey sub",
+     "normalizedForm": "ham and turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "eggs, toast, and a sub with double meat",
+   "input": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs",
+     "brand": ""
+    },
+    {
+     "rawText": "toast",
+     "normalizedForm": "toast",
+     "brand": ""
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs"
+    },
+    {
+     "rawText": "toast",
+     "normalizedForm": "toast"
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "bacon, eggs, and a sub with double meat",
+   "input": [
+    {
+     "rawText": "bacon",
+     "normalizedForm": "bacon",
+     "brand": ""
+    },
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs",
+     "brand": ""
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "bacon",
+     "normalizedForm": "bacon"
+    },
+    {
+     "rawText": "eggs",
+     "normalizedForm": "eggs"
+    },
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a chicken caesar salad and a steak sandwich with extra meat",
+   "input": [
+    {
+     "rawText": "a chicken caesar salad",
+     "normalizedForm": "chicken caesar salad",
+     "brand": ""
+    },
+    {
+     "rawText": "a steak sandwich",
+     "normalizedForm": "steak sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken caesar salad",
+     "normalizedForm": "chicken caesar salad"
+    },
+    {
+     "rawText": "a steak sandwich",
+     "normalizedForm": "steak sandwich"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "steak"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a sub with double meat and a side of bacon",
+   "input": [
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "a side of bacon",
+     "normalizedForm": "bacon",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a sub",
+     "normalizedForm": "sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat"
+    },
+    {
+     "rawText": "a side of bacon",
+     "normalizedForm": "bacon"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "with double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "with double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub plus double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "plus double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "plus double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meats",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meats",
+     "normalizedForm": "double meats",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meats",
+     "normalizedForm": "double meats"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a chicken sandwich with extra patty",
+   "input": [
+    {
+     "rawText": "a chicken sandwich",
+     "normalizedForm": "chicken sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "extra patty",
+     "normalizedForm": "extra patty",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a chicken sandwich",
+     "normalizedForm": "chicken sandwich"
+    },
+    {
+     "rawText": "extra patty",
+     "normalizedForm": "extra patty"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a pepperoni pizza with extra meat",
+   "input": [
+    {
+     "rawText": "a pepperoni pizza",
+     "normalizedForm": "pepperoni pizza",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a pepperoni pizza",
+     "normalizedForm": "pepperoni pizza"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "pepperoni"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a fish taco with extra protein",
+   "input": [
+    {
+     "rawText": "a fish taco",
+     "normalizedForm": "fish taco",
+     "brand": ""
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "extra protein",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a fish taco",
+     "normalizedForm": "fish taco"
+    },
+    {
+     "rawText": "extra protein",
+     "normalizedForm": "fish"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meat, two of them",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meat, two of them",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub, two of them, with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub, with double meat, 2 of them",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "2 of them",
+     "normalizedForm": "2 of them",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "2 of them",
+     "normalizedForm": "2 of them"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with extra turkey",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "turkey",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with extra turkey",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "extra turkey",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with turkey",
+   "input": [
+    {
+     "rawText": "a turkey sub with turkey",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "turkey",
+     "normalizedForm": "turkey",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub with turkey",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "turkey",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 0
+  },
+  {
+   "src": "refute-r1",
+   "line": "a subway turkey sub with double meat",
+   "input": [
+    {
+     "rawText": "a subway turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": "Subway"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a subway turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub i made with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub i made",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub i made",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sandwich i made with turkey and extra turkey",
+   "input": [
+    {
+     "rawText": "a turkey sandwich i made",
+     "normalizedForm": "turkey sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "turkey",
+     "normalizedForm": "turkey",
+     "brand": ""
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "extra turkey",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sandwich i made",
+     "normalizedForm": "turkey sandwich"
+    },
+    {
+     "rawText": "turkey",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "extra turkey",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with no cheese and double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "no cheese",
+     "normalizedForm": "cheese",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "no cheese",
+     "normalizedForm": "cheese"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "refute-r1",
+   "line": "a turkey sub with double meat and a coffee, 2 cups",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    },
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee",
+     "brand": ""
+    },
+    {
+     "rawText": "2 cups",
+     "normalizedForm": "2 cups",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    },
+    {
+     "rawText": "a coffee",
+     "normalizedForm": "coffee"
+    },
+    {
+     "rawText": "2 cups",
+     "normalizedForm": "2 cups"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "lane-stop",
+   "line": "a turkey sub, two of them, with double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "lane-stop",
+   "line": "a turkey sub, 2 more, double meat",
+   "input": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub",
+     "brand": ""
+    },
+    {
+     "rawText": "2 more",
+     "normalizedForm": "2 more",
+     "brand": ""
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "double meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a turkey sub",
+     "normalizedForm": "turkey sub"
+    },
+    {
+     "rawText": "2 more",
+     "normalizedForm": "2 more"
+    },
+    {
+     "rawText": "double meat",
+     "normalizedForm": "turkey"
+    }
+   ],
+   "rewrites": 1
+  },
+  {
+   "src": "lane-stop",
+   "line": "a ham sandwich, two of them with extra meat",
+   "input": [
+    {
+     "rawText": "a ham sandwich",
+     "normalizedForm": "ham sandwich",
+     "brand": ""
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them",
+     "brand": ""
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "extra meat",
+     "brand": ""
+    }
+   ],
+   "expect": [
+    {
+     "rawText": "a ham sandwich",
+     "normalizedForm": "ham sandwich"
+    },
+    {
+     "rawText": "two of them",
+     "normalizedForm": "two of them"
+    },
+    {
+     "rawText": "extra meat",
+     "normalizedForm": "ham"
+    }
+   ],
+   "rewrites": 1
+  }
+ ]
+}
