@@ -88,3 +88,26 @@ describe('lines that must not change (master output, hard-coded)', () => {
     expect(parseIngredientLine(line)).toEqual(want);
   });
 });
+
+describe('a leading hedge before an article + count-noun or abbreviated measure (cloud-36 C14 / G11)', () => {
+  test.each<[string, string, string, string]>([
+    ['maybe a slice of pizza', 'a slice of pizza', 'pizza', 'slice'],
+    ['about a tsp. of salt', 'a tsp. of salt', 'salt', 'tsp'],
+    ['around a tbsp. of butter', 'a tbsp. of butter', 'butter', 'tbsp'],
+    ['roughly a bowl of rice', 'a bowl of rice', 'rice', 'bowl'],
+    ['just over a slice of pizza', 'a slice of pizza', 'pizza', 'slice'],
+  ])('%s parses like %s', (line, twin, name, unit) => {
+    expect(triple(line)).toEqual(triple(twin));
+    expect(triple(line).name).toBe(name);
+    expect(triple(line).unit).toBe(unit);
+  });
+
+  test.each<[string, object]>([
+    ['maybe a slice', {'qty': 1, 'multiplier': 1, 'unit': null, 'rawUnit': null, 'name': 'maybe a', 'notes': null, 'unitHint': 'slice'}],
+    ['like a pound cake', {'qty': 1, 'multiplier': 1, 'unit': null, 'rawUnit': null, 'name': 'like a pound cake', 'notes': null, 'unitHint': null}],
+    ['about a dozen eggs', {'qty': 12, 'multiplier': 1, 'unit': 'egg', 'rawUnit': 'eggs', 'name': 'eggs', 'notes': null, 'unitHint': null}],
+    ['like a second helping', {'qty': 1, 'multiplier': 1, 'unit': null, 'rawUnit': null, 'name': 'like a second helping', 'notes': null, 'unitHint': null}],
+  ])('%s is unchanged (master output)', (line, want) => {
+    expect(parseIngredientLine(line)).toEqual(want);
+  });
+});
