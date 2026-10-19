@@ -372,6 +372,44 @@ function rewriteDoublePortion(mergedTokens: string[]): void {
   }
 }
 
+// "a stack of pancakes" is a COUNT of pancakes, not one: it parsed as qty 1,
+// name "a stack of pancakes" and billed ONE 30 g pancake while its numeric twin
+// "3 pancakes" bills 114 g (measured, MEL). The shape collapses to that twin.
+//
+// Same POSITIONAL discipline and hedge offset `f` as rewriteDoublePortion above:
+// (a|an|one) + [short|full|tall] + stack + `of` + only pancake modifiers + the
+// noun `pancakes`/`pancake` as the LAST token (end-anchored, so "a stack of
+// pancakes with syrup" keeps its dish reading). PANCAKES ONLY: flapjacks resolve
+// to an oat bar, hotcakes and crepes have no count seed, and their digit twins
+// mis-bill (the same exclusion #529 made).
+//
+// DEFAULTS, stated as defaults: a bare stack = 3 is a convention; IHOP's full
+// stack is 5 (FS "Original Buttermilk Pancakes (3)" and "(5)"), so
+// short = 3, full = tall = 5. `tall` has no record behind it and is read as full.
+// PANCAKE_STACK_MODS restates PANCAKE_MODS in servings/bare-query-guard.ts (#529);
+// keep the two in step. Owner: C70 S239 run-5 row (7), snapshots/s239/run5/stack-refute.md.
+const PANCAKE_STACK_MODS = new Set([
+  'buttermilk', 'blueberry', 'chocolate', 'chip', 'banana', 'strawberry', 'protein',
+  'whole', 'wheat', 'gluten', 'free', 'gluten-free', 'homemade', 'plain', 'frozen',
+  'fluffy', 'vegan', 'oatmeal', 'pumpkin',
+]);
+const PANCAKE_STACK_COUNTS = new Map([['', '3'], ['short', '3'], ['full', '5'], ['tall', '5']]);
+function rewriteStackOfPancakes(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
+  if (!(LEADING_ARTICLES.has(at(0)) || at(0) === 'one')) return;
+  const size = PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '' ? 1 : 0;
+  if (at(1 + size) !== 'stack' || at(2 + size) !== 'of') return;
+  const nounAt = mergedTokens.length - 1;
+  const noun = mergedTokens[nounAt]?.toLowerCase();
+  const first = f + 3 + size;
+  if ((noun !== 'pancakes' && noun !== 'pancake') || nounAt < first) return;
+  for (let k = first; k < nounAt; k++) {
+    if (!PANCAKE_STACK_MODS.has(mergedTokens[k].toLowerCase())) return;
+  }
+  mergedTokens.splice(f, 3 + size, PANCAKE_STACK_COUNTS.get(size ? at(1) : '')!);
+}
+
 // A leading mass/volume word that OPENS A FOOD NAME rather than measuring one:
 // `pound cake`, `cup noodles`. The line has no quantity and no article, so the
 // word sits at mergedTokens[0], and until this guard every one of the three
@@ -739,7 +777,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
-  if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); }
+  if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
