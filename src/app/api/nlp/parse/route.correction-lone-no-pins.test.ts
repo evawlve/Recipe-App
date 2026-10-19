@@ -75,12 +75,12 @@ const LINES: Array<{
   {
     text: "pizza, no anchovies",
     split: [seg("pizza", "pizza"), seg("anchovies", "anchovies")],
-    expected: ["pizza", "anchovies"],
+    expected: ["pizza"],
   },
   {
     text: "a pizza, no anchovies",
     split: [seg("a pizza", "pizza"), seg("anchovies", "anchovies")],
-    expected: ["a pizza", "anchovies"],
+    expected: ["a pizza"],
   },
   {
     text: "chicken burrito, no sour cream or cheese",
@@ -89,12 +89,12 @@ const LINES: Array<{
       seg("sour cream", "sour cream"),
       seg("cheese", "cheese"),
     ],
-    expected: ["chicken burrito", "sour cream", "cheese"],
+    expected: ["chicken burrito"],
   },
   {
     text: "ramen, no egg",
     split: [seg("ramen", "ramen"), seg("egg", "egg")],
-    expected: ["ramen", "egg"],
+    expected: ["ramen"],
   },
   {
     text: "ramen no egg",
@@ -121,7 +121,7 @@ const LINES: Array<{
   {
     text: "a burger, no bun",
     split: [seg("a burger", "burger"), seg("bun", "bun")],
-    expected: ["a burger", "bun"],
+    expected: ["a burger"],
   },
   {
     text: "a latte, no wait, a cappuccino",
