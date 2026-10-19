@@ -2,6 +2,7 @@ import { parseQuantityTokens } from './quantity';
 import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
+import { expandUnitAbbreviation } from './unit-abbreviations';
 import { resolveLoosePourMeasures } from './loose-measures';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
@@ -856,6 +857,14 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     }
     // If no quantity found, default to qty=1 and continue parsing
     // This handles cases like "egg" or "butter" from FatSecret API
+  }
+
+  // Unit-letter / container abbreviations (`3 c popcorn`, `2 T peanut butter`):
+  // rewrite the token to the full unit word so the branch below reads it like
+  // its spelled-out twin. Guards 1-2 live here, guard 3 in the table's owner.
+  if (hadExplicitQty && i + 1 < mergedTokens.length && /^[a-z]/i.test(mergedTokens[i + 1])) {
+    const expanded = expandUnitAbbreviation(mergedTokens[i], mergedTokens[i + 1]);
+    if (expanded) mergedTokens[i] = expanded;
   }
 
   // Parse unit and multiplier
