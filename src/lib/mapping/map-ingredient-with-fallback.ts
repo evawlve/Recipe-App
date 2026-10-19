@@ -642,6 +642,12 @@ async function preflightIngredientLine(
     // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
     // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(preProcessLine);
+    // C70 row 4: searchQuery / confidenceGate / assessConfidence / rerankQuery all read
+    // parsed.name, so the regional dish word is rewritten here, not only in the keys.
+    if (parsed?.name) {
+        const rewrittenName = rewriteRegionalDishWords(parsed.name);
+        if (rewrittenName !== parsed.name) parsed = { ...parsed, name: rewrittenName };
+    }
     // LANE S: strip a partitive-`of` residue off ALL three branches, so the
     // parser path and the free-text/LLM paths (normalizedForm / preProcessLine,
     // which never pass through the parser's #350 skip) converge on the same

@@ -14,6 +14,7 @@ const mockGatherCandidates = jest.fn();
 const mockShouldNormalize = jest.fn();
 const mockAiNormalize = jest.fn();
 const mockAiSimplify = jest.fn();
+const mockConfidenceGate = jest.fn();
 
 jest.mock('../../db', () => {
     const emptyFor = (verb: string) =>
@@ -30,7 +31,11 @@ jest.mock('../../search/query-embedding', () => ({
 jest.mock('../mapping-logger');
 jest.mock('../gather-candidates', () => {
     const actual = jest.requireActual('../gather-candidates');
-    return { ...actual, gatherCandidates: (...a: unknown[]) => mockGatherCandidates(...a) };
+    return {
+        ...actual,
+        gatherCandidates: (...a: unknown[]) => mockGatherCandidates(...a),
+        confidenceGate: (...a: unknown[]) => { mockConfidenceGate(...a); return (actual.confidenceGate as (...x: unknown[]) => unknown)(...a); },
+    };
 });
 jest.mock('../validated-mapping-helpers', () => {
     const actual = jest.requireActual('../validated-mapping-helpers');
@@ -190,3 +195,44 @@ describe('M1: the LLM stages receive the rewritten text', () => {
         expect(trimmedArg).not.toContain(regional);
     });
 });
+
+describe('fold: parsed.name (searchQuery) carries the rewrite', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGatherCandidates.mockResolvedValue([]);
+        mockShouldNormalize.mockReturnValue({ shouldCallLlm: false, reason: 'test', confidence: 0.9 });
+        mockAiNormalize.mockResolvedValue({ status: 'error', reason: 'test' });
+        mockAiSimplify.mockResolvedValue(null);
+    });
+
+    // Seam spied: the `parsed` argument (2nd) handed to gatherCandidates(), which is the
+    // preflight parsed whose .name feeds searchQuery -> confidenceGate / assessConfidence / rerankQuery.
+    const parsedNames = () => mockGatherCandidates.mock.calls.map((c) => (c[1] as { name?: string } | null)?.name);
+
+    it.each([
+        ['bickies', 'cookies'],
+        ['two bickies', 'cookies'],
+        ['a cuppa', 'tea'],
+        ['a bacon butty', 'bacon sandwich'],
+        ['chicken parmy and chips', 'parmigiana'],
+    ])('%s -> parsed.name contains %s', async (line, american) => {
+        await mapIngredientWithFallback(line);
+        const names = parsedNames().filter(Boolean) as string[];
+        expect(names.length).toBeGreaterThan(0);
+        expect(names.every((n) => n.includes(american))).toBe(true);
+        expect(names.some((n) => /\b(bickies|cuppa|butty|parmy)\b/i.test(n))).toBe(false);
+    });
+
+    it.each(['chip butty', 'parma ham', 'a cuppa joe', 'two cookies'])('control %s: parsed.name unchanged', async (line) => {
+        await mapIngredientWithFallback(line);
+        const names = parsedNames().filter(Boolean) as string[];
+        expect(names.length).toBeGreaterThan(0);
+        for (const n of names) expect(n).toBe(rawParsedName(line));
+    });
+});
+
+// parsed.name as parseIngredientLine() gives it (no rewrite involved for the controls).
+import { parseIngredientLine } from '../../parse/ingredient-line';
+function rawParsedName(line: string): string | undefined {
+    return parseIngredientLine(line)?.name;
+}
