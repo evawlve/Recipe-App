@@ -1,0 +1,2094 @@
+[
+ {
+  "src": "s240 draw",
+  "line": "a dozen donuts for the office, i had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen donuts",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a dozen donuts for the office, i had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen donuts",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a pint of ice cream, i ate about a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a pint of ice cream, i ate about a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "about a third",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream",
+   "about a third"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a large pizza, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3 slices"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a large pizza, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3 slices"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a glass of lemonade with ice",
+  "input": [
+   {
+    "rawText": "a glass of lemonade",
+    "normalizedForm": "lemonade",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of lemonade"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "iced coffee with ice",
+  "input": [
+   {
+    "rawText": "iced coffee",
+    "normalizedForm": "iced coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "iced coffee"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a coke with ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "shaved ice with syrup",
+  "input": [
+   {
+    "rawText": "shaved ice",
+    "normalizedForm": "shaved ice",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "shaved ice",
+   "syrup"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "ice and water",
+  "input": [
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice",
+   "water"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "a smoothie with banana and ice",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "banana",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "iced tea, ice",
+  "input": [
+   {
+    "rawText": "iced tea",
+    "normalizedForm": "iced tea",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "iced tea",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "a coke with lots of ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "lots of ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a vodka soda on ice",
+  "input": [
+   {
+    "rawText": "a vodka soda",
+    "normalizedForm": "vodka soda",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a vodka soda"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "ice cream with sprinkles",
+  "input": [
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "sprinkles",
+    "normalizedForm": "sprinkles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice cream",
+   "sprinkles"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "a coffee with ice cream",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "water with ice cubes",
+  "input": [
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   },
+   {
+    "rawText": "ice cubes",
+    "normalizedForm": "ice cubes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "water"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a lemonade, and an ice pop",
+  "input": [
+   {
+    "rawText": "a lemonade",
+    "normalizedForm": "lemonade",
+    "brand": ""
+   },
+   {
+    "rawText": "an ice pop",
+    "normalizedForm": "ice pop",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a lemonade",
+   "an ice pop"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 attack",
+  "line": "soda with ice and a burger",
+  "input": [
+   {
+    "rawText": "soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "soda",
+   "a burger"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a cup of ice",
+  "input": [
+   {
+    "rawText": "a cup of ice",
+    "normalizedForm": "cup of ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice",
+  "input": [
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of ice",
+  "input": [
+   {
+    "rawText": "a bag of ice",
+    "normalizedForm": "bag of ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "dry ice",
+  "input": [
+   {
+    "rawText": "dry ice",
+    "normalizedForm": "dry ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "dry ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice chips",
+  "input": [
+   {
+    "rawText": "ice chips",
+    "normalizedForm": "ice chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "an italian ice",
+  "input": [
+   {
+    "rawText": "an italian ice",
+    "normalizedForm": "italian ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an italian ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice, then water",
+  "input": [
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice",
+   "water"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "water, then ice",
+  "input": [
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "water",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "two scoops of ice and a coke",
+  "input": [
+   {
+    "rawText": "two scoops of ice",
+    "normalizedForm": "scoops of ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two scoops of ice",
+   "a coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke and two scoops of ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops of ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "two scoops of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "jello and ice chips",
+  "input": [
+   {
+    "rawText": "jello",
+    "normalizedForm": "jello",
+    "brand": ""
+   },
+   {
+    "rawText": "ice chips",
+    "normalizedForm": "ice chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "jello",
+   "ice chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "jello and ice chips for lunch at the hospital",
+  "input": [
+   {
+    "rawText": "jello",
+    "normalizedForm": "jello",
+    "brand": ""
+   },
+   {
+    "rawText": "ice chips",
+    "normalizedForm": "ice chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "jello",
+   "ice chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "water with ice and lemon",
+  "input": [
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "lemon",
+    "normalizedForm": "lemon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "water",
+   "lemon"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice with lemon",
+  "input": [
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "lemon",
+    "normalizedForm": "lemon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice",
+   "lemon"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pretzel and an italian ice",
+  "input": [
+   {
+    "rawText": "a pretzel",
+    "normalizedForm": "pretzel",
+    "brand": ""
+   },
+   {
+    "rawText": "an italian ice",
+    "normalizedForm": "italian ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pretzel",
+   "an italian ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pretzel and a water ice",
+  "input": [
+   {
+    "rawText": "a pretzel",
+    "normalizedForm": "pretzel",
+    "brand": ""
+   },
+   {
+    "rawText": "a water ice",
+    "normalizedForm": "water ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pretzel",
+   "a water ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "fish and chips and an ice",
+  "input": [
+   {
+    "rawText": "fish and chips",
+    "normalizedForm": "fish and chips",
+    "brand": ""
+   },
+   {
+    "rawText": "an ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fish and chips",
+   "an ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "fish and chips and a ice",
+  "input": [
+   {
+    "rawText": "fish and chips",
+    "normalizedForm": "fish and chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fish and chips",
+   "a ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "cake and ice",
+  "input": [
+   {
+    "rawText": "cake",
+    "normalizedForm": "cake",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "cake",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burrito with ice",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burrito and a bag of ice",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "a bag of ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito",
+   "a bag of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "shaved ice and syrup",
+  "input": [
+   {
+    "rawText": "shaved ice",
+    "normalizedForm": "shaved ice",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "shaved ice",
+   "syrup"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "shaved ice with condensed milk",
+  "input": [
+   {
+    "rawText": "shaved ice",
+    "normalizedForm": "shaved ice",
+    "brand": ""
+   },
+   {
+    "rawText": "condensed milk",
+    "normalizedForm": "condensed milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "shaved ice",
+   "condensed milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke and ice cream",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "ice",
+   "cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke and ice, cream",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "ice",
+   "cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a smirnoff ice and wings",
+  "input": [
+   {
+    "rawText": "a smirnoff",
+    "normalizedForm": "smirnoff",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smirnoff",
+   "ice",
+   "wings"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "wings and a smirnoff ice",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "a smirnoff",
+    "normalizedForm": "smirnoff",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "wings",
+   "a smirnoff",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "wings and a smirnoff ice",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": "Smirnoff"
+   }
+  ],
+  "expectRawTexts": [
+   "wings",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "wings and smirnoff ice",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "smirnoff ice",
+    "normalizedForm": "ice",
+    "brand": "Smirnoff"
+   }
+  ],
+  "expectRawTexts": [
+   "wings",
+   "smirnoff ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "gum and ice breakers",
+  "input": [
+   {
+    "rawText": "gum",
+    "normalizedForm": "gum",
+    "brand": ""
+   },
+   {
+    "rawText": "ice breakers",
+    "normalizedForm": "ice breakers",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "gum",
+   "ice breakers"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a sandwich and a sparkling ice",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a sparkling ice",
+    "normalizedForm": "sparkling ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a sparkling ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a sandwich and an ice",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "an ice",
+    "normalizedForm": "ice",
+    "brand": "Sparkling Ice"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "an ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a sandwich plus ice",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": "Sparkling Ice"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a lemonade with ice, two glasses",
+  "input": [
+   {
+    "rawText": "a lemonade",
+    "normalizedForm": "lemonade",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "two glasses",
+    "normalizedForm": "glasses",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a lemonade",
+   "two glasses"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, about 20 oz",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "about 20 oz",
+    "normalizedForm": "about 20 oz",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "about 20 oz"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a smoothie with ice, i had half",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "i had half",
+    "normalizedForm": "i had half",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "i had half"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, wait no, a sprite with ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": [
+   "ice",
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, actually a sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with no ice and fries",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "ice",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with light ice and fries",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "light ice",
+    "normalizedForm": "light ice",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "fries"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke, light ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "light ice",
+    "normalizedForm": "light ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "light ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with a lot of ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a lot of ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a lot of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with 2 ice cubes",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 ice cubes",
+    "normalizedForm": "ice cubes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "2 ice cubes"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with a few ice cubes",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a few ice cubes",
+    "normalizedForm": "ice cubes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a few ice cubes"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with a handful of ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a handful of ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a handful of ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "mcdonalds large coke with ice and a big mac",
+  "input": [
+   {
+    "rawText": "mcdonalds large coke",
+    "normalizedForm": "large coke",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "mcdonalds large coke",
+   "a big mac"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade smoothie i made with banana, milk and ice",
+  "input": [
+   {
+    "rawText": "a homemade smoothie",
+    "normalizedForm": "homemade smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade smoothie",
+   "banana",
+   "milk"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a latte with oat milk and ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "an iced latte with oat milk over ice",
+  "input": [
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an iced latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "oysters on ice and a beer",
+  "input": [
+   {
+    "rawText": "oysters",
+    "normalizedForm": "oysters",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oysters",
+   "ice",
+   "a beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bourbon on the rocks and wings",
+  "input": [
+   {
+    "rawText": "a bourbon",
+    "normalizedForm": "bourbon",
+    "brand": ""
+   },
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bourbon",
+   "wings"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "whiskey over ice, two of them",
+  "input": [
+   {
+    "rawText": "whiskey",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "of them",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "whiskey",
+   "two of them"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice water with ice",
+  "input": [
+   {
+    "rawText": "ice water",
+    "normalizedForm": "ice water",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ice water"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a soda with ice and a soda with ice",
+  "input": [
+   {
+    "rawText": "a soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a soda",
+   "a soda"
+  ],
+  "expectKinds": [
+   "ice",
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a salad with chicken and ice",
+  "input": [
+   {
+    "rawText": "a salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad with chicken",
+   "chicken",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "coffee with milk and ice",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "milk"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "coffee with ice and milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "milk"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a shake with ice cream and ice",
+  "input": [
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake",
+    "brand": ""
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a shake",
+   "ice cream",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a margarita with salt and ice",
+  "input": [
+   {
+    "rawText": "a margarita",
+    "normalizedForm": "margarita",
+    "brand": ""
+   },
+   {
+    "rawText": "salt",
+    "normalizedForm": "salt",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a margarita",
+   "salt",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "chicken w ice",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chicken",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "frozen fruit and ice blended",
+  "input": [
+   {
+    "rawText": "frozen fruit",
+    "normalizedForm": "frozen fruit",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "frozen fruit",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "the ice and the cream",
+  "input": [
+   {
+    "rawText": "the ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "the cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the ice",
+   "the cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with no ice and fries",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "no ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "no ice",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with no ice and fries",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "no ice",
+    "normalizedForm": "no ice",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "no ice",
+   "fries"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke, wait no, a sprite with ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, wait no, a sprite with ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, actually a sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke with ice, wait no, a sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "a sprite"
+  ],
+  "expectKinds": [
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "an iced matcha latte with almond milk and ice",
+  "input": [
+   {
+    "rawText": "an iced matcha latte",
+    "normalizedForm": "iced matcha latte",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an iced matcha latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ]
+ },
+ {
+  "src": "refute-r1",
+  "line": "an iced latte with oat milk and extra ice",
+  "input": [
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "extra ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an iced latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ]
+ }
+]
