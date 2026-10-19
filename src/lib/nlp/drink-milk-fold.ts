@@ -24,6 +24,8 @@
  *
  * - Second use (S202 cloud-35 F7): an `and` milk followed by `for|in|into` (or `with` + a possessive) + a non-meal, non-time
  *   word (`for my cereal`, `for the baby`) is a second use of the milk, so it is KEPT; with no such evidence it still folds.
+ *   `in|into it` (singular drink) / `in|into them` (plural), with the drink first, and `for me|myself` when the drink's own span
+ *   holds no `for`, are not a second use (S240, cloud-36 C11).
  * - Ice (S240, MGR reserve R2): an item that is ONLY ice (`ice`, `some|extra|light|lots of|crushed ice`, `ice cubes`; rawText AND
  *   normalizedForm, never branded, never item 0) is dropped when the previous LIVE item is a DRINK (a word-list head, milk included),
  *   it shares that item's comma piece, and the gap from the IMMEDIATELY preceding item's span is `with`, `w`, `and`, `on`, `over`,
@@ -163,7 +165,15 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
         const obj = ptoks[q]?.piece === nx.piece ? ptoks[q]?.w : undefined;
         const use = (['for', 'in', 'into'].includes(nx.w) && !!obj && !NOT_A_USE.has(obj))
           || (nx.w === 'with' && poss && !!obj && !NOT_A_USE.has(obj));
-        if (use) continue;
+        // S240 (cloud-36 C11): a pronoun object folds only when its antecedent can only be the drink / the eater.
+        const head = words(items[d].normalizedForm || items[d].rawText).filter(x => x !== 'with' && x !== 'made' && x !== 'w');
+        const plural = /s$/.test(head.find(x => DRINK1.has(x)) ?? '');
+        const firstLive = ![...Array(d).keys()].some(q => !drop.has(q));
+        const drinkHasFor = toks.slice(sd.start, sd.end).includes('for');
+        const pron = !poss && obj !== undefined && (
+          (['in', 'into'].includes(nx.w) && firstLive && ((obj === 'it' && !plural) || (obj === 'them' && plural)))
+          || (nx.w === 'for' && (obj === 'me' || obj === 'myself') && !drinkHasFor));
+        if (use && !pron) continue;
       }
     }
 
