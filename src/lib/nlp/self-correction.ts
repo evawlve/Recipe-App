@@ -41,7 +41,7 @@
  * parts. The SegmentationCache keeps the uncorrected split.
  *
  * An addition is not a correction: an ADD word or `as well` the segmenter stripped out of j (`a ham sandwich too`) still
- * keeps j, and in the trailing block two items joined by `and` in one comma piece are two foods.
+ * keeps j, and in the trailing block an `and` in the gap right before the last item keeps the earlier reading (two foods).
  *
  * Pure; never mutates its input (items are copied before any write).
  */
@@ -427,18 +427,16 @@ export function resolveSelfCorrections<T extends Item>(
         if (removed.has(k)) continue;
         const hk = headOf(cur(k));
         if (hl && hk && sameWord(hl, hk) && cl) {
-          // S202 (cloud-35 F3): the main loop's `and` guard — two items joined by `and` in one comma piece
+          // S202 (cloud-35 F3): the main loop's `and` guard — two items joined by `and`
           // are two foods (`a beef taco and 2 chicken tacos, sorry`), not a reading and its correction.
           const sk = spans[k];
-          const onePiece = !!sk && toks[sk.start].piece === toks[sl.start].piece;
-          // S202 (cloud-35 F3): only an `and` joining k and L directly (no live item between) over two DIFFERENT foods;
-          // a null span keeps base, and the same food at a new quantity is still a correction (`two eggs and three eggs, sorry`).
-          let between = false;
-          for (let q = k + 1; q < L; q++) if (!removed.has(q)) between = true;
+          // An `and` in the gap right before L keeps k, as the main loop reads the gap before j — across a comma (`a beef taco, and 2
+          // chicken tacos, sorry`) or past a live item (`… and a coke and 2 chicken tacos, sorry`) (S240, cloud-36 C3). A null span keeps
+          // base, and the same food at a new quantity is still a correction (`two eggs and three eggs, sorry`).
           const fk = words(foodMinusQty(cur(k).rawText));
           const fl = words(foodMinusQty(items[L].rawText));
           const sameFood = fk.length === fl.length && fk.every((w, x) => sameWord(w, fl[x]));
-          if (sk && onePiece && !between && !sameFood && toks.slice(sk.end, sl.start).some(t => t.w === 'and')) break;
+          if (sk && !sameFood && toks.slice(prevEnd(L), sl.start).some(t => t.w === 'and')) break;
           removed.add(k);
           note('trailing', k, cur(k).rawText, '');
           break;

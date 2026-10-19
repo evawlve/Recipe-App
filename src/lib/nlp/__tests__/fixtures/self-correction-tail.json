@@ -1132,6 +1132,7 @@
    }
   ],
   "expectRawTexts": [
+   "a beef taco",
    "2 chicken tacos"
   ]
  },
@@ -1156,6 +1157,7 @@
    }
   ],
   "expectRawTexts": [
+   "a beef taco",
    "a coke",
    "2 chicken tacos"
   ]
