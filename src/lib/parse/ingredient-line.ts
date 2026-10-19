@@ -517,7 +517,7 @@ const ARTICLE_MEASURE_UNIT_SOURCE =
   '(?:\\s+of\\b|\\s*[,(]|\\s*$)';
 const FILLER_ADJECTIVE_RE = new RegExp(
   `^(\\s*(?:(?:${APPROXIMATOR_SOURCE}|about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+)?(?:a|an)\\s+)` +
-    `(?:good|full|solid|generous|scant)\\s+(?=${ARTICLE_MEASURE_UNIT_SOURCE})`,
+    '(?:good|full|solid|generous|scant)\\s+(?=\\S)',
   'i',
 );
 const APPROXIMATOR_RE = new RegExp(`^(\\s*)(?:${APPROXIMATOR_SOURCE})\\s+(?=\\S)`, 'i');
@@ -531,7 +531,10 @@ function articleMeasureFollows(rest: string): boolean {
   return c !== null && isMeasureToken(c[1]);
 }
 function stripFillerAdjective(line: string): string {
-  return line.replace(FILLER_ADJECTIVE_RE, '$1');
+  const m = FILLER_ADJECTIVE_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  return articleMeasureFollows(`a ${rest}`) ? m[1] + rest : line;
 }
 function stripApproximatorBeforeMeasure(line: string): string {
   const m = APPROXIMATOR_RE.exec(line);
