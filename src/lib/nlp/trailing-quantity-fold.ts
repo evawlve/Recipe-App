@@ -42,6 +42,9 @@
  * quarters, two thirds) parse only under the opt-in `parseClause(t, { fractions: true })`, as a PURE fraction; no other
  * caller passes it, so self-correction is byte-unchanged. Fold kind `stock`. Named misses: food-named counts
  * (`ate 20 chips` in some shapes), `the kids ate 4`, word-number stocks (`two bags`), size stocks.
+ * On a one-item line a stock whose clause the plain reader cannot parse (`drank half`, `finished 2`, `eaten 2`) is still
+ * re-counted / scaled through the consumed-count reading; a valid target is never rewritten that way (S240, cloud-38 D7).
+ * Named misses: `i've eaten 2`, a trailing time word (`drank half last night`).
  *
  * DOSE (S240, MGR 16:36Z). The segmenter emits the food-less dose of a protein shake (`two scoops`, `2 scoops`, or
  * `two scoops in milk`) as its own item and the mapper invents a food for `scoops` (a phantom strawberry record). Only a
@@ -639,7 +642,20 @@ export function foldTrailingQuantityClauses<T extends Item>(
       continue;
     }
     const clause = parseClause(first) ?? parseClause(first, { fractions: true });
-    if (!clause) continue;
+    if (!clause) {
+      // S240 (cloud-38 D7): a clause led by a verb the plain reader does not take (`drank half`, `finished 2`, `eaten 2`)
+      // still re-counts a STOCK on a one-item line; it never rewrites a valid target (#531 refute-r1 item 2: `drank` in the global
+      // reader made `a pitcher of beer, drank 2` two pitchers).
+      if (n !== 1 || isValidTarget(W[t])) continue;
+      const own = consumedTokens(first);
+      const cc = own ? parseClause(own) ?? parseClause(own, { fractions: true }) : null;
+      if (cc?.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
+      const st = !cc ? null : isPureFraction(cc) ? scaleStock(W[t], cc.value) : replaceStock(W[t], cc);
+      if (st === null) continue;
+      folds.push({ kind: 'stock', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after: st });
+      folded.set(t, st);
+      continue;
+    }
     if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
     if (!isValidTarget(W[t])) {
       // S240 R3: a pure fraction over a STOCK item, on a one-item line only; never an ADDITION (`and a half`).
