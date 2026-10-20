@@ -343,7 +343,7 @@ describe('MIGRATION GUARD — every hydration call site inside the mapper uses t
         // budget the caller never supplied, so a spread-only recursion spends a
         // fresh allowance per level. That trap is already documented for the
         // last-resort budget; the hydration one inherits it.
-        const recursive = callArgs(SRC, 'mapIngredientWithFallback')
+        const recursive = callArgs(SRC, 'mapIngredientWithFallbackCore') // a-bit-of row: the recursions call the private core, not the export
             .filter(a => a.includes('_skipFallback: true'));
         expect(recursive.length).toBe(2);
         for (const args of recursive) {
