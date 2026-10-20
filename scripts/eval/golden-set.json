@@ -6986,15 +6986,15 @@
       ],
       "grams": [
         3,
-        15
+        10
       ],
       "total": {
         "calories": [
           25,
-          135
+          90
         ]
       },
-      "notes": "PROSE SET (2026-08-17) — the sitting's sixth line. No gram table for 'a bit of' and none should be built (P4: strip for identity only). The truth claim is a CEILING: a bit of cooking oil is at most a tablespoon (14-15 g, ~130 kcal), so the band's top is the label serving and anything above it (a flat 100 g = 884 kcal) is the failure. Measured 15 g fdc_own_size_cached on fdc_173573 (2026-08-17, warm); bare 'avocado oil' 14-20 g bare_query_default / fdc_size_estimate. A cold FS landing at 1 tbsp = 14 g is in band."
+      "notes": "PROSE SET (2026-08-17); re-banded 2026-10-19 (Diego's reopen, this PR). The line now bills HALF the serving the pipeline picked: a leading 'a bit of' / 'a little bit of' scales grams and macros by 0.5 AFTER selection (floor and untiered servings excepted); still no gram table. The truth claim is about half a tablespoon (7-8 g, ~65 kcal) with a ceiling of 10 g / 90 kcal: anything above it (the old full 15 g label serving, or a flat 100 g = 884 kcal) is the failure. Picked serving measured 15 g fdc_own_size_cached on fdc_173573 (2026-08-17, warm), so the branch bills 7.5 g; bare 'avocado oil' 14-20 g bare_query_default / fdc_size_estimate halves to 7-10 g; a cold FS landing at 1 tbsp = 14 g halves to 7 g, all in band."
     },
     {
       "id": "n-prose-08",

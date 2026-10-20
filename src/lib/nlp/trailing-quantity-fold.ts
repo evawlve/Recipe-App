@@ -27,8 +27,12 @@
  * `a|an|one X` with no stated amount, and the scaled text (`1/2 sandwich`) must parse to the SAME unit
  * at exactly factor x the original quantity, else nothing fires. A clause that names a food must
  * covers() the owner; a clause naming none fires only on a ONE-item line. Fold kind `partial`.
- * Named misses: phrases outside the table, multi-item lines with an unnamed clause, a clause the
- * segmenter emits as its own item, stated-amount targets (`two slices of pizza, i gave half away`),
+ * The segmenter can also emit the clause as its OWN item (`a muffin` + [`ate the top only`]); the
+ * segment fold drops that item and scales under the same guards, unless it names a food the item
+ * before it does not cover, goes on past a connector (`shared half and a coke`), or follows a count
+ * stated between them (`two of them`), which the gap fold keeps (S240, MGR 00:16Z).
+ * Named misses: phrases outside the table, multi-item lines with an unnamed clause,
+ * stated-amount targets (`two slices of pizza, i gave half away`),
  * short comma-less lines (fast path).
  *
  * STOCK (S240, MGR reserve R1+R3). A consumption clause after a STOCK item - one that states its own amount and so
@@ -341,6 +345,8 @@ function rewrite(item: Item, clause: Clause): string {
 const PE_LEAD = new Set(['i', 'we', 'and', 'but', 'then', 'so', 'just', 'also']);
 const PE_STOP = new Set(['to', 'with', 'for', 'away', 'because', 'cause', 'since', 'and', 'but', 'so', 'in', 'on', 'at']);
 const PE_IT = new Set(['it', 'that', 'them', 'this']);
+// S240 (MGR 00:16Z refute-r1 M1): a connector inside a partial-eat ITEM, with words after it, means the item holds more than the clause.
+const PE_TAIL = new Set(['and', 'but', 'so', 'then', 'plus']);
 
 export interface PartialEat {
   factor: number;
@@ -696,6 +702,29 @@ export function foldTrailingQuantityClauses<T extends Item>(
   // Segment fold (shapes A, B).
   for (let j = 1; j < n; j++) {
     if (removed.has(j) || folded.has(j)) continue;
+    // S240 (MGR 00:16Z, C68 run 20): the partial-eat clause the segmenter emits as its OWN item (`a muffin` + [`ate the top only`]).
+    // It is no food - the AI lane mints one for it (`Top of Muffin`) - so it never bills. It scales the item before it under the gap
+    // fold's guards: a named food must be covered by that item; an unnamed clause belongs to a two-item line (the item + the clause).
+    // A clause naming a food the item before it does not cover (`a burger, shared half a pizza`) may BE that food, and an item that
+    // goes on past a connector (`shared half and a coke`) holds another food: both are left as typed. A count stated between the
+    // item and the clause (`a sandwich, two of them, gave half`) is the gap fold's: the clause is dropped there, never scaled.
+    const pw = words(W[j].rawText);
+    const pj = parsePartialEat(pw);
+    let pt = j - 1;
+    while (pt >= 0 && removed.has(pt)) pt--;
+    let lead = 0;
+    while (lead < pw.length && PE_LEAD.has(pw[lead])) lead++;
+    const tail = pw.slice(lead + 1).some((w, k, a) => PE_TAIL.has(w) && k + 1 < a.length);
+    if (pj && !tail && pt >= 0 && (pj.food.length === 0 || covers(W[pt], pj.food))) {
+      const between = spans[pt] && spans[j] ? toks.slice(spans[pt]!.end, spans[j]!.start).map(x => x.w) : null;
+      const clearGap = between !== null && between.every(w => CONNECTORS.has(w) || GAP_SKIP.has(w));
+      const owned = clearGap && !folded.has(pt) && (pj.food.length > 0 || n === 2);
+      const scaled = owned ? scaleByFactor(W[pt], pj.factor) : null;
+      if (scaled !== null) folded.set(pt, scaled);
+      folds.push({ kind: 'partial', targetIndex: pt, clause: W[j].rawText, before: W[pt].rawText, after: scaled ?? W[pt].rawText });
+      removed.add(j);
+      continue;
+    }
     const jt = words(W[j].rawText);
     const jc = consumedTokens(jt);
     const plain = parseClause(jt) ?? parseClause(jt, { fractions: true });
