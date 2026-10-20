@@ -69,6 +69,14 @@
  * servings, a plain shake), a host that already states a quantity, a host that is itself a `with` part (`a protein shake
  * with milk with 2 scoops`), a dose naming a food. Fold kind `dose`. Named miss: `... in milk, 1 cup` leaves `1 cup`
  * (the milk shares the shake's comma piece).
+ * A self-correction that runs first can rewrite or restate the dose; the dose is then the item right after the host's `with`, and a
+ * corrected-away `<count> scoop(s)` may sit in the gap (S240, cloud-38 D3).
+ *
+ * TOPPING (S240, cloud-38 D4, MGR 19:10Z). A food-less spoon measure (tbsp / tsp / tablespoon / teaspoon / spoonful) after a
+ * host named with `with` / `w` + a part (`oatmeal with peanut butter, 2 tbsp`) measures the topping the host already bills,
+ * so it never becomes the host's serving: a split-off one is dropped (fold kind `topping`), a gap one is left unread;
+ * `of it` / `of them` still folds onto the host, and a volume or count (`2 cups`) still folds. Named miss: a host that IS
+ * spoon-measured (`peanut butter with honey, 4 tbsp`) loses its stated amount.
  *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
@@ -81,7 +89,7 @@ import { normalizeUnitToken } from '@/lib/parse/unit';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
-  kind: 'segment' | 'gap' | 'partial' | 'stock' | 'dose';
+  kind: 'segment' | 'gap' | 'partial' | 'stock' | 'dose' | 'topping';
   /** Index of the folded-into item in the ORIGINAL input array. */
   targetIndex: number;
   /** The clause text (a segment's rawText, or the gap piece's tokens). */
@@ -510,6 +518,19 @@ function replaceStock(item: Item, c: Clause): string | null {
 }
 
 
+// S240 (cloud-38 D4, MGR 19:10Z): a food-less SPOON measure after a dish named with its topping (`oatmeal with peanut butter,
+// 2 tbsp`) measured the topping, which the host already bills: it never becomes the dish's serving (`2 tbsp of oatmeal with
+// peanut butter`). A split-off one is dropped (fold kind `topping`); a gap one is left unread. A volume or count still folds.
+const SPOON_UNITS = new Set(['tbsp', 'tsp', 'tablespoon', 'teaspoon', 'spoonful']);
+function spoonOnTopping(host: Item, clause: Clause, said: string[]): boolean {
+  if (clause.food.length || !clause.unit || !SPOON_UNITS.has(clause.unit.replace(/s$/, ''))) return false;
+  // `2 tbsp of it` points back at the host itself.
+  if (said.some(x => TAILOF_WORDS.has(x))) return false;
+  const w = words(host.rawText);
+  const wi = w.findIndex(x => x === 'with' || x === 'w');
+  return wi > 0 && wi < w.length - 1;
+}
+
 export function foldTrailingQuantityClauses<T extends Item>(
   lineKey: string,
   items: T[],
@@ -565,9 +586,23 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const h = j - 1;
     const sh = spans[h];
     const sj = spans[j];
-    if (!sh || !sj || removed.has(h) || folded.has(h)) continue;
-    const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
-    if (gapW.length !== 1 || gapW[0] !== 'with') continue;
+    if (!sh || removed.has(h) || folded.has(h)) continue;
+    if (toks[sh.end]?.w !== 'with') continue;
+    // S240 (cloud-38 D3): a self-correction runs first and can rewrite the dose to text the line never had (`two scoops, ok,
+    // three scoops` -> `3 scoops`, no span), or keep a restated dose whose gap still holds the corrected-away one (`with 2 scoops,
+    // sorry, 3 scoops in milk`). Either way the dose is the item right after the host's `with`.
+    if (sj) {
+      const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
+      if (gapW.length !== 1) {
+        // The corrected-away clause is the WHOLE rest of the host's `with` piece (`half a scoop`, `2 big scoops`), a scoop of powder at most.
+        const wp = toks[sh.end].piece;
+        const priorW = toks.slice(sh.end + 1, sj.start).filter(x => x.piece === wp).map(x => x.w);
+        const pIn = priorW.indexOf('in');
+        const prior = parseClause(pIn > 0 ? priorW.slice(0, pIn) : priorW);
+        if (!prior || prior.food.some(x => !PROTEIN_WORDS.has(x) && x !== 'powder') || !prior.unit || prior.unit.replace(/s$/, '') !== 'scoop') continue;
+        if (toks[sj.start - 1]?.piece === wp) continue; // the restated dose must start a later piece than the corrected one
+      }
+    }
     if (toks[sh.start - 1]?.w === 'with' || toks[sh.start - 2]?.w === 'with') continue;
     const hw = words(`${items[h].normalizedForm ?? ''} ${items[h].rawText}`);
     if (!hw.some(x => PROTEIN_WORDS.has(x)) || !hw.some(x => x === 'shake' || x === 'shakes')) continue;
@@ -681,6 +716,11 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     if (clause.fractionWord || viaConsume) continue;
     if (clause.food.length === 0 && !aloneInPiece(t, j)) continue;
+    if (spoonOnTopping(W[t], clause, words(W[j].rawText))) {
+      folds.push({ kind: 'topping', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: W[t].rawText });
+      removed.add(j);
+      continue;
+    }
     const after = rewrite(W[t], clause);
     folds.push({ kind: 'segment', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after });
     folded.set(t, after);
@@ -763,6 +803,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     if (clause.fractionWord) continue;
     if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(W[t], clause.food)) continue;
+    if (spoonOnTopping(W[t], clause, first)) continue;
     const after = rewrite(W[t], clause);
     folds.push({ kind: 'gap', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after });
     folded.set(t, after);
