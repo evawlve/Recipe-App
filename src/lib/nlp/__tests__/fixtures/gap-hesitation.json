@@ -1,0 +1,1407 @@
+[
+ {
+  "src": "seat",
+  "line": "a large pizza, um, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, um, ate half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, um, i gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a muffin, ok fine, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a large pizza, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two slices of toast, er, one slice",
+  "input": [
+   {
+    "rawText": "1 slice of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 slice of toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, um, a ham sandwich",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coffee, oh, two of them",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, okay, ate half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a sandwich, um, a coffee",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "pizza, ok, 2 cokes",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cokes",
+    "normalizedForm": "cokes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "2 cokes",
+    "normalizedForm": "cokes"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "pizza, ok, 2 cokes",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pizza, um, i had 3 beers",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pizza, um, 3 slices, and a coke",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pizza, um, i had 3 slices, and a coke",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, um, a coffee, ate half",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "1/2 coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burger, um, 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burger, um, 2",
+  "input": [
+   {
+    "rawText": "2 burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burger, 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pizza, um, 2 of them",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pizza, 2 of them",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "an ok burger",
+  "input": [
+   {
+    "rawText": "an ok burger",
+    "normalizedForm": "ok burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "an ok burger",
+    "normalizedForm": "ok burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burger, ok, an ok burger",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "an ok burger",
+    "normalizedForm": "ok burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "an ok burger",
+    "normalizedForm": "ok burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a burger, an ok one, 2 of them",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 (re-pinned: #570 re-counts a count-noun stock (6 eggs, had 2), cloud-38 D13)",
+  "line": "6 eggs, nope, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 (re-pinned: #570 re-counts a count-noun stock (6 eggs, had 2), cloud-38 D13)",
+  "line": "6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, oops, half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, nope, ate 10",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, ate 10",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, oops, and a half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, and a half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a cup of rice, um, and a half",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a cup of rice, and a half",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a box of cereal, nope, had 2 bowls",
+  "input": [
+   {
+    "rawText": "a box of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bowls of cereal",
+    "normalizedForm": "cereal"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a box of cereal, had 2 bowls",
+  "input": [
+   {
+    "rawText": "a box of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bowls of cereal",
+    "normalizedForm": "cereal"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, nope, had 2 left",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bag of chips, had 2 left",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two slices of toast, um, three slices",
+  "input": [
+   {
+    "rawText": "3 slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two slices of toast, um, three",
+  "input": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two slices of toast, um, three",
+  "input": [
+   {
+    "rawText": "3 slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two slices of toast, three",
+  "input": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coffee, nope, a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, oops, a small pizza",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "a small pizza",
+    "normalizedForm": "small pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   },
+   {
+    "rawText": "a small pizza",
+    "normalizedForm": "small pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "3 eggs, um, 2 eggs",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "3 eggs, um, 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "3 eggs, 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, oh, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, well, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, like, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, ok so, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, um, um, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, um i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza um, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, and um, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, uhm, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, hm, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, for lunch, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, um, for lunch",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, um, and a second pizza",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a large pizza, nope, ate none of it",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, nope, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, ok, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, nope fine, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, okay fine, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a muffin, oops, ate the top only for breakfast",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ }
+]

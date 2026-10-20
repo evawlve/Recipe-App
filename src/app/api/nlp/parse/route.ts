@@ -255,8 +255,8 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
-    const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
-    const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
+    const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
+    const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
     const { rewriteExtraPortions } = await import('@/lib/nlp/extra-portion');
@@ -378,6 +378,14 @@ export async function POST(req: NextRequest) {
         // return it unchanged after ~1-5s. Skip straight to mapping.
         items = [singleItemFromText(text)!];
         segmenter = 'single';
+        // S240 (MGR 17:30Z relay 3): the fast path never segments, so dropNegatedParts never sees
+        // `a cobb salad without the egg`; the removal clause is stripped here instead.
+        const solo = stripSoloRemoval(items[0].rawText);
+        if (solo) {
+          items = [{ ...items[0], rawText: solo.head }];
+          // audit: the stripped head keys the cache and MappingEventLog, so this line is the only record of the clause.
+          logger.audit('nlp_parse.solo_removal', { head: solo.head, clause: solo.clause });
+        }
       } else {
         // AI-first segmentation (prompt/model/schema live in
         // src/lib/nlp/ai-segmenter.ts, versioned by SEG_PARSER_VERSION): the
@@ -491,6 +499,13 @@ export async function POST(req: NextRequest) {
         items = se.items;
         if (se.echoes.length > 0) {
           logger.info('nlp_parse.segmenter_echo_drop', { count: se.echoes.length });
+        }
+        // S240 (MGR 18:44Z (2)): an item carrying its own personal `i made with` marker is the dish; retrieval reads its head. After the
+        // echo drop (which reads the host's full normalizedForm) and before the fold.
+        const mw = readMadeWithHeads(lineKey, items);
+        items = mw.items;
+        if (mw.heads.length > 0) {
+          logger.info('nlp_parse.made_with_head', { count: mw.heads.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
