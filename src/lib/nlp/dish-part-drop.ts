@@ -19,7 +19,7 @@
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
- * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12).
+ * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12); a meal frame (for/at/as [filler] <meal>, or this morning) ends a provenance phrase (S240, cloud-38 D1).
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
  * with the parts gone the fold can attach `two slices` to the dish. The SegmentationCache keeps the
@@ -110,7 +110,20 @@ const CLAUSE = new Set([
 ]);
 // A clause word right after one of these is a part's provenance (`chicken from dinner`), not a new clause.
 const PROVENANCE = new Set(['from', 'since', 'over']);
+const MEAL_FRAME = new Set(['for', 'at', 'as']);
+const MEALS = new Set(['breakfast', 'lunch', 'dinner', 'brunch', 'snack', 'supper', 'dessert']);
 const JOINERS = new Set(['and', 'or', 'plus', 'with']);
+// A meal frame: `for|at|as` + up to two filler words (`my`, `a late`, `today's`) + a meal word (plural ok), or `this morning`.
+function mealFrameAt(g: string[], i: number): boolean {
+  if (g[i] === 'this') return g[i + 1] === 'morning';
+  if (!MEAL_FRAME.has(g[i])) return false;
+  for (let k = i + 1; k <= i + 3 && k < g.length; k++) {
+    const x = g[k];
+    if (MEALS.has(x) || MEALS.has(x.replace(/e?s$/, ''))) return true;
+    if (JOINERS.has(x) || PROVENANCE.has(x) || STEP.has(x) || MEAL_FRAME.has(x)) return false;
+  }
+  return false;
+}
 const STEP = new Set(['then', 'later', 'after', 'afterwards', 'afterward', 'followed']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
@@ -261,6 +274,9 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
         const w = g[i];
         const q = gs + i;
         if (inProv && (JOINERS.has(w) || STEP.has(w) || bounds.has(q) || ptoks[q]?.piece !== ptoks[q - 1]?.piece)) inProv = false;
+        // S240 (cloud-38 D1): a meal frame (`for lunch`, `at dinner`, `as a snack`) ends the provenance phrase, and its meal word
+        // then ends the list (`chicken from yesterday for lunch and steak for dinner` keeps the steak).
+        if (inProv && !PROVENANCE.has(g[i - 1] ?? '') && mealFrameAt(g, i)) inProv = false;
         if (PROVENANCE.has(w)) { inProv = true; continue; }
         if (!inProv && CLAUSE.has(w)) { clause = true; break; }
       }

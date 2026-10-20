@@ -10,7 +10,8 @@
  *   C. DROPS the clause (`maybe four`, `two of them`) - the food is billed at its default
  *      quantity and the user's number vanishes.
  * Shapes A and B are folded by the SEGMENT fold, shape C by the GAP fold (the clause is
- * found in the text between two items' spans). Either way the quantity is written onto the
+ * found in the text between two items' spans; a comma group made only of hesitation words - `um`, `ok`, `oops`, `oh`,
+ * `well`, `ok fine` - is skipped when choosing the clause, S240, cloud-38 D8). Either way the quantity is written onto the
  * item it belongs to as a canonical prefix (`1 cup of leftover tuna salad`, `1/2 chicken tikka
  * masala`), which parseIngredientLine() already understands.
  *
@@ -55,6 +56,8 @@
  * servings, a plain shake), a host that already states a quantity, a host that is itself a `with` part (`a protein shake
  * with milk with 2 scoops`), a dose naming a food. Fold kind `dose`. Named miss: `... in milk, 1 cup` leaves `1 cup`
  * (the milk shares the shake's comma piece).
+ * A self-correction that runs first can rewrite or restate the dose; the dose is then the item right after the host's `with`, and a
+ * corrected-away `<count> scoop(s)` may sit in the gap (S240, cloud-38 D3).
  *
  * TOPPING (S240, cloud-38 D4, MGR 19:10Z). A food-less spoon measure (tbsp / tsp / tablespoon / teaspoon / spoonful) after a
  * host named with `with` / `w` + a part (`oatmeal with peanut butter, 2 tbsp`) measures the topping the host already bills,
@@ -392,6 +395,10 @@ const STOCK_UNITS = new Set([
   'oz', 'lb', 'g', 'kg', 'ml', 'l', 'liter', 'cup', 'pint', 'quart', 'gallon', 'tbsp', 'tsp', 'bag', 'can', 'bottle', 'box',
   'jar', 'container', 'tub', 'bowl', 'plate',
 ]);
+/** Spoken hesitation / self-repair interjections (S240, MGR 17:14Z): self-correction.ts's QUANTITY-ONLY marker tier IS this Set. */
+export const HESITATION = new Set(['er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok']);
+// The gap fold skips a little more (plain filler that is no correction marker); gap-only words go HERE, never into HESITATION.
+const GAP_SKIP = new Set([...HESITATION, 'oh', 'well', 'uhm', 'hm', 'ah']);
 const ORDINAL_CUE = new Set(['first', 'second', 'another', 'again', 'next']);
 
 /**
@@ -544,9 +551,23 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const h = j - 1;
     const sh = spans[h];
     const sj = spans[j];
-    if (!sh || !sj || removed.has(h) || folded.has(h)) continue;
-    const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
-    if (gapW.length !== 1 || gapW[0] !== 'with') continue;
+    if (!sh || removed.has(h) || folded.has(h)) continue;
+    if (toks[sh.end]?.w !== 'with') continue;
+    // S240 (cloud-38 D3): a self-correction runs first and can rewrite the dose to text the line never had (`two scoops, ok,
+    // three scoops` -> `3 scoops`, no span), or keep a restated dose whose gap still holds the corrected-away one (`with 2 scoops,
+    // sorry, 3 scoops in milk`). Either way the dose is the item right after the host's `with`.
+    if (sj) {
+      const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
+      if (gapW.length !== 1) {
+        // The corrected-away clause is the WHOLE rest of the host's `with` piece (`half a scoop`, `2 big scoops`), a scoop of powder at most.
+        const wp = toks[sh.end].piece;
+        const priorW = toks.slice(sh.end + 1, sj.start).filter(x => x.piece === wp).map(x => x.w);
+        const pIn = priorW.indexOf('in');
+        const prior = parseClause(pIn > 0 ? priorW.slice(0, pIn) : priorW);
+        if (!prior || prior.food.some(x => !PROTEIN_WORDS.has(x) && x !== 'powder') || !prior.unit || prior.unit.replace(/s$/, '') !== 'scoop') continue;
+        if (toks[sj.start - 1]?.piece === wp) continue; // the restated dose must start a later piece than the corrected one
+      }
+    }
     if (toks[sh.start - 1]?.w === 'with' || toks[sh.start - 2]?.w === 'with') continue;
     const hw = words(`${items[h].normalizedForm ?? ''} ${items[h].rawText}`);
     if (!hw.some(x => PROTEIN_WORDS.has(x)) || !hw.some(x => x === 'shake' || x === 'shakes')) continue;
@@ -648,6 +669,8 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     const first = groups.find(g => {
       if (g.every(x => CONNECTORS.has(x))) return false;
+      // S240 (cloud-38 D8): a hesitation piece (`, um,` / `, ok fine,`) is not the clause; the next piece is.
+      if (g.every(x => GAP_SKIP.has(x) || CONNECTORS.has(x)) || (g.length === 2 && HESITATION.has(g[0]) && g[1] === 'fine')) return false;
       if (g.length === 2 && FRAME_WORDS.has(g[0]) && MEAL_WORDS.has(g[1])) return false;
       return true;
     });
