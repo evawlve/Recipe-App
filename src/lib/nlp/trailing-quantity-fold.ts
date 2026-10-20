@@ -10,7 +10,8 @@
  *   C. DROPS the clause (`maybe four`, `two of them`) - the food is billed at its default
  *      quantity and the user's number vanishes.
  * Shapes A and B are folded by the SEGMENT fold, shape C by the GAP fold (the clause is
- * found in the text between two items' spans). Either way the quantity is written onto the
+ * found in the text between two items' spans; a comma group made only of hesitation words - `um`, `ok`, `oops`, `oh`,
+ * `well`, `ok fine` - is skipped when choosing the clause, S240, cloud-38 D8). Either way the quantity is written onto the
  * item it belongs to as a canonical prefix (`1 cup of leftover tuna salad`, `1/2 chicken tikka
  * masala`), which parseIngredientLine() already understands.
  *
@@ -388,6 +389,10 @@ const STOCK_UNITS = new Set([
   'oz', 'lb', 'g', 'kg', 'ml', 'l', 'liter', 'cup', 'pint', 'quart', 'gallon', 'tbsp', 'tsp', 'bag', 'can', 'bottle', 'box',
   'jar', 'container', 'tub', 'bowl', 'plate',
 ]);
+/** Spoken hesitation / self-repair interjections (S240, MGR 17:14Z): self-correction.ts's QUANTITY-ONLY marker tier IS this Set. */
+export const HESITATION = new Set(['er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok']);
+// The gap fold skips a little more (plain filler that is no correction marker); gap-only words go HERE, never into HESITATION.
+const GAP_SKIP = new Set([...HESITATION, 'oh', 'well', 'uhm', 'hm', 'ah']);
 const ORDINAL_CUE = new Set(['first', 'second', 'another', 'again', 'next']);
 
 /**
@@ -640,6 +645,8 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     const first = groups.find(g => {
       if (g.every(x => CONNECTORS.has(x))) return false;
+      // S240 (cloud-38 D8): a hesitation piece (`, um,` / `, ok fine,`) is not the clause; the next piece is.
+      if (g.every(x => GAP_SKIP.has(x) || CONNECTORS.has(x)) || (g.length === 2 && HESITATION.has(g[0]) && g[1] === 'fine')) return false;
       if (g.length === 2 && FRAME_WORDS.has(g[0]) && MEAL_WORDS.has(g[1])) return false;
       return true;
     });
