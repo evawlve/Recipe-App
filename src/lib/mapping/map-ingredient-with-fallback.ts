@@ -10,6 +10,7 @@
 
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
+import { VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS, pickVolumeUnits } from '../units/volume-density';
 import { normalizeIngredientName, rewriteRegionalDishWords } from './normalization-rules';
 import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
@@ -889,6 +890,8 @@ async function preflightIngredientLine(
 
         // Calculate grams from parsed quantity using standard conversions
         const WATER_UNIT_GRAMS: Record<string, number> = {
+            // Lane B1b large-volume family (pint/quart/gallon/litre) from the owner volume-density.ts; first so every private cell below wins unchanged.
+            ...pickVolumeUnits(VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS),
             'cup': 237, 'cups': 237,
             'ml': 1, 'milliliter': 1, 'milliliters': 1,
             'l': 1000, 'liter': 1000, 'liters': 1000,
