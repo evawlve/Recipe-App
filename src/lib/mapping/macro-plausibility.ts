@@ -732,6 +732,48 @@ function dietDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInp
     return `rank:diet_drink_kcal_${round1(kcal)}_over_${DIET_DRINK_MAX_KCAL}`;
 }
 
+// Poured-drink dry panel (S242 / D20): a brewed drink line (`espresso`, `masala chai`, `thai iced tea`, `vietnamese iced coffee`) can
+// resolve to a DRY-MIX, CONCENTRATE or FOOD record (241 / 375 / 333 / 220 kcal/100g) while drink records sit in the pool.
+// HEAD rule, as in the S202 prepared-drink rule: the drink word must be the query's head noun, so `coffee cake`, `espresso beans` and
+// `chai concentrate` never fire. Ceiling = PREPARED_DRINK_MAX_KCAL: USDA brewed coffee and tea are ~1 kcal/100g and espresso ~9; a sweetened
+// milky pour (Thai iced tea, Vietnamese iced coffee, masala chai with milk and sugar) stays near 60-110. Instant or dry mixes run 330-450.
+// RANK-TIME ONLY: the reason lives in assessRankTimePlausibility() alone and demotes through the floor-hit partition. The save gate,
+// Step 3d and assessMacroPlausibility() are untouched (S202 refute r2 F1/F2). The HEAD is read from queryName ONLY (brewed-tea refute M1),
+// and the exemption words are read over the WHOLE queryName and headLine. There is no brand skip: no poured brewed drink, branded or not,
+// sits above 150, and the brand IS the drink (`twisted tea original`). Spirits are deliberately absent: the pool has no spirit record to
+// promote (FdcFood holds none), so demoting `Gin Gin` would only promote a non-alcoholic gin and tonic.
+// It does NOT extend PREPARED_DRINK_HEADS: preparedDrinkHeadWord() also drives the bare-drink cup rule in bare-query-guard.ts.
+const POURED_DRINK_CEILINGS: Record<string, number> = {
+    coffee: PREPARED_DRINK_MAX_KCAL, espresso: PREPARED_DRINK_MAX_KCAL, americano: PREPARED_DRINK_MAX_KCAL, brew: PREPARED_DRINK_MAX_KCAL,
+    tea: PREPARED_DRINK_MAX_KCAL, chai: PREPARED_DRINK_MAX_KCAL,
+};
+// Trailing words that never name the drink, on top of headClauseWords()' size/temperature list (`twisted tea original`, `espresso shot`).
+const POURED_DRINK_TRAILING = new Set(['original', 'classic', 'shot', 'shots', 'black', 'unsweetened']);
+// `heavy cream in coffee`, `honey in my tea`, `scotch on the rocks`: the food before in/into/on/over is the item, the drink is its place.
+const POURED_DRINK_PLACE_BREAK = /\s(?:in|into|on|over)\s/;
+const POURED_DRINK_EXEMPT_PATTERN = new RegExp(
+    `\\b(?:${[
+        'instant', 'powder', 'powdered', 'mix', 'ground', 'grounds', 'beans?', 'concentrate', 'syrup', 'creamer', 'protein', 'keto',
+        'bulletproof', 'butter', 'buttered', 'mct', 'whipped', 'dalgona', 'cake', 'candy', 'liqueur', 'ice cream', 'gelato', 'frozen',
+        'latte', 'frappuccino', 'frappe', 'milkshake', 'shake', 'smoothie', 'boba', 'bubble', 'matcha', 'leaves', 'bag', 'bags', 'pods?', 'k cups?', 'kcups?', 'island', 'hard', 'spiked', 'boozy',
+    ].join('|')})\\b`
+);
+function pouredDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= PREPARED_DRINK_MAX_KCAL) return null;
+    const words = headClauseWords((queryName || '').toLowerCase().split(POURED_DRINK_PLACE_BREAK)[0]);
+    while (words.length > 1 && POURED_DRINK_TRAILING.has(words[words.length - 1])) words.pop();
+    if (words.length === 0) return null;
+    const last = words[words.length - 1];
+    const head = last.endsWith('s') && POURED_DRINK_CEILINGS[last.slice(0, -1)] != null ? last.slice(0, -1) : last;
+    const ceiling = Object.prototype.hasOwnProperty.call(POURED_DRINK_CEILINGS, head) ? POURED_DRINK_CEILINGS[head] : undefined;
+    if (ceiling == null || kcal <= ceiling) return null;
+    const lowered = [queryName, headLine].map((t) => (t || '').toLowerCase());
+    if (lowered.some((t) => POURED_DRINK_EXEMPT_PATTERN.test(t))) return null;
+    return `rank:poured_drink_kcal_${round1(kcal)}_over_${ceiling}`;
+}
+
 /**
  * Rank-time plausibility: composes assessMacroPlausibility with the SAME
  * deterministic floors as the save-time gate (collectDeterministicFloorReasons
@@ -760,12 +802,14 @@ export function assessRankTimePlausibility(
     const drinkReason = preparedDrinkReason(queryName, macrosPer100g, headLine);
     const teaReason = brewedTeaReason(queryName, macrosPer100g, headLine);
     const dietReason = dietDrinkReason(queryName, macrosPer100g, headLine);
+    const pouredReason = pouredDrinkReason(queryName, macrosPer100g, headLine);
     const reasons = [
         ...base.reasons,
         ...floorReasons,
         ...(drinkReason ? [drinkReason] : []),
         ...(teaReason ? [teaReason] : []),
         ...(dietReason ? [dietReason] : []),
+        ...(pouredReason ? [pouredReason] : []),
     ];
 
     const floorHit =
@@ -773,6 +817,7 @@ export function assessRankTimePlausibility(
         drinkReason != null ||
         teaReason != null ||
         dietReason != null ||
+        pouredReason != null ||
         base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
     const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
 
