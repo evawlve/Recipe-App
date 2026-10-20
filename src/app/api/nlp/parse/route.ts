@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
     const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
-    const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
+    const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
     const { rewriteExtraPortions } = await import('@/lib/nlp/extra-portion');
@@ -499,6 +499,13 @@ export async function POST(req: NextRequest) {
         items = se.items;
         if (se.echoes.length > 0) {
           logger.info('nlp_parse.segmenter_echo_drop', { count: se.echoes.length });
+        }
+        // S240 (MGR 18:44Z (2)): an item carrying its own personal `i made with` marker is the dish; retrieval reads its head. After the
+        // echo drop (which reads the host's full normalizedForm) and before the fold.
+        const mw = readMadeWithHeads(lineKey, items);
+        items = mw.items;
+        if (mw.heads.length > 0) {
+          logger.info('nlp_parse.made_with_head', { count: mw.heads.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
