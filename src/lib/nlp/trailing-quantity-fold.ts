@@ -49,6 +49,9 @@
  * On a one-item line a stock whose clause the plain reader cannot parse (`drank half`, `finished 2`, `eaten 2`) is still
  * re-counted / scaled through the consumed-count reading; a valid target is never rewritten that way (S240, cloud-38 D7).
  * Named misses: `i've eaten 2`, a trailing time word (`drank half last night`).
+ * A span-less item the segmenter restated as a fraction of the item before it (`a bottle of wine, um, drank half` ->
+ * [`a bottle of wine`] + [`half a bottle of wine`]) scales that item and goes, only when the line states the same fraction
+ * behind a consume verb and nothing but filler follows (S340, C68's deploy-3 read).
  * A COUNT-stock container right before `of` (bag / pack / box / case / tray / sleeve / ...) states the stock even where the
  * parser reads no unit (`a family size bag of chips`, `a pack of gum`); a consumed whole count re-counts its food (`3 chips`),
  * in the gap and the segment shape, and a clause naming the stock's own food (`ate 3 chips`) counts too (S240, cloud-38 D5).
@@ -460,6 +463,25 @@ function consumedTokens(t: string[]): string[] | null {
   return t.slice(i + 1);
 }
 
+// S340 (MGR 20:30Z): the fraction a span-less item restates of an earlier item (`half a bottle of wine` of `a bottle of wine`).
+const RESTATE_FRAC: [string[], number][] = [
+  [['three', 'quarters'], 0.75], [['a', 'quarter'], 0.25], [['one', 'quarter'], 0.25], [['half'], 0.5], [['1/2'], 0.5],
+  [['1/4'], 0.25], [['3/4'], 0.75],
+];
+
+/** The factor when `restated` is exactly a fraction of `host` (`half [of] [a|an|the] <host's own words>`), else null. */
+function restatedFraction(restated: string, host: string): number | null {
+  const rw = words(restated);
+  const hw = words(host);
+  const core = ['a', 'an', 'one', 'the'].includes(hw[0] ?? '') ? hw.slice(1) : hw;
+  const f = RESTATE_FRAC.find(([p]) => p.every((w, k) => rw[k] === w));
+  if (!f || core.length === 0) return null;
+  let rest = rw.slice(f[0].length);
+  if (rest[0] === 'of') rest = rest.slice(1);
+  if (['a', 'an', 'the'].includes(rest[0] ?? '')) rest = rest.slice(1);
+  return rest.length === core.length && rest.every((w, k) => w === core[k]) ? f[1] : null;
+}
+
 /** The stock item replaced by the consumed count (`2 eggs`, `3 slices of pizza`), or null. */
 function stockBeforeOf(item: Item): boolean {
   const w = words(item.rawText);
@@ -624,6 +646,52 @@ export function foldTrailingQuantityClauses<T extends Item>(
   }
   // Later folds see the rewritten liquid (`… in milk, 1 cup` still folds the cup onto the milk).
   const W: T[] = items.map((it, i) => (dose.has(i) ? { ...it, rawText: dose.get(i)!, normalizedForm: doseNf.get(i) ?? it.normalizedForm } : it));
+
+  // S340 (MGR 20:30Z, C68's deploy-3 read): the segmenter can RESTATE a consumed fraction as a whole item with no span in the
+  // line (`a bottle of wine, um, drank half` -> [`a bottle of wine`] + [`half a bottle of wine`]), and both bill. A span-less item
+  // that is exactly a fraction of the live item before it scales that item and goes - only when, after the item, the line states
+  // the same fraction behind a consume verb (`drank half`), and nothing but filler follows that clause. Any other span-less item is
+  // left as typed.
+  for (let j = 1; j < n; j++) {
+    if (spans[j] || removed.has(j)) continue;
+    let t = j - 1;
+    while (t >= 0 && removed.has(t)) t--;
+    if (t < 0 || !spans[t] || folded.has(t)) continue;
+    const f = restatedFraction(W[j].rawText, W[t].rawText);
+    if (f === null) continue;
+    // j's words occur nowhere in the line: the left-to-right span walk can leave a stated, reordered item span-less (refute r1 M1).
+    const jw = words(W[j].rawText);
+    if (toks.some((_, s0) => s0 + jw.length <= toks.length && jw.every((w, k) => toks[s0 + k].w === w))) continue;
+    let end = toks.length;
+    for (let k = t + 1; k < n; k++) if (spans[k]) { end = spans[k]!.start; break; }
+    let said = false;
+    let lastPiece = -1;
+    let group: string[] = [];
+    const groups: string[][] = [];
+    for (const tk of toks.slice(spans[t]!.end, end)) {
+      if (tk.piece !== lastPiece) { group = []; groups.push(group); lastPiece = tk.piece; }
+      group.push(tk.w);
+    }
+    for (let gi = 0; gi < groups.length; gi++) {
+      const g = groups[gi];
+      let i = 0;
+      while (i < g.length && (GAP_SKIP.has(g[i]) || CONNECTORS.has(g[i]))) i++;
+      const own = consumedTokens(g.slice(i));
+      const c = own ? parseClause(own, { fractions: true }) : null;
+      if (c && c.food.length === 0 && c.unit === null && Math.abs(c.value - f) < 1e-9) {
+        // The consume clause is the last thing said before the next item or the line end: a later portion (`then the other half
+        // at dinner`) may be what j restates (refute r1 B1).
+        said = groups.slice(gi + 1).every(r => r.every(x => GAP_SKIP.has(x) || CONNECTORS.has(x) || SUBJECT_OK.has(x) || CONSUME.has(x)));
+        break;
+      }
+    }
+    if (!said) continue;
+    const scaled = scaleByFactor(W[t], f);
+    if (scaled === null) continue;
+    folds.push({ kind: 'partial', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: scaled });
+    folded.set(t, scaled);
+    removed.add(j);
+  }
 
   // Segment fold (shapes A, B).
   for (let j = 1; j < n; j++) {
