@@ -20,6 +20,7 @@
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
+ * An uncovered word that opens a later comma piece also ends the list, except a joiner, an article, a quantity lead, a part modifier, a topping phrase (`topped with`, `lots of`) or a correction marker (S240, cloud-36 C2); the comma forms only.
  * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12); a meal frame (for/at/as [filler] <meal>, or this morning) ends a provenance phrase (S240, cloud-38 D1).
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
@@ -125,6 +126,11 @@ function mealFrameAt(g: string[], i: number): boolean {
   }
   return false;
 }
+// Words that may open a comma piece inside a parts list: articles, part modifiers and correction markers.
+const GAP_OK = new Set([
+  'a', 'an', 'the', 'some', 'my', 'more', 'extra', 'double', 'light', 'little', 'bit', 'fresh', 'melted', 'shredded', 'grilled',
+  'w', 'leftover', 'leftovers', 'instead', 'rather', 'actually', 'sorry', 'wait', 'no', 'oops', 'um', 'uh', 'er', 'ok', 'okay', 'i', 'mean', 'scratch', 'make', 'it', 'that', 'correction',
+]);
 const STEP = new Set(['then', 'later', 'after', 'afterwards', 'afterward', 'followed']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
@@ -269,6 +275,19 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
       // the next joiner, step word, sentence boundary or comma piece, and no word inside it counts. A clause word outside it (a step
       // word included) still ends the list (`… from lunch. later steak` keeps the steak).
       const g = toks.slice(gs, js.start);
+      // a token opens its comma piece when it is the piece's first token, or follows only an `and` that opens it
+      const opensPiece = (q: number): boolean => {
+        const p = ptoks[q]?.piece;
+        if (p === undefined || q === 0) return false;
+        if (ptoks[q - 1]?.piece !== p) return true;
+        return ptoks[q - 1]?.w === 'and' && ptoks[q - 2]?.piece !== p;
+      };
+      // the gap tokens after q that stay in q's comma piece
+      const restOfPiece = (q: number): string[] => {
+        const out: string[] = [];
+        for (let r = q + 1; r < js.start && ptoks[r]?.piece === ptoks[q]?.piece; r++) out.push(toks[r]);
+        return out;
+      };
       let inProv = false;
       let clause = false;
       for (let i = 0; i < g.length; i++) {
@@ -280,6 +299,14 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
         if (inProv && !PROVENANCE.has(g[i - 1] ?? '') && mealFrameAt(g, i)) inProv = false;
         if (PROVENANCE.has(w)) { inProv = true; continue; }
         if (!inProv && CLAUSE.has(w)) { clause = true; break; }
+        // S240 (cloud-36 C2): an uncovered word that OPENS a later comma piece (after an optional `and`) also opens a new clause
+        // (`, also steak`, `, next steak`, `, and at 7pm steak`, `, thn steak`) — never a joiner, an article, a part modifier
+        // (`, extra swiss`) or a correction marker (`, actually steak`, which self-correction owns), and never in the first gap.
+        // A quantity lead (`two eggs` — #556's amount rule reads it), a part modifier, or a topping phrase (`topped with`, `lots of`)
+        // never opens a clause; an additive word (`also`, `plus`) still does (S240, cloud-36 C2 refute r1).
+        const toppingPhrase = !ADDITIVE.has(w) && restOfPiece(q).some(x => x === 'of' || x === 'with');
+        if (!inProv && seen > 0 && opensPiece(q) && !JOINERS.has(w) && !GAP_OK.has(w) && !LEAD_STOP.has(w) && !/^\d/.test(w)
+          && !MODS.has(w) && !toppingPhrase) { clause = true; break; }
       }
       if (clause) break;
       // S240 (MGR 18:44Z): an amount part continues the list, except after an ADDITIVE word in the gap (`also`, `along with`,

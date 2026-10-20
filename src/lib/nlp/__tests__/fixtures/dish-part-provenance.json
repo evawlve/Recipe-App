@@ -1064,7 +1064,9 @@
    }
   ],
   "expectRawTexts": [
-   "a homemade burrito"
+   "a homemade burrito",
+   "steak",
+   "rice"
   ]
  },
  {
@@ -1098,7 +1100,9 @@
    }
   ],
   "expectRawTexts": [
-   "a homemade burrito"
+   "a homemade burrito",
+   "steak",
+   "rice"
   ]
  },
  {
@@ -1132,7 +1136,9 @@
    }
   ],
   "expectRawTexts": [
-   "a homemade burrito"
+   "a homemade burrito",
+   "steak",
+   "rice"
   ]
  },
  {
@@ -1166,7 +1172,9 @@
    }
   ],
   "expectRawTexts": [
-   "a homemade burrito"
+   "a homemade burrito",
+   "steak",
+   "rice"
   ]
  },
  {
@@ -1298,7 +1306,8 @@
    }
   ],
   "expectRawTexts": [
-   "a homemade burrito"
+   "a homemade burrito",
+   "steak"
   ]
  },
  {
