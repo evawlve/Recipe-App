@@ -1,8 +1,9 @@
 /**
  * Drank / finished stock fold - S240 cloud-38 D7. On a one-item line a stock whose clause the plain reader cannot parse
  * (`drank half`, `finished 2`) is re-counted through the consumed-count reading; a valid target is never rewritten.
- * Every case of fixtures/drank-stock.json (a copy of snapshots/s240/rowD7/fixture.json: 170 cases, 47 changed) runs
- * through the shipped function.
+ * Every case of fixtures/drank-stock.json (a copy of snapshots/s240/rowD7/fixture.json: 170 cases, 49 changed) runs
+ * through the shipped function. Two `um, drank half` / `um, had half` cases were re-pinned from unchanged to `1/2 bottle of
+ * wine` when #563 (an um / ok gap does not hide the clause, cloud-38 D8) merged in; their src says so.
  */
 
 import { foldTrailingQuantityClauses } from '../trailing-quantity-fold';
@@ -21,9 +22,9 @@ interface Case {
 const CASES = fixture as Case[];
 
 describe('foldTrailingQuantityClauses - drank-stock fixture', () => {
-  test('the fixture is the cut it claims to be: 170 cases, 47 changed', () => {
+  test('the fixture is the cut it claims to be: 170 cases, 49 changed', () => {
     expect(CASES).toHaveLength(170);
-    expect(CASES.filter(c => c.changed)).toHaveLength(47);
+    expect(CASES.filter(c => c.changed)).toHaveLength(49);
   });
 
   test.each(CASES.map(c => [`${c.src}: ${c.line}`, c] as const))('%s', (_name, c) => {

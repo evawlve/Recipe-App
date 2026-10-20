@@ -3346,7 +3346,7 @@
   "changed": true
  },
  {
-  "src": "refute-r1 cases3",
+  "src": "refute-r1 cases3 (re-pinned: an um gap no longer hides the clause once #563 merged in)",
   "line": "a bottle of wine, um, drank half",
   "input": [
    {
@@ -3357,15 +3357,17 @@
   ],
   "expect": [
    {
-    "rawText": "a bottle of wine",
+    "rawText": "1/2 bottle of wine",
     "normalizedForm": "wine"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
-  "src": "refute-r1 cases3",
+  "src": "refute-r1 cases3 (re-pinned: an um gap no longer hides the clause once #563 merged in)",
   "line": "a bottle of wine, um, had half",
   "input": [
    {
@@ -3376,12 +3378,14 @@
   ],
   "expect": [
    {
-    "rawText": "a bottle of wine",
+    "rawText": "1/2 bottle of wine",
     "normalizedForm": "wine"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1 cases3",
