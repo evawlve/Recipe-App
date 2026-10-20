@@ -56,6 +56,7 @@ import {
   sameWord,
   tokenizeWithPieces,
   words,
+  HESITATION,
   type Clause,
   type Tok,
 } from './trailing-quantity-fold';
@@ -94,7 +95,7 @@ const STRONG = [
 // S240 (MGR 17:14Z, refute-r1): the interjections are a QUANTITY-ONLY tier. Alone they fire qty / qty-on-qty / restate-qty only, and
 // only when nothing else follows the correction in its comma piece; never restate-replace, part or trailing (`a turkey sandwich, um,
 // a ham sandwich` and `two eggs, toast, three eggs, ok` keep every food).
-const QTY_ONLY = new Set(['er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok']);
+const QTY_ONLY = HESITATION;
 const SWAP_OK = new Set(['wait no', 'no wait', 'scratch that', 'make that', 'make it', '<no>']);
 // S240: an ordinal is an addition (`a beer, wait, a second beer` is two beers).
 const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
