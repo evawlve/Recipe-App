@@ -47,6 +47,12 @@
  * KNOWN MISSES (declined on purpose, no population): a trailing or parenthesised `<N>x` (`(2x)`,
  * `eggs (2x)`, `red bull 2x`); a tag followed by punctuation (`tacos x3!`); an article-led line
  * (`a bagel x2`, `a short stack x2`); a leading-`x2` count (`at least x2 wings`).
+ *
+ * KNOWN MISS, a pre-existing class this row does not change: a LEADING QUANTITY plus a tag (`2 wings x2` -> qty 2,
+ * name `wings x2`; `3 eggs x2` -> qty 3, name `x2`). Guards (a)-(c) decline it, so the parse is master's own. With
+ * #572 merged, `at least 2 wings x2`, `upwards of 3 beers x2` and `at least a dozen wings x2` parse like their
+ * un-hedged twins and join it (deploy-3 integration, MGR 2026-10-20T00:50Z, default A). What `N food xM` means
+ * (multiplier M, or drop the tag) is a billed-gram decision for its own row, not this one.
  */
 import { normalizeUnitToken } from './unit';
 import { parseQuantityTokens } from './quantity';
