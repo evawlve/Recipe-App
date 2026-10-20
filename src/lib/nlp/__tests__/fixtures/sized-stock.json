@@ -1380,7 +1380,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1 CL",
+  "src": "refute-r1 CL (re-pinned: an um gap no longer hides the clause once #563 merged in)",
   "line": "a family size bag of chips, um, ate 3",
   "input": [
    {
@@ -1391,12 +1391,14 @@
   ],
   "expect": [
    {
-    "rawText": "a family size bag of chips",
+    "rawText": "3 chips",
     "normalizedForm": "chips"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1 CL",
@@ -1622,7 +1624,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned: an um gap no longer hides the clause once #563 merged in)",
   "line": "a bag of chips, um, ate 3",
   "input": [
    {
@@ -1633,12 +1635,14 @@
   ],
   "expect": [
    {
-    "rawText": "a bag of chips",
+    "rawText": "3 chips",
     "normalizedForm": "chips"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1",

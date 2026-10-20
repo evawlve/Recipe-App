@@ -1,8 +1,9 @@
 /**
  * trailing-quantity-fold - S240 cloud-38 D5. A consumed whole count over a COUNT-stock container before `of` (a family size
  * bag of chips) re-counts the food, not the bags. Every case of the sized-stock fixture (fixtures/sized-stock.json, a copy
- * of snapshots/s240/rowD5/fixture.json: 91 cases, 40 changed) runs through the shipped function. Five `drank 2` cases were
- * re-pinned from unchanged to `2 <food>` when #568 (drank re-counts a stock, cloud-38 D7) merged in; their src says so.
+ * of snapshots/s240/rowD5/fixture.json: 91 cases, 42 changed) runs through the shipped function. Five `drank 2` cases were
+ * re-pinned from unchanged to `2 <food>` when #568 (drank re-counts a stock, cloud-38 D7) merged in, and two `um, ate 3` cases
+ * to `3 chips` when #563 (an um / ok gap does not hide the clause, cloud-38 D8) merged in; their src says so.
  */
 
 import { foldTrailingQuantityClauses } from '../trailing-quantity-fold';
@@ -21,9 +22,9 @@ interface Case {
 const CASES = fixture as Case[];
 
 describe('foldTrailingQuantityClauses - sized-stock fixture', () => {
-  test('the fixture is the cut it claims to be: 91 cases, 40 changed', () => {
+  test('the fixture is the cut it claims to be: 91 cases, 42 changed', () => {
     expect(CASES).toHaveLength(91);
-    expect(CASES.filter(c => c.changed)).toHaveLength(40);
+    expect(CASES.filter(c => c.changed)).toHaveLength(42);
   });
 
   test.each(CASES.map(c => [`${c.src}: ${c.line}`, c] as const))('%s', (_name, c) => {
