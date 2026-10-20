@@ -1,0 +1,1097 @@
+[
+ {
+  "src": "seat",
+  "line": "a beef taco, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "a beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a beef taco and a coke and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "a beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a beef taco and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "a beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two eggs and three eggs, sorry",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two eggs, three eggs, actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a beef taco, a chicken taco, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "a beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a chicken taco",
+    "normalizedForm": "a chicken taco",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a chicken taco"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a beef taco, a coke, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "a beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "toast and eggs, 2 eggs, sorry",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "2 eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and a muffin, a blueberry muffin, actually",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "a muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "a blueberry muffin",
+    "normalizedForm": "a blueberry muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "a muffin",
+   "a blueberry muffin"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and a coke and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, a coke, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, and a coke, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "two eggs, toast and jam, three eggs, sorry",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "jam",
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and rice, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two scrambled eggs, toast and jam, 3 fried eggs, sorry",
+  "input": [
+   {
+    "rawText": "two scrambled eggs",
+    "normalizedForm": "two scrambled eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   },
+   {
+    "rawText": "3 fried eggs",
+    "normalizedForm": "3 fried eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "jam",
+   "3 fried eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a chicken burrito and a coke, 2 steak burritos, sorry",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 steak burritos",
+    "normalizedForm": "2 steak burritos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "2 steak burritos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "3 blueberry pancakes and syrup, 2 banana pancakes, sorry",
+  "input": [
+   {
+    "rawText": "3 blueberry pancakes",
+    "normalizedForm": "3 blueberry pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   },
+   {
+    "rawText": "2 banana pancakes",
+    "normalizedForm": "2 banana pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "syrup",
+   "2 banana pancakes"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a turkey sandwich and chips, 2 ham sandwiches, sorry",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "2 ham sandwiches",
+    "normalizedForm": "2 ham sandwiches",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chips",
+   "2 ham sandwiches"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and rice, 2 chicken tacos, wait no",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and rice, 2 chicken tacos, i mean",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "2 large coffees and a bagel, 1 medium coffee, actually",
+  "input": [
+   {
+    "rawText": "2 large coffees",
+    "normalizedForm": "2 large coffees",
+    "brand": ""
+   },
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "1 medium coffee",
+    "normalizedForm": "1 medium coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "1 medium coffee"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "mac and cheese, 2 mac and cheese, sorry",
+  "input": [
+   {
+    "rawText": "mac and cheese",
+    "normalizedForm": "mac and cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 mac and cheese",
+    "normalizedForm": "2 mac and cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 mac and cheese"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pb and j, 2 pb and js, sorry",
+  "input": [
+   {
+    "rawText": "a pb and j",
+    "normalizedForm": "pb and j",
+    "brand": ""
+   },
+   {
+    "rawText": "2 pb and js",
+    "normalizedForm": "2 pb and js",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 pb and js"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, mac and cheese, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "mac and cheese",
+    "normalizedForm": "mac and cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "mac and cheese",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, a pb and j, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a pb and j",
+    "normalizedForm": "pb and j",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pb and j",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a pb and j, 2 pb and honey sandwiches, sorry",
+  "input": [
+   {
+    "rawText": "a pb and j",
+    "normalizedForm": "pb and j",
+    "brand": ""
+   },
+   {
+    "rawText": "2 pb and honey sandwiches",
+    "normalizedForm": "2 pb and honey sandwiches",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 pb and honey sandwiches"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two eggs, and three eggs, sorry",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two eggs and toast and three eggs, sorry",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two eggs, toast, and three eggs, sorry",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "three eggs"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a coke and 2 cokes, sorry",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cokes",
+    "normalizedForm": "2 cokes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 cokes"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, and 2 chicken tacos, um",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and rice, 2 chicken tacos, oops",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "rice",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "two eggs, three eggs, er",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, 2 chicken tacos and rice, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos",
+   "rice"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "toast and a beef taco, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, and a coke, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, a coke and fries, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "fries",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "oh and a beef taco, 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 chicken tacos"
+  ],
+  "expectKinds": [
+   "trailing"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco, oh and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a beef taco and also 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "2 chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ],
+  "expectKinds": [],
+  "changed": false
+ }
+]
