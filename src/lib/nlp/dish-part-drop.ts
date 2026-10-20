@@ -9,6 +9,7 @@
  * TRIGGER. The dish item is followed in the line by `made with` / `i made with`, or (when the line says
  * `homemade` / `home made` / `i made a ...`) by `with` / `on <bread>`. A blend-class dish (smoothie,
  * pancakes, french toast) takes only the `made with` form.
+ * readMadeWithHeads() (S240, MGR 18:44Z (2)) reads an item that carries its own personal `i/we made (it) with` marker, or `made with` on a homemade item, as its head for retrieval; label claims stay; it runs in the route after the echo drop.
  *
  * DEFAULT-KEEP POSTURE. An item after the marker is dropped only when it is a BARE KNOWN PART of the dish's
  * class (a filling, a protein, a bread, a sauce, ... per class table). Anything else stays and keeps its
@@ -19,7 +20,7 @@
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
- * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12).
+ * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12); a meal frame (for/at/as [filler] <meal>, or this morning) ends a provenance phrase (S240, cloud-38 D1).
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
  * with the parts gone the fold can attach `two slices` to the dish. The SegmentationCache keeps the
@@ -110,7 +111,20 @@ const CLAUSE = new Set([
 ]);
 // A clause word right after one of these is a part's provenance (`chicken from dinner`), not a new clause.
 const PROVENANCE = new Set(['from', 'since', 'over']);
+const MEAL_FRAME = new Set(['for', 'at', 'as']);
+const MEALS = new Set(['breakfast', 'lunch', 'dinner', 'brunch', 'snack', 'supper', 'dessert']);
 const JOINERS = new Set(['and', 'or', 'plus', 'with']);
+// A meal frame: `for|at|as` + up to two filler words (`my`, `a late`, `today's`) + a meal word (plural ok), or `this morning`.
+function mealFrameAt(g: string[], i: number): boolean {
+  if (g[i] === 'this') return g[i + 1] === 'morning';
+  if (!MEAL_FRAME.has(g[i])) return false;
+  for (let k = i + 1; k <= i + 3 && k < g.length; k++) {
+    const x = g[k];
+    if (MEALS.has(x) || MEALS.has(x.replace(/e?s$/, ''))) return true;
+    if (JOINERS.has(x) || PROVENANCE.has(x) || STEP.has(x) || MEAL_FRAME.has(x)) return false;
+  }
+  return false;
+}
 const STEP = new Set(['then', 'later', 'after', 'afterwards', 'afterward', 'followed']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
@@ -261,6 +275,9 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
         const w = g[i];
         const q = gs + i;
         if (inProv && (JOINERS.has(w) || STEP.has(w) || bounds.has(q) || ptoks[q]?.piece !== ptoks[q - 1]?.piece)) inProv = false;
+        // S240 (cloud-38 D1): a meal frame (`for lunch`, `at dinner`, `as a snack`) ends the provenance phrase, and its meal word
+        // then ends the list (`chicken from yesterday for lunch and steak for dinner` keeps the steak).
+        if (inProv && !PROVENANCE.has(g[i - 1] ?? '') && mealFrameAt(g, i)) inProv = false;
         if (PROVENANCE.has(w)) { inProv = true; continue; }
         if (!inProv && CLAUSE.has(w)) { clause = true; break; }
       }
@@ -319,3 +336,66 @@ function sentTokBounds(lineKey: string): Set<number> {
   }
   return out;
 }
+
+/**
+ * S240 (MGR 18:44Z (2), narrowed 19:44Z): an item that carries its OWN personal made-with marker (`pasta i made with olive oil`,
+ * `a homemade smoothie bowl made with frozen berries`) is the dish (Option A inside one item): its normalizedForm becomes the head,
+ * so retrieval never answers the whole phrase (`Green olive paste … for pasta`). rawText is kept. A bare `made with` on a non-homemade
+ * item is a label claim (`cookies made with almond flour`, `gummies made with real fruit juice`) and stays as typed.
+ */
+export interface MadeWithHead {
+  index: number;
+  rawText: string;
+  head: string;
+}
+
+const MW_LEAD = new Set(['a', 'an', 'the', 'some', 'my', 'homemade', 'home', 'made']);
+const MW_REL = new Set(['that', 'which']);
+const MW_STOP = new Set(['what', 'something', 'stuff', 'thing', 'things', 'one', 'it', 'this', 'that', 'which', 'who', 'dinner', 'lunch',
+  'breakfast', 'brunch', 'supper', 'snack', 'meal', 'leftovers', 'food', 'i', 'we', 'just', 'my', 'our', 'mom', 'dad', 'home', 'style']);
+const MW_COUNT = new Set(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'twelve', 'dozen', 'half', 'couple', 'few']);
+
+export function readMadeWithHeads<T extends Item>(lineKey: string, items: T[]): { items: T[]; heads: MadeWithHead[] } {
+  const heads: MadeWithHead[] = [];
+  const lk = words(lineKey);
+  // `homemade` counts on the item or right before its span, never anywhere in the line (`homemade bread and gummies made with
+  // real fruit juice` keeps the gummies' label claim).
+  const homeBefore = (w0: string[]): boolean => {
+    for (let s = 0; s + w0.length <= lk.length; s++) {
+      if (w0.every((x, i) => lk[s + i] === x)) return lk[s - 1] === 'homemade' || (lk[s - 1] === 'made' && lk[s - 2] === 'home');
+    }
+    return false;
+  };
+  const out = items.map((it, index) => {
+    if (it.brand && it.brand.trim()) return it;
+    const w = words(it.rawText);
+    let at = -1;
+    let personal = false;
+    for (let k = 1; k + 1 < w.length; k++) {
+      if (w[k] !== 'made') continue;
+      const next = w[k + 1] === 'it' ? w[k + 2] : w[k + 1];
+      if (next !== 'with') continue;
+      personal = w[k - 1] === 'i' || w[k - 1] === 'we';
+      at = personal ? k - 1 : k;
+      break;
+    }
+    if (at < 1) return it;
+    if (!personal && !homeBefore(w) && !w.slice(0, at).some(x => x === 'homemade') && !(w.slice(0, at).join(' ').includes('home made'))) return it;
+    // Only a normalizedForm that still carries the phrase (or none) is rewritten; one the segmenter already digested
+    // (`chicken burrito`, `turkey sandwich`, `chicken` for `dinner i made with chicken`) is kept.
+    const nfw = words(it.normalizedForm ?? '');
+    if (nfw.length && !nfw.includes('with') && !nfw.includes('made')) return it;
+    const headWords = w.slice(0, at);
+    // the head's own count stays in rawText for the parser (`2 pancakes i made with oat flour` -> `pancakes`)
+    while (headWords.length && (MW_LEAD.has(headWords[0]) || /^[\d/.]+$/.test(headWords[0]) || MW_COUNT.has(headWords[0]))) headWords.shift();
+    while (headWords.length && MW_REL.has(headWords[headWords.length - 1])) headWords.pop();
+    // A head that is not a food (`what`, `dinner`, `leftovers`) or still holds a clause is refused.
+    if (!headWords.length || headWords.some(x => /\d/.test(x) || MW_STOP.has(x))) return it;
+    const head = headWords.join(' ');
+    if ((it.normalizedForm ?? '').trim() === head) return it;
+    heads.push({ index, rawText: it.rawText, head });
+    return { ...it, normalizedForm: head };
+  });
+  return { items: out, heads };
+}
+

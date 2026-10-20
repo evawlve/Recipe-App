@@ -1,0 +1,799 @@
+[
+ {
+  "src": "seat: cloud-38 G1",
+  "line": "a coke and left out pizza from last night",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "left out pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "left out pizza"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat: bare verb mid-piece",
+  "line": "a coke and left over pizza",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "left over pizza",
+    "normalizedForm": "left over pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "left over pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: bare verb mid-piece",
+  "line": "chips and left out cake from the party",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "left out cake",
+    "normalizedForm": "cake",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chips",
+   "left out cake"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat: removal, comma",
+  "line": "a burrito, skipped cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, comma",
+  "line": "a burger, left off pickles",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "left off pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, i",
+  "line": "tacos, i left out cheese",
+  "input": [
+   {
+    "rawText": "tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "left out cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, determiner",
+  "line": "a burrito and skipped the cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, determiner",
+  "line": "a coke and left out the ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "left out the ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, determiner",
+  "line": "a bowl of ramen, skipped the egg",
+  "input": [
+   {
+    "rawText": "a bowl of ramen",
+    "normalizedForm": "bowl of ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped the egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of ramen"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: removal, determiner",
+  "line": "a slice of pepperoni pizza, picked off the pepperoni",
+  "input": [
+   {
+    "rawText": "a slice of pepperoni pizza",
+    "normalizedForm": "slice of pepperoni pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "picked off the pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a slice of pepperoni pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in and-skipped",
+  "line": "a burrito and skipped cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in no-bun-and-left-off",
+  "line": "a burger, no bun and left off pickles",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "left off pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in and-took-off",
+  "line": "a burger and took off onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "took off onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in but-left-off",
+  "line": "a burger but left off pickles",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "left off pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in but-took-off",
+  "line": "a burger but took off onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "took off onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in comma-and-skipped",
+  "line": "a salad, and skipped croutons",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in comma-but-left-out",
+  "line": "a salad, but left out croutons",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "left out croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in i-left-out",
+  "line": "tacos i left out cheese",
+  "input": [
+   {
+    "rawText": "tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "left out cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in we-left-off",
+  "line": "tacos we left off onions",
+  "input": [
+   {
+    "rawText": "tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "left off onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in comma-skipped",
+  "line": "a burrito, skipped cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in then-took-off",
+  "line": "a burger then took off onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "took off onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-in and-removed",
+  "line": "a burger with bacon and removed tomato",
+  "input": [
+   {
+    "rawText": "a burger with bacon",
+    "normalizedForm": "burger with bacon",
+    "brand": ""
+   },
+   {
+    "rawText": "removed tomato",
+    "normalizedForm": "tomato",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger with bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-out and-skipped",
+  "line": "a burrito and skipped cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: R-out and-took-off",
+  "line": "a burger and took off onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: D2 in",
+  "line": "a coke and left out pizza from last night",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "left out pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "left out pizza"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1: D2 in-long",
+  "line": "a coke and left out pizza from last night",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "left out pizza from last night",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "left out pizza from last night"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: D2 verb-stripped (isRemoved)",
+  "line": "a coke and left out pizza from last night",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "pizza"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1: D2 verb-stripped long",
+  "line": "a coke and left out pizza from last night",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "pizza from last night",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "pizza from last night"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1: leftover control",
+  "line": "a coke and leftover pizza",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "leftover pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "leftover pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: D2 comma variant (accepted ambiguity)",
+  "line": "coffee, left out pizza",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "left out pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: some left out",
+  "line": "coffee and some left out pizza",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "some left out pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "some left out pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: slices of left out",
+  "line": "coffee and 2 slices of left out pizza",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of left out pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "2 slices of left out pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: nf keeps adj",
+  "line": "coffee and left out pizza",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "left out pizza",
+    "normalizedForm": "left out pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "left out pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: n/a",
+  "line": "eggs and removed pizza",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "removed pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: span-miss typo",
+  "line": "a burrito, skippd cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: span-miss segmenter dropped det",
+  "line": "a burrito; skipped the sour cream",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: span ok",
+  "line": "a burger, skipped pickles & onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "skipped pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: case",
+  "line": "A Burger, Took Off Onions",
+  "input": [
+   {
+    "rawText": "A Burger",
+    "normalizedForm": "Burger",
+    "brand": ""
+   },
+   {
+    "rawText": "Took Off Onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "A Burger"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1: rawText has i",
+  "line": "a burger, i skipped cheese",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "i skipped cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "i skipped cheese"
+  ],
+  "changed": false
+ }
+]
