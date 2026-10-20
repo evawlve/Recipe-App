@@ -22,6 +22,7 @@ import {
     servingLabelCountsPiece,
     inferDiscreteUnit,
 } from '../count-label';
+import { labelCountPerPiece } from './label-count-band';
 import { logger } from '../../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from '../client';
 import { getCachedFoodWithRelations, cacheFoodToDetails } from '../cache-search';
@@ -201,7 +202,7 @@ function annotateGroundMeatName(foodName: string, query: string): string {
  * multiply a whole serving, so the ordinary bare dispatch answers instead.
  */
 const TWIN_TIER_ALLOW = new Set([
-    'seed_count_default', 'label_count_derived', 'fs_label_count', 'fs_default_serving',
+    'seed_count_default', 'label_count_derived', 'label_count_band_derived', 'fs_label_count', 'fs_default_serving',
 ]);
 
 /**
@@ -3081,6 +3082,40 @@ export async function buildOffResult(
             });
         }
 
+        // (0) LABEL COUNT BAND, ARTICLE-SINGULAR (C70 row 10, 2026-10-20): `a pop
+        // tart` on a `2 pastries (96 g)` label bills ONE piece (48 g), not the
+        // whole two-piece serving rung (1) below would bill. DISPLACES
+        // `bare_label_serving` on article-singular lines only. Admitted only when
+        // the label's per-piece weight is inside the noun's corpus band
+        // (label-count-band.ts) AND clears the bare-piece floor the seed table
+        // uses: a bare `a chip` / `a pretzel` must not bill one 1.5-3 g piece.
+        // The tier is in none of the bare guard's sets (CAP / HEAD_GATED /
+        // REPLACE / DECLARED), so applyOffBareQueryGuard() passes it through.
+        // `one` is stripped from the name by the parser, `a`/`an` are kept; the
+        // article test reads rawLine. A stick of gum etc. (unit `stick`) never
+        // enters this branch.
+        if (grams == null && bareRequest && !barePluralRequest && !doseAnchored
+            && /^\s*(a|an|one)\s/i.test(rawLine)) {
+            const lbs = labelCountPerPiece({
+                servingGrams: hydrated.servingGrams,
+                labelUnitCount,
+                labelUnitWord,
+                itemName: parsed.name || hydrated.foodName,
+            });
+            if (lbs && lbs.perPiece >= BARE_MIN_PIECE_SERVING_GRAMS) {
+                grams = lbs.perPiece;
+                servingDescription = `1 ${lbs.noun} (${lbs.perPiece.toFixed(1)}g each, from the label's count of ${lbs.n})`;
+                servingTier = 'label_count_band_derived';
+                logger.info('off.build_result.label_count_band_derived', {
+                    foodId: candidate.id,
+                    name: itemNameForCount,
+                    labelCount: lbs.n,
+                    perPieceGrams: lbs.perPiece,
+                    arm: 'singular',
+                });
+            }
+        }
+
         // (1) OWN LABEL SERVING for a bare request (bare-serving defaults,
         // Track 3 Jul 2026): a digitless qty-1 line bills the record's own
         // single-serving-scale label directly, pre-empting every per-piece
@@ -3197,6 +3232,40 @@ export async function buildOffResult(
                 labelUnitCount,
                 perPieceGrams: perLabelUnitGrams,
             });
+        }
+
+        // (A') LABEL COUNT BAND, COUNTED (C70 row 10, 2026-10-20): a unitless
+        // qty >= 2 on a real-GTIN record whose label counts N >= 2 pieces bills
+        // qty x (label grams / N) when that per-piece weight is inside the
+        // noun's corpus band (label-count-band.ts; `three tacos` 384 g -> 192 g,
+        // `2 pop tarts` 192 -> 96). The set-free arm of (A) was REFUTED
+        // (`4 oreo cookies` on `9 cookies (29 g)`); this admits by a measured
+        // band instead and cookies stay out (`cooky` has no band entry).
+        // DISPLACES: `label_serving_default` (qty x a multi-piece serving) AND
+        // `seed_count_default` on counted OFF lines whose label is multi-piece
+        // and in band (`2 eggo waffles` keeps 70 g, tier change only; it moves
+        // either way against the seed: `two sausage links` 90 -> 42.7 g).
+        // The tier is in none of the bare guard's sets (CAP / HEAD_GATED /
+        // REPLACE / DECLARED), so applyOffBareQueryGuard() passes it through.
+        if (grams == null && !barePluralRequest && Number.isInteger(qty) && qty >= 2) {
+            const lb = labelCountPerPiece({
+                servingGrams: hydrated.servingGrams,
+                labelUnitCount,
+                labelUnitWord,
+                itemName: itemNameForCount,
+            });
+            if (lb) {
+                grams = qty * lb.perPiece;
+                servingDescription = `${qty} ${lb.noun} (${lb.perPiece.toFixed(1)}g each, from the label's count of ${lb.n})`;
+                servingTier = 'label_count_band_derived';
+                logger.info('off.build_result.label_count_band_derived', {
+                    foodId: candidate.id,
+                    name: itemNameForCount,
+                    labelCount: lb.n,
+                    perPieceGrams: lb.perPiece,
+                    arm: 'counted',
+                });
+            }
         }
 
         // (B) GENERIC SEED TABLE — curated per-piece for common discrete items with
