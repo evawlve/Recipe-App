@@ -239,7 +239,7 @@ function consumePartitiveOf(tokens: string[], i: number): number {
  */
 const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-  'ten', 'eleven', 'twelve', 'dozen', 'couple',
+  'ten', 'eleven', 'twelve', 'dozen', 'couple', 'few',
 ]);
 
 /**
