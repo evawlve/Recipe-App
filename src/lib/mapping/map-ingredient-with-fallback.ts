@@ -61,6 +61,7 @@ import {
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
 import { stripHomemadeDescriptor } from './homemade-descriptor';
+import { stripLeftoverDescriptor } from './leftover-descriptor';
 import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
@@ -648,6 +649,25 @@ async function preflightIngredientLine(
         const rewrittenName = rewriteRegionalDishWords(parsed.name);
         if (rewrittenName !== parsed.name) parsed = { ...parsed, name: rewrittenName };
     }
+    // C70 `leftover` descriptor, seat (b): searchQuery / confidenceGate / assessConfidence / rerank
+    // read parsed.name, so the descriptor is stripped here too, not only from baseName (seat (a),
+    // the end of preflight). baseName is the retrieval query AND the cache key; they move together.
+    if (parsed?.name) {
+        const leftoverName = stripLeftoverDescriptor(
+            parsed.name,
+            rawLine,
+            options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand,
+        );
+        if (leftoverName.stripped) {
+            logger.info('mapping.leftover_descriptor_stripped', {
+                rawLine,
+                site: 'parsed_name',
+                before: parsed.name,
+                after: leftoverName.baseName,
+            });
+            parsed = { ...parsed, name: leftoverName.baseName };
+        }
+    }
     // LANE S: strip a partitive-`of` residue off ALL three branches, so the
     // parser path and the free-text/LLM paths (normalizedForm / preProcessLine,
     // which never pass through the parser's #350 skip) converge on the same
@@ -970,6 +990,23 @@ async function preflightIngredientLine(
             after: homemade.baseName,
         });
         baseName = homemade.baseName;
+    }
+
+    // C70 `leftover` descriptor, seat (a): after the homemade strip, still last, so the retrieval
+    // query and the cache key move together (and with parsed.name, seat (b), above).
+    const leftover = stripLeftoverDescriptor(
+        baseName,
+        rawLine,
+        options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand,
+    );
+    if (leftover.stripped) {
+        logger.info('mapping.leftover_descriptor_stripped', {
+            rawLine,
+            site: 'base_name',
+            before: baseName,
+            after: leftover.baseName,
+        });
+        baseName = leftover.baseName;
     }
 
     return { done: false, parsed, baseName };
