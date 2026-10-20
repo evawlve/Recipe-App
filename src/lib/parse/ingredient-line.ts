@@ -528,7 +528,7 @@ const ARTICLE_MEASURE_UNIT_SOURCE =
   '(?:\\s+of\\b|\\s*[,(]|\\s*$)';
 const FILLER_ADJECTIVE_RE = new RegExp(
   `^(\\s*(?:(?:${APPROXIMATOR_SOURCE}|about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+)?(?:a|an)\\s+)` +
-    `(?:good|full|solid|generous|scant)\\s+(?=${ARTICLE_MEASURE_UNIT_SOURCE})`,
+    '(?:good|full|solid|generous|scant)\\s+(?=\\S)',
   'i',
 );
 const APPROXIMATOR_RE = new RegExp(`^(\\s*)(?:${APPROXIMATOR_SOURCE})\\s+(?=\\S)`, 'i');
@@ -542,7 +542,10 @@ function articleMeasureFollows(rest: string): boolean {
   return c !== null && isMeasureToken(c[1]);
 }
 function stripFillerAdjective(line: string): string {
-  return line.replace(FILLER_ADJECTIVE_RE, '$1');
+  const m = FILLER_ADJECTIVE_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  return articleMeasureFollows(`a ${rest}`) ? m[1] + rest : line;
 }
 function stripApproximatorBeforeMeasure(line: string): string {
   const m = APPROXIMATOR_RE.exec(line);
@@ -558,8 +561,25 @@ function stripApproximatorBeforeMeasure(line: string): string {
   if (/^(?:a|an)$/i.test(tokens[k] ?? '')) k += 1;
   return isMeasureToken(tokens[k]) ? m[1] + rest : line;
 }
+// C70 definite-frame row (the #518/#537 family: a qualifier that never changes the measure is dropped before parsing): a line-start DEFINITE
+// FRAME `(the|my|our)? (last|remaining|other|final)` -- or a bare `last` / `remaining` -- before a COUNT. `the last 2 slices of pizza`
+// parsed as qty 1 / name `the last 2 of pizza` (unitHint slice), because the frame sits at tokens[0] where parseQuantityTokens() reads
+// no quantity, and the vanished pizza then resolved to "The Last Tradition - Machacado". Dropped ONLY when the very next tokens are a
+// quantity that parseQuantityTokens() reads AND at least one more word follows it (`the last 2` has none and stays). Controls that
+// stay: `the last tradition machacado`, `the other half`, `leftover pizza`, `last night's pizza`, `the last of the pizza`. Runs FIRST
+// in stripQuantityHedges()'s chain; the other strips read the line after it. Tested in definite-frame.test.ts.
+const DEFINITE_FRAME_RE = /^(\s*)(?:(?:the|my|our)\s+(?:last|remaining|other|final)|last|remaining)\s+(?=\S)/i;
+function stripDefiniteFrameBeforeCount(line: string): string {
+  const m = DEFINITE_FRAME_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  const tokens = rest.split(/\s+/).filter((t) => t.length > 0);
+  const q = parseQuantityTokens(tokens.map((t) => t.toLowerCase()));
+  if (!q || q.consumed >= tokens.length) return line;
+  return m[1] + rest;
+}
 function stripQuantityHedges(line: string): string {
-  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(line)))
+  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(stripDefiniteFrameBeforeCount(line))))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
     .replace(/~\s*(?=\d)/g, '')
     .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
