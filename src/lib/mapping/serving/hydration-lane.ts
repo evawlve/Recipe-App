@@ -47,6 +47,8 @@ import {
     BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../../servings/bare-query-guard';
 import { buildFatSecretResult } from '../build-fatsecret-result';
+import { normalizeUnitToken } from '../../parse/unit';
+import { expandUnitAbbreviation } from '../../parse/unit-abbreviations';
 import { resolveVolumeGrams, pickVolumeUnits, LARGE_VOLUME_UNIT_SPELLINGS } from '../../units/volume-density';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 
@@ -1310,6 +1312,100 @@ async function dispatchServing(
 
 import { isSizeQualifier, getOrCreateFdcSizeServings } from '../../usda/fdc-ai-backfill';
 
+/**
+ * Seed keys whose bare-noun ALIAS does not name one piece when a user counts it
+ * (`1 romaine lettuce` is a head, `3 thyme` is sprigs, a `mustard` is a bottle).
+ * Declined, so they keep today's ladder. (Refute, C70 S239.)
+ */
+const FDC_SEED_EXCLUDED_KEYS = new Set([
+    'lettuce leaf', 'thyme', 'rosemary', 'mustard packet', 'chicken skin',
+]);
+
+/** Lowercase, split on non `[a-z&]`, trailing `es`/`s` stripped. NOT `singularizeUnit` (`cookies` -> `cooky`). */
+function fdcSeedTokens(text: string): string[] {
+    return text.toLowerCase().split(/[^a-z&]+/).filter(t => t.length > 0).map(t => t.replace(/(es|s)$/, ''));
+}
+
+/**
+ * C70 S239 ("berry"): a COUNT of a SMALL item on the FDC lane bills qty x the
+ * curated piece seed, instead of an AI "medium" per piece.
+ *
+ * MECHANISM. `3 blueberries` (qty <= 3, strictly unitless) takes the LOW-COUNT arm
+ * of `buildFdcResult()`. The record has no `medium` row of its own, so rung 0
+ * declines and `getOrCreateFdcSizeServings()` asks an AI for "1 medium" of
+ * blueberries. The answer is a serving (about a cup, ~150 g) and is billed PER
+ * PIECE: 3 x 150 = 450 g against ~4.5 g. `4 blueberries` takes the HIGH-COUNT arm
+ * (per-piece AI) and is fine, hence the 3/4 cliff. The OFF lane already runs this
+ * seed table as its rung (B); the FDC lane never consulted it. Measured organic
+ * population 2026-10-19: 0 counted berries, one `three sugar packets` 30 g (truth
+ * ~12 g); this is a determinism / correctness hardening, not a traffic row.
+ *
+ * WHEN IT FIRES (every guard can only DECLINE, so a declined line keeps today's
+ * ladder exactly). Called AFTER the record's own-row step in both count arms:
+ *  - no unit, no unitHint, and the line is not a bare qty-1 request (a bare
+ *    `blueberries` asks for a serving, not one berry);
+ *  - qty >= 1 (`half blueberries` is not 0.75 g);
+ *  - the parsed name holds no digit (`x2 blueberries` leaves `x2` in the name);
+ *  - the RAW line holds no mass/volume unit token, or abbreviation, because the
+ *    parser still LOSES units in some shapes (`1,5 cups blueberries`,
+ *    `1 tblsp almonds`, `1 pkg blueberries`) and the live normalizedForm is often
+ *    already clean, so a name-only guard cannot see the loss. Such a line billed
+ *    ~a cup by accident; the seed would bill 1.5 g, 100x under;
+ *  - every parsed-name token is covered by the candidate's name or the seed key
+ *    (`2 kirkland almonds`, `2x blueberries` decline: a cost, not a regression);
+ *  - the seed key is not one of FDC_SEED_EXCLUDED_KEYS;
+ *  - the seed is < BARE_MIN_PIECE_SERVING_GRAMS (20 g), the codebase's line for
+ *    "a piece is not a serving". Egg, apple, banana, avocado, cucumber keep the
+ *    estimator ladder.
+ *
+ * REFUTED FIXES THIS IS NOT: capping the `medium` estimate (DNB-8: that tier's
+ * correct qty-1 output spans 3 g to 900 g); comparing medium against the record's
+ * `cup` row (cucumber / avocado trip it); reading the record's own `berries` row
+ * as the per-unit weight (the ingest dropped `portion.amount`, so 68 g is 50
+ * berries); widening Fix 49 (lowering the high-count threshold moves every
+ * `2 avocados` onto a different AI question).
+ *
+ * RESIDUALS, deliberately left: `3 cherry tomatoes` on the generic tomato record
+ * is answered by the record's OWN `medium whole` 123 g row (rung 0 precedes this)
+ * -> 369 g; raspberries / blackberries have no seed (seeds live in
+ * src/lib/servings/, outside this row); size words (`jumbo`) are ignored.
+ *
+ * WIRE: a moved FDC line is stamped `seed_count_default`, whose
+ * portionProvenanceForTier() is 'borrowed' (the old tiers gave undefined), so
+ * moved lines newly emit `portionProvenance: 'borrowed'` on /api/nlp/parse.
+ *
+ * Returns grams PER PIECE, or null (today's path).
+ */
+async function fdcSmallPieceSeed(
+    parsed: ParsedIngredient | null,
+    unit: string | undefined,
+    rawLine: string,
+    candidateName: string,
+    qty: number,
+): Promise<number | null> {
+    if (!parsed || unit || parsed.unitHint) return null;
+    if (isBareUnitlessQty1(parsed, rawLine)) return null;
+    if (!(qty >= 1)) return null;
+    const name = parsed.name || '';
+    if (!name || /\d/.test(name)) return null;
+
+    const toks = rawLine.split(/\s+/).map(t => t.replace(/[.,;:!?)]+$/, '')).filter(t => t.length > 0);
+    for (let i = 0; i < toks.length; i++) {
+        const kind = normalizeUnitToken(toks[i]).kind;
+        if (kind === 'mass' || kind === 'volume') return null;
+        if (expandUnitAbbreviation(toks[i], toks[i + 1] ?? '') !== null) return null;
+    }
+
+    const { getDefaultCountServing } = await import('../../servings/default-count-grams');
+    const seed = getDefaultCountServing(name, 'each');
+    if (!seed || !(seed.grams > 0) || seed.grams >= BARE_MIN_PIECE_SERVING_GRAMS) return null;
+    if (seed.key && FDC_SEED_EXCLUDED_KEYS.has(seed.key)) return null;
+
+    const covered = new Set([...fdcSeedTokens(candidateName), ...fdcSeedTokens(seed.key || '')]);
+    if (!fdcSeedTokens(name).every(t => covered.has(t))) return null;
+    return seed.grams;
+}
+
 async function buildFdcResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
@@ -1656,6 +1752,18 @@ async function buildFdcResult(
                 });
             }
 
+            // 0b. The curated small-piece seed (C70 S239) — after the record's own row,
+            //     before the sub-piece and AI rungs. See fdcSmallPieceSeed().
+            if (!resolved) {
+                const seedG = await fdcSmallPieceSeed(parsed, unit, rawLine, candidate.name, qty);
+                if (seedG != null) {
+                    grams = qty * seedG;
+                    servingDescription = `${qty} each (${seedG.toFixed(1)}g each)`;
+                    servingTier = 'seed_count_default';
+                    resolved = true;
+                }
+            }
+
             // 1. Try deterministic sub-piece defaults first (cheaper & more reliable than AI)
             if (!resolved && unitHint) {
                 try {
@@ -1779,6 +1887,10 @@ async function buildFdcResult(
                 (hasMiniModifier ? await findOwnFdcSizeServing(fdcId, 'mini') : null)
                 ?? await findOwnFdcSizeServing(fdcId, targetSize);
 
+            const seedG = ownLowCount
+                ? null
+                : await fdcSmallPieceSeed(parsed, unit, rawLine, candidate.name, qty);
+
             if (ownLowCount) {
                 grams = qty * ownLowCount.perUnitGrams;
                 servingDescription = ownLowCount.description;
@@ -1788,6 +1900,11 @@ async function buildFdcResult(
                     gramsPerUnit: ownLowCount.perUnitGrams, totalGrams: grams,
                     description: ownLowCount.description, genuine: ownLowCount.genuine,
                 });
+            } else if (seedG != null) {
+                // The curated small-piece seed (C70 S239): see fdcSmallPieceSeed().
+                grams = qty * seedG;
+                servingDescription = `${qty} each (${seedG.toFixed(1)}g each)`;
+                servingTier = 'seed_count_default';
             } else {
                 const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
 

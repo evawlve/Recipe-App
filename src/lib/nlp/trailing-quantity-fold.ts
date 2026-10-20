@@ -56,6 +56,9 @@
  * A self-correction after the consumed count restates it (`a 6 pack of beer, drank 2, wait, 3` -> `3 beer`; with the count split
  * off, `a family size bag of chips, ate 3, sorry,` + [`4`] -> `4 chips`, never four bags): whole counts in the same unit, the
  * stock's own food, only filler between (S340, cloud-40 F2 / H2).
+ * A span-less item the segmenter restated as a fraction of the item before it (`a bottle of wine, um, drank half` ->
+ * [`a bottle of wine`] + [`half a bottle of wine`]) scales that item and goes, only when the line states the same fraction
+ * behind a consume verb and nothing but filler follows (S340, C68's deploy-3 read).
  * A COUNT-stock container right before `of` (bag / pack / box / case / tray / sleeve / ...) states the stock even where the
  * parser reads no unit (`a family size bag of chips`, `a pack of gum`); a consumed whole count re-counts its food (`3 chips`),
  * in the gap and the segment shape, and a clause naming the stock's own food (`ate 3 chips`) counts too (S240, cloud-38 D5).
@@ -72,6 +75,14 @@
  * servings, a plain shake), a host that already states a quantity, a host that is itself a `with` part (`a protein shake
  * with milk with 2 scoops`), a dose naming a food. Fold kind `dose`. Named miss: `... in milk, 1 cup` leaves `1 cup`
  * (the milk shares the shake's comma piece).
+ * A self-correction that runs first can rewrite or restate the dose; the dose is then the item right after the host's `with`, and a
+ * corrected-away `<count> scoop(s)` may sit in the gap (S240, cloud-38 D3).
+ *
+ * TOPPING (S240, cloud-38 D4, MGR 19:10Z). A food-less spoon measure (tbsp / tsp / tablespoon / teaspoon / spoonful) after a
+ * host named with `with` / `w` + a part (`oatmeal with peanut butter, 2 tbsp`) measures the topping the host already bills,
+ * so it never becomes the host's serving: a split-off one is dropped (fold kind `topping`), a gap one is left unread;
+ * `of it` / `of them` still folds onto the host, and a volume or count (`2 cups`) still folds. Named miss: a host that IS
+ * spoon-measured (`peanut butter with honey, 4 tbsp`) loses its stated amount.
  *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
@@ -84,7 +95,7 @@ import { normalizeUnitToken } from '@/lib/parse/unit';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
-  kind: 'segment' | 'gap' | 'partial' | 'stock' | 'dose';
+  kind: 'segment' | 'gap' | 'partial' | 'stock' | 'dose' | 'topping';
   /** Index of the folded-into item in the ORIGINAL input array. */
   targetIndex: number;
   /** The clause text (a segment's rawText, or the gap piece's tokens). */
@@ -510,6 +521,25 @@ function correctedConsume(item: Item, first: string[], later: string[][]): strin
   return out;
 }
 
+// S340 (MGR 20:30Z): the fraction a span-less item restates of an earlier item (`half a bottle of wine` of `a bottle of wine`).
+const RESTATE_FRAC: [string[], number][] = [
+  [['three', 'quarters'], 0.75], [['a', 'quarter'], 0.25], [['one', 'quarter'], 0.25], [['half'], 0.5], [['1/2'], 0.5],
+  [['1/4'], 0.25], [['3/4'], 0.75],
+];
+
+/** The factor when `restated` is exactly a fraction of `host` (`half [of] [a|an|the] <host's own words>`), else null. */
+function restatedFraction(restated: string, host: string): number | null {
+  const rw = words(restated);
+  const hw = words(host);
+  const core = ['a', 'an', 'one', 'the'].includes(hw[0] ?? '') ? hw.slice(1) : hw;
+  const f = RESTATE_FRAC.find(([p]) => p.every((w, k) => rw[k] === w));
+  if (!f || core.length === 0) return null;
+  let rest = rw.slice(f[0].length);
+  if (rest[0] === 'of') rest = rest.slice(1);
+  if (['a', 'an', 'the'].includes(rest[0] ?? '')) rest = rest.slice(1);
+  return rest.length === core.length && rest.every((w, k) => w === core[k]) ? f[1] : null;
+}
+
 /** The stock item replaced by the consumed count (`2 eggs`, `3 slices of pizza`), or null. */
 function stockBeforeOf(item: Item): boolean {
   const w = words(item.rawText);
@@ -561,6 +591,19 @@ function replaceStock(item: Item, c: Clause): string | null {
   return out;
 }
 
+
+// S240 (cloud-38 D4, MGR 19:10Z): a food-less SPOON measure after a dish named with its topping (`oatmeal with peanut butter,
+// 2 tbsp`) measured the topping, which the host already bills: it never becomes the dish's serving (`2 tbsp of oatmeal with
+// peanut butter`). A split-off one is dropped (fold kind `topping`); a gap one is left unread. A volume or count still folds.
+const SPOON_UNITS = new Set(['tbsp', 'tsp', 'tablespoon', 'teaspoon', 'spoonful']);
+function spoonOnTopping(host: Item, clause: Clause, said: string[]): boolean {
+  if (clause.food.length || !clause.unit || !SPOON_UNITS.has(clause.unit.replace(/s$/, ''))) return false;
+  // `2 tbsp of it` points back at the host itself.
+  if (said.some(x => TAILOF_WORDS.has(x))) return false;
+  const w = words(host.rawText);
+  const wi = w.findIndex(x => x === 'with' || x === 'w');
+  return wi > 0 && wi < w.length - 1;
+}
 
 export function foldTrailingQuantityClauses<T extends Item>(
   lineKey: string,
@@ -637,9 +680,23 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const h = j - 1;
     const sh = spans[h];
     const sj = spans[j];
-    if (!sh || !sj || removed.has(h) || folded.has(h)) continue;
-    const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
-    if (gapW.length !== 1 || gapW[0] !== 'with') continue;
+    if (!sh || removed.has(h) || folded.has(h)) continue;
+    if (toks[sh.end]?.w !== 'with') continue;
+    // S240 (cloud-38 D3): a self-correction runs first and can rewrite the dose to text the line never had (`two scoops, ok,
+    // three scoops` -> `3 scoops`, no span), or keep a restated dose whose gap still holds the corrected-away one (`with 2 scoops,
+    // sorry, 3 scoops in milk`). Either way the dose is the item right after the host's `with`.
+    if (sj) {
+      const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
+      if (gapW.length !== 1) {
+        // The corrected-away clause is the WHOLE rest of the host's `with` piece (`half a scoop`, `2 big scoops`), a scoop of powder at most.
+        const wp = toks[sh.end].piece;
+        const priorW = toks.slice(sh.end + 1, sj.start).filter(x => x.piece === wp).map(x => x.w);
+        const pIn = priorW.indexOf('in');
+        const prior = parseClause(pIn > 0 ? priorW.slice(0, pIn) : priorW);
+        if (!prior || prior.food.some(x => !PROTEIN_WORDS.has(x) && x !== 'powder') || !prior.unit || prior.unit.replace(/s$/, '') !== 'scoop') continue;
+        if (toks[sj.start - 1]?.piece === wp) continue; // the restated dose must start a later piece than the corrected one
+      }
+    }
     if (toks[sh.start - 1]?.w === 'with' || toks[sh.start - 2]?.w === 'with') continue;
     const hw = words(`${items[h].normalizedForm ?? ''} ${items[h].rawText}`);
     if (!hw.some(x => PROTEIN_WORDS.has(x)) || !hw.some(x => x === 'shake' || x === 'shakes')) continue;
@@ -667,6 +724,52 @@ export function foldTrailingQuantityClauses<T extends Item>(
   }
   // Later folds see the rewritten liquid (`… in milk, 1 cup` still folds the cup onto the milk).
   const W: T[] = items.map((it, i) => (dose.has(i) ? { ...it, rawText: dose.get(i)!, normalizedForm: doseNf.get(i) ?? it.normalizedForm } : it));
+
+  // S340 (MGR 20:30Z, C68's deploy-3 read): the segmenter can RESTATE a consumed fraction as a whole item with no span in the
+  // line (`a bottle of wine, um, drank half` -> [`a bottle of wine`] + [`half a bottle of wine`]), and both bill. A span-less item
+  // that is exactly a fraction of the live item before it scales that item and goes - only when, after the item, the line states
+  // the same fraction behind a consume verb (`drank half`), and nothing but filler follows that clause. Any other span-less item is
+  // left as typed.
+  for (let j = 1; j < n; j++) {
+    if (spans[j] || removed.has(j)) continue;
+    let t = j - 1;
+    while (t >= 0 && removed.has(t)) t--;
+    if (t < 0 || !spans[t] || folded.has(t)) continue;
+    const f = restatedFraction(W[j].rawText, W[t].rawText);
+    if (f === null) continue;
+    // j's words occur nowhere in the line: the left-to-right span walk can leave a stated, reordered item span-less (refute r1 M1).
+    const jw = words(W[j].rawText);
+    if (toks.some((_, s0) => s0 + jw.length <= toks.length && jw.every((w, k) => toks[s0 + k].w === w))) continue;
+    let end = toks.length;
+    for (let k = t + 1; k < n; k++) if (spans[k]) { end = spans[k]!.start; break; }
+    let said = false;
+    let lastPiece = -1;
+    let group: string[] = [];
+    const groups: string[][] = [];
+    for (const tk of toks.slice(spans[t]!.end, end)) {
+      if (tk.piece !== lastPiece) { group = []; groups.push(group); lastPiece = tk.piece; }
+      group.push(tk.w);
+    }
+    for (let gi = 0; gi < groups.length; gi++) {
+      const g = groups[gi];
+      let i = 0;
+      while (i < g.length && (GAP_SKIP.has(g[i]) || CONNECTORS.has(g[i]))) i++;
+      const own = consumedTokens(g.slice(i));
+      const c = own ? parseClause(own, { fractions: true }) : null;
+      if (c && c.food.length === 0 && c.unit === null && Math.abs(c.value - f) < 1e-9) {
+        // The consume clause is the last thing said before the next item or the line end: a later portion (`then the other half
+        // at dinner`) may be what j restates (refute r1 B1).
+        said = groups.slice(gi + 1).every(r => r.every(x => GAP_SKIP.has(x) || CONNECTORS.has(x) || SUBJECT_OK.has(x) || CONSUME.has(x)));
+        break;
+      }
+    }
+    if (!said) continue;
+    const scaled = scaleByFactor(W[t], f);
+    if (scaled === null) continue;
+    folds.push({ kind: 'partial', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: scaled });
+    folded.set(t, scaled);
+    removed.add(j);
+  }
 
   // Segment fold (shapes A, B).
   for (let j = 1; j < n; j++) {
@@ -753,6 +856,11 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     if (clause.fractionWord || viaConsume) continue;
     if (clause.food.length === 0 && !aloneInPiece(t, j)) continue;
+    if (spoonOnTopping(W[t], clause, words(W[j].rawText))) {
+      folds.push({ kind: 'topping', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: W[t].rawText });
+      removed.add(j);
+      continue;
+    }
     const after = rewrite(W[t], clause);
     folds.push({ kind: 'segment', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after });
     folded.set(t, after);
@@ -838,6 +946,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     if (clause.fractionWord) continue;
     if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(W[t], clause.food)) continue;
+    if (spoonOnTopping(W[t], clause, first)) continue;
     const after = rewrite(W[t], clause);
     folds.push({ kind: 'gap', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after });
     folded.set(t, after);
