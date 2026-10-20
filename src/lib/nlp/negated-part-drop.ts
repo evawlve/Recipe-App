@@ -18,7 +18,15 @@
  * [burrito | sour cream | cheese]); a removal verb may sit INSIDE the item (`picked off the pepperoni`,
  * `skipped the egg`); a normalizedForm may keep `<neg> <one word>` (`no sugar` ~ `no sugar`); and a
  * one-word bare part after `or` / `nor` inherits the negation of the part before it. Longer names
- * that start with a negator stay products (`no sugar added jam`, `no bake cookies`).
+ * that start with a negator stay products (`no sugar added jam`, `no bake cookies`). Bare 'left out' with no determiner
+ * is a removal only when it opens its own clause (S240, cloud-38 D2).
+ *
+ * SOLO (S240, MGR 17:30Z relay 3): the single-item fast path never segments, so `stripSoloRemoval()` strips a
+ * trailing removal clause there (`a cobb salad without the egg` -> `a cobb salad`). One `without` / `minus` after a
+ * food word; tail of 1-4 words, parts of 1-3 split on or / nor. The line stays as typed for a count, size, unit,
+ * connector or digit in the tail and for an absence part (nutrient or identity: sugar, salt, fat, caffeine, alcohol,
+ * gluten, lactose, yolk, meat, skin, dairy, breading). `no` / `hold the` are out (product names: No Cow, Hold the
+ * Cone). Named false positive: `chili without beans` bills plain chili.
  *
  * Runs immediately BEFORE trailing-quantity-fold (drop first, then fold): fold-first can rewrite a
  * negated part into a billed one (`no bun, two of them` -> `2 no bun`). The SegmentationCache keeps
@@ -94,11 +102,23 @@ function isNegated(item: Item): boolean {
 }
 
 /** S240 (MGR 17:14Z b): the segmenter may keep the removal verb INSIDE the item (`picked off the pepperoni`, `skipped the egg`). */
-function isRemovedOwn(item: Item): boolean {
+// S240 (cloud-38 D2): `left out` with no determiner can be an adjective (`a coke and left out pizza from last night` is leftover
+// pizza). It reads as a removal only when the verb opens its own clause: a comma piece starts there, or `i` / `we` / `but` /
+// `then` sits right before it (`a burrito, left out cheese`). Every other removal verb, and `left out the …`, is unchanged.
+const CLAUSE_OPENERS = new Set(['i', 'we', 'but', 'then']);
+function opensAt(at: number, toks: Tok[]): boolean {
+  if (at === 0) return true;
+  const prev = toks[at - 1];
+  return toks[at].piece !== prev.piece || CLAUSE_OPENERS.has(prev.w);
+}
+const isAdjectival = (verb: string[], det: string[]) => det.length === 0 && verb.length === 2 && verb[0] === 'left' && verb[1] === 'out';
+
+function isRemovedOwn(item: Item, span: { start: number; end: number } | null, toks: Tok[]): boolean {
   if (item.brand && item.brand.trim()) return false;
   const w = words(item.rawText);
   for (const verb of REMOVAL_VERBS) {
     for (const det of REMOVAL_DETS) {
+      if (isAdjectival(verb, det) && !(span && opensAt(span.start, toks))) continue;
       const seq = [...verb, ...det];
       if (w.length > seq.length && seq.every((x, k) => w[k] === x)) {
         const rest = w.slice(seq.length);
@@ -167,6 +187,7 @@ function isRemoved(item: Item, span: { start: number; end: number } | null, toks
       for (let k = 0; k < seq.length; k++) {
         if (toks[from + k].w !== seq[k] || toks[from + k].piece !== piece) { ok = false; break; }
       }
+      if (ok && isAdjectival(verb, det) && !opensAt(from, toks)) continue;
       if (ok) return true;
     }
   }
@@ -208,7 +229,7 @@ export function dropNegatedParts<T extends Item>(
     let kind: NegatedPartDrop['kind'] | null = null;
     if (isExclusion(it)) kind = 'exclusion';
     else if (isNegated(it)) kind = 'negated';
-    else if (isRemoved(it, spans[j], toks) || isRemovedOwn(it)) kind = 'removed';
+    else if (isRemoved(it, spans[j], toks) || isRemovedOwn(it, spans[j], toks)) kind = 'removed';
     else if (negatedInLine(it, spans[j], toks)) kind = 'negated';
     else if (
       prevNegated && spans[j] && spans[j - 1] && bareLead(it) && asIs(it) && words(it.rawText).length === 1 && toks[spans[j]!.start].piece === toks[spans[j - 1]!.end - 1].piece &&
@@ -219,4 +240,59 @@ export function dropNegatedParts<T extends Item>(
     else out.push(it);
   });
   return { items: out, drops };
+}
+
+// S240 (MGR 17:30Z relay 3): the single-item fast path never segments, so a removal clause stays in the one item.
+const SOLO_NEG = new Set(['without', 'minus']);
+const SOLO_TAIL_DETS = new Set(['the', 'any', 'my']);
+// The tail must name a plain part. A count, a size, a connector or a filler keeps the line as typed.
+const SOLO_TAIL_STOP = new Set([
+  'a', 'an', 'one', 'two', 'three', 'four', 'five', 'six', 'half', 'some', 'extra', 'double', 'small', 'medium', 'large',
+  'little', 'bit', 'much', 'and', 'or', 'nor', 'but', 'then', 'with', 'plus', 'i', 'it', 'them', 'that',
+  // Quantity, size and unit words (rowSolo refute r1 B1): `coffee without cream lg` keeps its size.
+  'w', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'dozen', 'couple', 'few', 'several', 'pair', 'twice', 'thrice',
+  'again', 'x', 'lg', 'sm', 'md', 'reg', 'big', 'huge', 'full', 'whole', 'regular', 'tall', 'grande', 'venti', 'jumbo', 'mini',
+  'cup', 'bowl', 'piece', 'slice', 'serving', 'helping', 'plate', 'plateful', 'handful', 'scoop', 'tbsp', 'tsp', 'tablespoon',
+  'teaspoon', 'oz', 'ounce', 'gram', 'g', 'ml', 'container', 'portion', 'glass', 'mug', 'can', 'bottle', 'bag', 'box', 'packet',
+  'spoonful', 'pint', 'quart', 'liter', 'lb', 'pound',
+]);
+const soloStop = (w: string): boolean => SOLO_TAIL_STOP.has(w) || (/(?:es|s)$/.test(w) && (SOLO_TAIL_STOP.has(w.replace(/es$/, '')) || SOLO_TAIL_STOP.has(w.replace(/s$/, ''))));
+// A removed nutrient or a removed defining part names a different food (`a coke without sugar`, `chili without meat`).
+// That line stays as typed: the absence is the food's identity, not a part to drop.
+const SOLO_ABSENCE = /^(?:added )?(?:sugars?|salt|sodium|fat|calories?|carbs?|caffeine|alcohol|gluten|lactose|yolks?|meat|skin|dairy|breading)$/;
+const SOLO_HEAD_FILLER = new Set([
+  'a', 'an', 'the', 'one', 'two', 'three', 'some', 'my', 'half', 'just', 'only', 'i', 'had', 'ate', 'have', 'of',
+]);
+
+export interface SoloRemoval {
+  /** The text the item keeps: everything before the clause, trailing punctuation trimmed. */
+  head: string;
+  /** The dropped clause, as typed. */
+  clause: string;
+}
+
+/**
+ * The fast path's twin of rule (a): `a cobb salad without the egg` -> `a cobb salad`. One `without` / `minus`
+ * after at least one food word, followed by a plain part of one to three words. Null (keep the line as typed)
+ * when the clause is not that shape.
+ */
+export function stripSoloRemoval(rawText: string): SoloRemoval | null {
+  const raw = rawText.trim().split(/\s+/);
+  const lw = raw.map(t => words(t).join(' '));
+  const at = lw.flatMap((w, k) => (SOLO_NEG.has(w) ? [k] : []));
+  if (at.length !== 1 || at[0] === 0) return null;
+  const k = at[0];
+  const head = raw.slice(0, k).join(' ').replace(/[\s,;:(\-]+$/, '');
+  const headWords = words(head);
+  if (!headWords.some(w => !SOLO_HEAD_FILLER.has(w) && !/^[\d/.]+$/.test(w))) return null;
+  let tail = raw.slice(k + 1).flatMap(t => words(t));
+  if (tail.length > 0 && (SOLO_TAIL_DETS.has(tail[0]) || (lw[k] === 'without' && (tail[0] === 'a' || tail[0] === 'an')))) {
+    tail = tail.slice(1);
+  }
+  // `without onions or pickles`: each part is checked on its own.
+  const parts = tail.join(' ').split(/ (?:or|nor) /).map(p => p.split(' ').filter(Boolean));
+  if (tail.length < 1 || tail.length > 4 || parts.some(p => p.length < 1 || p.length > 3)) return null;
+  if (parts.some(p => p.some(w => soloStop(w) || /\d/.test(w)))) return null;
+  if (parts.some(p => SOLO_ABSENCE.test(p.join(' ')))) return null;
+  return { head, clause: raw.slice(k).join(' ') };
 }

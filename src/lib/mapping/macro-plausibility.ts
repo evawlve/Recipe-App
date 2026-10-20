@@ -18,6 +18,7 @@
  */
 
 import { detectBrandInQuery } from './brand-detector';
+import { normalizeUnitToken } from '../parse/unit';
 
 export interface MacroPlausibilityInput {
     kcal?: number | null;
@@ -686,7 +687,8 @@ function brewedTeaReason(queryName: string, macrosPer100g?: MacroPlausibilityInp
     const words = headClauseWords(queryName);
     const last = words[words.length - 1];
     if (last !== 'tea' && last !== 'teas') return null;
-    if (!words.slice(0, -1).every((w) => BREWED_TEA_MODS.has(w))) return null;
+    // A size/measure word (`large`, `small`, `medium`, `bottle` ...) that the unit table reads is allowed; it is not a brand or a flavour.
+    if (!words.slice(0, -1).every((w) => BREWED_TEA_MODS.has(w) || normalizeUnitToken(w).kind !== 'unknown')) return null;
     const lowered = [queryName, headLine].map((t) => (t || '').toLowerCase());
     if (lowered.some((t) => BREWED_TEA_EXEMPT_PATTERN.test(t))) return null;
     if (detectBrandInQuery(queryName).isBranded) return null;
