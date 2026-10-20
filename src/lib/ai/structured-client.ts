@@ -66,6 +66,13 @@ export interface StructuredLlmOptions {
     forceProvider?: StructuredLlmProvider;
     /** Optional max_tokens cap for the completion (omitted from the request when unset) */
     maxTokens?: number;
+    /**
+     * Optional caller cancellation (C70, S239). Once it aborts, a call still QUEUED for its
+     * purpose's concurrency slot leaves the queue without ever taking one, an in-flight fetch is
+     * aborted, and no further retry or provider fallback starts. The call then RESOLVES (it never
+     * rejects) to { status: 'error', error: STRUCTURED_LLM_ABORTED_ERROR }. Omitted: nothing changes.
+     */
+    signal?: AbortSignal;
 }
 
 export interface StructuredLlmResult {
@@ -77,6 +84,12 @@ export interface StructuredLlmResult {
     error?: string;
     durationMs?: number;
 }
+
+/**
+ * The `error` of a call ended by its caller's `signal`. Not a provider failure: the client logs
+ * nothing for it and counts nothing beyond the one `failures` an aborted in-flight attempt is.
+ */
+export const STRUCTURED_LLM_ABORTED_ERROR = 'aborted_by_caller';
 
 // ============================================================
 // Simple Semaphore for Concurrency Limiting
@@ -100,18 +113,33 @@ class Semaphore {
         return this.waiting.length;
     }
 
-    async acquire(): Promise<void> {
+    /**
+     * Take a permit, waiting in FIFO order when none is free. Resolves true once the permit is
+     * held. Resolves false, holding NOTHING (so there is nothing to release), only when `signal`
+     * aborts first: an already-aborted signal never takes a permit, and an abort while queued
+     * removes the waiter, so the next release() hands the permit to the next waiter instead.
+     */
+    async acquire(signal?: AbortSignal): Promise<boolean> {
+        if (signal?.aborted) return false;
         if (this.permits > 0) {
             this.permits--;
             this._activeCount++;
-            return;
+            return true;
         }
 
-        return new Promise<void>((resolve) => {
-            this.waiting.push(() => {
+        return new Promise<boolean>((resolve) => {
+            const grant = (): void => {
+                signal?.removeEventListener('abort', onAbort);
                 this._activeCount++;
-                resolve();
-            });
+                resolve(true);
+            };
+            const onAbort = (): void => {
+                const i = this.waiting.indexOf(grant);
+                if (i !== -1) this.waiting.splice(i, 1);
+                resolve(false);
+            };
+            this.waiting.push(grant);
+            signal?.addEventListener('abort', onAbort, { once: true });
         });
     }
 
@@ -125,8 +153,15 @@ class Semaphore {
         }
     }
 
-    async run<T>(fn: () => Promise<T>): Promise<T> {
-        await this.acquire();
+    /**
+     * Run `fn` holding a permit, released exactly once whatever `fn` does. With `abort`, a caller
+     * whose signal fires while still queued gets `abort.onAbort()` instead and never holds a permit.
+     */
+    async run<T>(fn: () => Promise<T>, abort?: { signal: AbortSignal; onAbort: () => T }): Promise<T> {
+        // acquire() can only return false when it was given a signal, i.e. when `abort` is set.
+        if (!(await this.acquire(abort?.signal)) && abort) {
+            return abort.onAbort();
+        }
         try {
             return await fn();
         } finally {
@@ -292,10 +327,26 @@ export function getProviderChain(
 // ============================================================
 
 /**
- * Sleep for specified milliseconds
+ * Sleep for specified milliseconds. With a signal, an abort ends the sleep at once and clears its
+ * timer; the retry loop re-checks `signal.aborted` before the next attempt.
  */
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (!signal) return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+        if (signal.aborted) {
+            resolve();
+            return;
+        }
+        const onAbort = (): void => {
+            clearTimeout(timer);
+            resolve();
+        };
+        const timer = setTimeout(() => {
+            signal.removeEventListener('abort', onAbort);
+            resolve();
+        }, ms);
+        signal.addEventListener('abort', onAbort, { once: true });
+    });
 }
 
 /**
@@ -390,10 +441,17 @@ async function makeRequest(
     systemPrompt: string,
     userPrompt: string,
     timeout: number,
-    maxTokens?: number
+    maxTokens?: number,
+    signal?: AbortSignal
 ): Promise<RequestResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    // The caller's signal (C70, S239) aborts this attempt through the SAME controller as the
+    // per-attempt timeout, so it lands on the AbortError paths below and is counted exactly as a
+    // timed-out attempt is. Linked by hand, not AbortSignal.any(), so no Node version floor;
+    // unlinked in the finally below.
+    const onCallerAbort = (): void => controller.abort();
+    signal?.addEventListener('abort', onCallerAbort, { once: true });
 
     // One outcome per attempt. `countFailure()` is a no-op once a response has been counted, which
     // is what stops a post-body throw (`JSON.parse(rawContent)`, or `response.text()` on the error
@@ -524,6 +582,8 @@ async function makeRequest(
         }
 
         return { success: false, error: (err as Error).message };
+    } finally {
+        signal?.removeEventListener('abort', onCallerAbort);
     }
 }
 
@@ -555,9 +615,20 @@ async function makeRequest(
 export async function callStructuredLlm(
     options: StructuredLlmOptions
 ): Promise<StructuredLlmResult> {
-    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider, maxTokens } = options;
+    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider, maxTokens, signal } = options;
     const limiter = limiters[purpose];
     const startTime = Date.now();
+
+    // A call ended by its caller's signal. Deliberately NOT the all-providers-failed path: no
+    // console.error, and no counter beyond the `failures` an aborted in-flight attempt already
+    // counted in makeRequest() (an attempt that produced no 2xx, as that counter is defined).
+    const aborted = (provider?: ProviderConfig): StructuredLlmResult => ({
+        status: 'error',
+        error: STRUCTURED_LLM_ABORTED_ERROR,
+        provider: provider?.name ?? 'openai',
+        model: provider?.model ?? 'none',
+        durationMs: Date.now() - startTime,
+    });
 
     return limiter.run(async () => {
         const providerChain = getProviderChain(purpose, forceProvider);
@@ -579,7 +650,10 @@ export async function callStructuredLlm(
             lastProvider = provider;
 
             for (let attempt = 0; attempt < STRUCTURED_LLM_MAX_RETRIES; attempt++) {
-                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens);
+                // Before EVERY attempt: a slot granted as the signal fired, a retry after an
+                // aborted backoff, and the first attempt of the next provider all stop here.
+                if (signal?.aborted) return aborted(provider);
+                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens, signal);
 
                 if (result.success) {
                     const durationMs = Date.now() - startTime;
@@ -612,6 +686,9 @@ export async function callStructuredLlm(
                     };
                 }
 
+                // Aborted mid-attempt: return quietly, not through the provider-failed logs.
+                if (signal?.aborted) return aborted(provider);
+
                 lastError = result.error;
 
                 // If retryable error, backoff and retry with same provider
@@ -621,7 +698,7 @@ export async function callStructuredLlm(
                         `[structured-llm] Retryable error (${result.status}) from ${provider.name}/${provider.model}, ` +
                         `retrying in ${delay}ms (attempt ${attempt + 1}/${STRUCTURED_LLM_MAX_RETRIES})`
                     );
-                    await sleep(delay);
+                    await sleep(delay, signal);
                     continue;
                 }
 
@@ -646,7 +723,7 @@ export async function callStructuredLlm(
             model: lastProvider.model,
             durationMs,
         };
-    });
+    }, signal ? { signal, onAbort: () => aborted() } : undefined);
 }
 
 // ============================================================

@@ -1,0 +1,1147 @@
+[
+ {
+  "src": "seat",
+  "line": "pasta i made with olive oil",
+  "input": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "seat",
+  "line": "pasta i made with olive oil",
+  "input": [
+   {
+    "rawText": "pasta i made",
+    "normalizedForm": "pasta",
+    "brand": ""
+   },
+   {
+    "rawText": "olive oil",
+    "normalizedForm": "olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made",
+    "normalizedForm": "pasta"
+   },
+   {
+    "rawText": "olive oil",
+    "normalizedForm": "olive oil"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "seat",
+  "line": "a homemade smoothie bowl made with frozen berries",
+  "input": [
+   {
+    "rawText": "a homemade smoothie bowl made with frozen berries",
+    "normalizedForm": "smoothie bowl made with frozen berries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a homemade smoothie bowl made with frozen berries",
+    "normalizedForm": "smoothie bowl"
+   }
+  ],
+  "heads": [
+   "smoothie bowl"
+  ]
+ },
+ {
+  "src": "seat",
+  "line": "oatmeal made with milk",
+  "input": [
+   {
+    "rawText": "oatmeal made with milk",
+    "normalizedForm": "oatmeal made with milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal made with milk",
+    "normalizedForm": "oatmeal made with milk"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "seat",
+  "line": "cookies made with almond flour",
+  "input": [
+   {
+    "rawText": "cookies made with almond flour",
+    "normalizedForm": "cookies made with almond flour",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "cookies made with almond flour",
+    "normalizedForm": "cookies made with almond flour"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "seat",
+  "line": "gummies made with real fruit juice",
+  "input": [
+   {
+    "rawText": "gummies made with real fruit juice",
+    "normalizedForm": "gummies made with real fruit juice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "gummies made with real fruit juice",
+    "normalizedForm": "gummies made with real fruit juice"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "seat",
+  "line": "french toast i made with brioche",
+  "input": [
+   {
+    "rawText": "french toast i made with brioche",
+    "normalizedForm": "french toast i made with brioche",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "french toast i made with brioche",
+    "normalizedForm": "french toast"
+   }
+  ],
+  "heads": [
+   "french toast"
+  ]
+ },
+ {
+  "src": "seat",
+  "line": "a stew we made it with beef and carrots",
+  "input": [
+   {
+    "rawText": "a stew we made it with beef and carrots",
+    "normalizedForm": "a stew we made it with beef and carrots",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a stew we made it with beef and carrots",
+    "normalizedForm": "stew"
+   }
+  ],
+  "heads": [
+   "stew"
+  ]
+ },
+ {
+  "src": "seat",
+  "line": "homemade cookies made with almond flour",
+  "input": [
+   {
+    "rawText": "homemade cookies made with almond flour",
+    "normalizedForm": "homemade cookies made with almond flour",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade cookies made with almond flour",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "heads": [
+   "cookies"
+  ]
+ },
+ {
+  "src": "seat",
+  "line": "i made pasta with olive oil",
+  "input": [
+   {
+    "rawText": "i made pasta with olive oil",
+    "normalizedForm": "i made pasta with olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "i made pasta with olive oil",
+    "normalizedForm": "i made pasta with olive oil"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "seat",
+  "line": "2 pancakes i made with oat flour",
+  "input": [
+   {
+    "rawText": "2 pancakes i made with oat flour",
+    "normalizedForm": "2 pancakes i made with oat flour",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 pancakes i made with oat flour",
+    "normalizedForm": "pancakes"
+   }
+  ],
+  "heads": [
+   "pancakes"
+  ]
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a burrito i made with chicken",
+  "input": [
+   {
+    "rawText": "a burrito i made with chicken",
+    "normalizedForm": "burrito i made with chicken",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burrito i made with chicken",
+    "normalizedForm": "burrito"
+   }
+  ],
+  "heads": [
+   "burrito"
+  ]
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a burrito i made with chicken and rice",
+  "input": [
+   {
+    "rawText": "a burrito i made with chicken",
+    "normalizedForm": "burrito with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burrito i made with chicken",
+    "normalizedForm": "burrito"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "heads": [
+   "burrito"
+  ]
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a homemade burrito made with chicken, with cheese and salsa",
+  "input": [
+   {
+    "rawText": "a homemade burrito made with chicken",
+    "normalizedForm": "burrito with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a homemade burrito made with chicken",
+    "normalizedForm": "burrito"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa"
+   }
+  ],
+  "heads": [
+   "burrito"
+  ]
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a homemade pizza with cheese, and sausage we made with fennel",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage we made with fennel",
+    "normalizedForm": "sausage we made with fennel",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "sausage we made with fennel",
+    "normalizedForm": "sausage"
+   }
+  ],
+  "heads": [
+   "sausage"
+  ]
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a homemade pizza with sauce made with tomatoes and basil",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "sauce made with tomatoes",
+    "normalizedForm": "sauce made with tomatoes",
+    "brand": ""
+   },
+   {
+    "rawText": "basil",
+    "normalizedForm": "basil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "sauce made with tomatoes",
+    "normalizedForm": "sauce made with tomatoes"
+   },
+   {
+    "rawText": "basil",
+    "normalizedForm": "basil"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 DP",
+  "line": "a sandwich i made with turkey and a cookie we made with butter",
+  "input": [
+   {
+    "rawText": "a sandwich i made with turkey",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a cookie we made with butter",
+    "normalizedForm": "cookie",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sandwich i made with turkey",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "a cookie we made with butter",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "what i made with leftovers",
+  "input": [
+   {
+    "rawText": "what i made with leftovers",
+    "normalizedForm": "leftovers",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "what i made with leftovers",
+    "normalizedForm": "leftovers"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "something we made with chicken and rice",
+  "input": [
+   {
+    "rawText": "something we made with chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "something we made with chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "dinner i made with chicken and broccoli",
+  "input": [
+   {
+    "rawText": "dinner i made with chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "dinner i made with chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "breakfast i made with eggs and toast",
+  "input": [
+   {
+    "rawText": "breakfast i made with eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "breakfast i made with eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "the stuff i made with ground beef",
+  "input": [
+   {
+    "rawText": "the stuff i made with ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "the stuff i made with ground beef",
+    "normalizedForm": "ground beef"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "leftovers we made with turkey",
+  "input": [
+   {
+    "rawText": "leftovers we made with turkey",
+    "normalizedForm": "turkey leftovers",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "leftovers we made with turkey",
+    "normalizedForm": "turkey leftovers"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "a meal i made with salmon and rice",
+  "input": [
+   {
+    "rawText": "a meal i made with salmon",
+    "normalizedForm": "salmon",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a meal i made with salmon",
+    "normalizedForm": "salmon"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 NF",
+  "line": "the one i made with oat milk",
+  "input": [
+   {
+    "rawText": "the one i made with oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "the one i made with oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "made a sandwich with turkey",
+  "input": [
+   {
+    "rawText": "made a sandwich with turkey",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "made a sandwich with turkey",
+    "normalizedForm": "turkey sandwich"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "i made pasta with olive oil",
+  "input": [
+   {
+    "rawText": "i made pasta with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "i made pasta with olive oil",
+    "normalizedForm": "pasta with olive oil"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "pasta that i made with olive oil",
+  "input": [
+   {
+    "rawText": "pasta that i made with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta that i made with olive oil",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "soup which we made with chicken broth",
+  "input": [
+   {
+    "rawText": "soup which we made with chicken broth",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "soup which we made with chicken broth",
+    "normalizedForm": "chicken soup"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "homemade pasta i just made with butter",
+  "input": [
+   {
+    "rawText": "homemade pasta i just made with butter",
+    "normalizedForm": "pasta with butter",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade pasta i just made with butter",
+    "normalizedForm": "pasta with butter"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "homemade bread my mom made with honey",
+  "input": [
+   {
+    "rawText": "homemade bread my mom made with honey",
+    "normalizedForm": "bread",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade bread my mom made with honey",
+    "normalizedForm": "bread"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "chili i made yesterday with beans",
+  "input": [
+   {
+    "rawText": "chili i made yesterday with beans",
+    "normalizedForm": "chili with beans",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "chili i made yesterday with beans",
+    "normalizedForm": "chili with beans"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "cookies i made with my kids",
+  "input": [
+   {
+    "rawText": "cookies i made with my kids",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "cookies i made with my kids",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 VB",
+  "line": "brownies we made with grandma",
+  "input": [
+   {
+    "rawText": "brownies we made with grandma",
+    "normalizedForm": "brownies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "brownies we made with grandma",
+    "normalizedForm": "brownies"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "homemade style cookies made with butter",
+  "input": [
+   {
+    "rawText": "homemade style cookies made with butter",
+    "normalizedForm": "homemade style cookies made with butter",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade style cookies made with butter",
+    "normalizedForm": "homemade style cookies made with butter"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "homestyle cookies made with butter",
+  "input": [
+   {
+    "rawText": "homestyle cookies made with butter",
+    "normalizedForm": "homestyle cookies made with butter",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homestyle cookies made with butter",
+    "normalizedForm": "homestyle cookies made with butter"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "homemade bread and gummies made with real fruit juice",
+  "input": [
+   {
+    "rawText": "homemade bread",
+    "normalizedForm": "bread",
+    "brand": ""
+   },
+   {
+    "rawText": "gummies made with real fruit juice",
+    "normalizedForm": "gummies made with real fruit juice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade bread",
+    "normalizedForm": "bread"
+   },
+   {
+    "rawText": "gummies made with real fruit juice",
+    "normalizedForm": "gummies made with real fruit juice"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "homemade soup, and cookies made with almond flour",
+  "input": [
+   {
+    "rawText": "homemade soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "cookies made with almond flour",
+    "normalizedForm": "cookies made with almond flour",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "homemade soup",
+    "normalizedForm": "soup"
+   },
+   {
+    "rawText": "cookies made with almond flour",
+    "normalizedForm": "cookies made with almond flour"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "pizza home made with cheese",
+  "input": [
+   {
+    "rawText": "pizza home made with cheese",
+    "normalizedForm": "pizza home made with cheese",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pizza home made with cheese",
+    "normalizedForm": "pizza home made with cheese"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 HM",
+  "line": "home made pizza made with cheese",
+  "input": [
+   {
+    "rawText": "home made pizza made with cheese",
+    "normalizedForm": "home made pizza made with cheese",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "home made pizza made with cheese",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "heads": [
+   "pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "pasta i made with olive oil, about 2 cups",
+  "input": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   },
+   {
+    "rawText": "about 2 cups",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta"
+   },
+   {
+    "rawText": "about 2 cups",
+    "normalizedForm": ""
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "pasta i made with olive oil, maybe a cup and a half",
+  "input": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   },
+   {
+    "rawText": "maybe a cup and a half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta"
+   },
+   {
+    "rawText": "maybe a cup and a half",
+    "normalizedForm": ""
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "two pancakes i made with oat flour and a coffee",
+  "input": [
+   {
+    "rawText": "two pancakes i made with oat flour",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "two pancakes i made with oat flour",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "pasta i made with 2 tbsp olive oil",
+  "input": [
+   {
+    "rawText": "pasta i made with 2 tbsp olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made with 2 tbsp olive oil",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "pasta i made with olive oil, ate half",
+  "input": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta with olive oil",
+    "brand": ""
+   },
+   {
+    "rawText": "ate half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "pasta i made with olive oil",
+    "normalizedForm": "pasta"
+   },
+   {
+    "rawText": "ate half",
+    "normalizedForm": ""
+   }
+  ],
+  "heads": [
+   "pasta"
+  ]
+ },
+ {
+  "src": "refute-r1 FD",
+  "line": "a smoothie i made with banana and spinach, 16 oz",
+  "input": [
+   {
+    "rawText": "a smoothie i made with banana",
+    "normalizedForm": "banana smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   },
+   {
+    "rawText": "16 oz",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a smoothie i made with banana",
+    "normalizedForm": "banana smoothie"
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach"
+   },
+   {
+    "rawText": "16 oz",
+    "normalizedForm": ""
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 BR",
+  "line": "a protein bar made with whey",
+  "input": [
+   {
+    "rawText": "a protein bar made with whey",
+    "normalizedForm": "protein bar made with whey",
+    "brand": "Quest"
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein bar made with whey",
+    "normalizedForm": "protein bar made with whey"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 MI",
+  "line": "i made with chicken a stir fry",
+  "input": [
+   {
+    "rawText": "i made with chicken a stir fry",
+    "normalizedForm": "i made with chicken a stir fry",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "i made with chicken a stir fry",
+    "normalizedForm": "i made with chicken a stir fry"
+   }
+  ],
+  "heads": []
+ },
+ {
+  "src": "refute-r1 MI",
+  "line": "oatmeal i made with milk",
+  "input": [
+   {
+    "rawText": "oatmeal i made with milk",
+    "normalizedForm": "oatmeal with milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal i made with milk",
+    "normalizedForm": "oatmeal"
+   }
+  ],
+  "heads": [
+   "oatmeal"
+  ]
+ },
+ {
+  "src": "refute-r1 MI",
+  "line": "eggs we made it with cheese",
+  "input": [
+   {
+    "rawText": "eggs we made it with cheese",
+    "normalizedForm": "eggs with cheese",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "eggs we made it with cheese",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "heads": [
+   "eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 MI",
+  "line": "chicken i made with rice",
+  "input": [
+   {
+    "rawText": "chicken i made with rice",
+    "normalizedForm": "chicken with rice",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "chicken i made with rice",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "heads": [
+   "chicken"
+  ]
+ }
+]
