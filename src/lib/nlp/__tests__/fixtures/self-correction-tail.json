@@ -1075,6 +1075,7 @@
    }
   ],
   "expectRawTexts": [
+   "a turkey sandwich",
    "a ham sandwich"
   ]
  },
@@ -1094,6 +1095,7 @@
    }
   ],
   "expectRawTexts": [
+   "a turkey sandwich",
    "a ham sandwich"
   ]
  },
@@ -1113,6 +1115,7 @@
    }
   ],
   "expectRawTexts": [
+   "a turkey sandwich",
    "a ham sandwich"
   ]
  },

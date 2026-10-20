@@ -227,6 +227,7 @@ export function resolveSelfCorrections<T extends Item>(
     // gap: previous found span end .. j's span start (j span null -> j's text not in line; use leading tokens)
     const gs = prevEnd(j);
     let ge = spans[j] ? spans[j]!.start : -1;
+    let gl = 0; // the length of the prefix matched for a span-less j (S240, cloud-36 C5)
     if (ge < 0) {
       // j's text is not in the line (the segmenter completed it): longest PREFIX of j found after gs
       for (let L = jw.length - 1; L >= 1 && ge < 0; L--) {
@@ -240,6 +241,7 @@ export function resolveSelfCorrections<T extends Item>(
           }
           if (ok) {
             ge = s;
+            gl = L;
             break;
           }
         }
@@ -265,22 +267,41 @@ export function resolveSelfCorrections<T extends Item>(
     if (gap.some((t, q) => ADD.has(t.w) && !covered.has(q)) || jw.some(w => ADD.has(w))) continue;
     // S202 (cloud-35 F3): an addition word the segmenter left OUT of j (`a ham sandwich too`,
     // `... as well`) still makes j an addition.
-    if (spans[j]) {
-      const pj = toks[spans[j]!.start].piece;
+    // S240 (cloud-36 C5): a span-less j (the segmenter fixed its spelling) reads its tail from the end of the matched prefix.
+    const jEnd = spans[j] ? spans[j]!.end : gl > 0 ? ge + gl : -1;
+    if (jEnd >= 0) {
       // S202 (cloud-35 F3): only j's OWN stripped tail - stop at the next item's span or the first joiner.
       let stop = toks.length;
       let next = -1;
       for (let q = j + 1; q < n; q++) if (spans[q]) { stop = next = spans[q]!.start; break; }
-      for (let q = spans[j]!.end; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
+      for (let q = jEnd; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
       // S240 (cloud-36 C10): the shipped window; an ADD word is NOT an addition in three shapes only, read on the raw tokens.
+      // S240 (cloud-36 C4): the window runs on through later comma pieces that are a pure addition tail (`…, a ham sandwich, too`).
       const idx: number[] = [];
-      for (let q = spans[j]!.end; q < stop; q++) if (toks[q].piece === pj) idx.push(q);
+      // j's own piece runs to `stop`; a LATER piece joins only when every word in it is a pure addition tail (an ADD word,
+      // `as`, `well`) — a piece with any other word may be an item whose span the segmenter rewrote (refute r1).
+      const TAILW = (w: string): boolean => ADD.has(w) || w === 'as' || w === 'well';
+      const pj = toks[jEnd - 1] ? toks[jEnd - 1].piece : -1;
+      for (let q = jEnd; q < stop; ) {
+        if (toks[q].piece === pj) { idx.push(q); q++; continue; }
+        const pc = toks[q].piece;
+        let e = q;
+        while (e < stop && toks[e].piece === pc) e++;
+        let full = e;
+        while (full < toks.length && toks[full].piece === pc) full++;
+        if (full !== e) break; // the piece runs past stop: not a pure tail piece
+        let pure = true;
+        for (let r = q; r < e; r++) if (!TAILW(toks[r].w)) { pure = false; break; }
+        if (!pure) break;
+        for (let r = q; r < e; r++) idx.push(r);
+        q = e;
+      }
       const PRENOM = new Set(['plus', 'extra', 'more', 'another', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
       const notAdd = (q: number): boolean => {
-        const w = toks[q].w, nx = toks[q + 1], pv = toks[q - 1];
-        if (w === 'more' && ((nx && nx.piece === pj && nx.w === 'or') || (pv && pv.w === 'or'))) return true; // more or less / or more
-        if (w === 'extra' && nx && nx.piece === pj && q + 1 !== next && !ADD.has(nx.w) && !['and', 'with', 'or'].includes(nx.w)) return true; // extra large
-        if (PRENOM.has(w) && q + 1 === next && nx.piece === pj) return true; // plus|extra|more|another <next item>
+        const w = toks[q].w, nx = toks[q + 1], pv = toks[q - 1], pq = toks[q].piece;
+        if (w === 'more' && ((nx && nx.piece === pq && nx.w === 'or') || (pv && pv.w === 'or'))) return true; // more or less / or more
+        if (w === 'extra' && nx && nx.piece === pq && q + 1 !== next && !ADD.has(nx.w) && !['and', 'with', 'or'].includes(nx.w)) return true; // extra large
+        if (PRENOM.has(w) && q + 1 === next && nx.piece === pq) return true; // plus|extra|more|another <next item>
         return false;
       };
       const after = idx.filter(q => !(ADD.has(toks[q].w) && notAdd(q))).map(q => toks[q].w);
