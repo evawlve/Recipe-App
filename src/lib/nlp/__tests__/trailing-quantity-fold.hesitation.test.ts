@@ -1,6 +1,8 @@
 /**
  * Gap-fold hesitation skip (S240, cloud-38 D8): `a large pizza, um, i had 3 slices` folds the clause after the `um`.
- * Table-driven over fixtures/gap-hesitation.json (a copy of snapshots/s240/rowD8/fixture.json: 66 cases, 25 changed).
+ * Table-driven over fixtures/gap-hesitation.json (a copy of snapshots/s240/rowD8/fixture.json: 66 cases, 27 changed).
+ * `6 eggs, had 2` and `6 eggs, nope, had 2` were re-pinned from unchanged to `2 eggs` when #570 (a count-noun stock
+ * re-counts, cloud-38 D13) merged in; their src says so.
  */
 
 import { foldTrailingQuantityClauses } from '../trailing-quantity-fold';
@@ -19,9 +21,9 @@ interface Case {
 const CASES = fixture as Case[];
 
 describe('gap-hesitation fixture', () => {
-  test('fixture shape: 66 cases, 25 changed', () => {
+  test('fixture shape: 66 cases, 27 changed', () => {
     expect(CASES).toHaveLength(66);
-    expect(CASES.filter(c => c.changed)).toHaveLength(25);
+    expect(CASES.filter(c => c.changed)).toHaveLength(27);
   });
 
   test.each(CASES.map(c => [`${c.src}: ${c.line}`, c] as const))('%s', (_name, c) => {

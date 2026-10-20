@@ -547,7 +547,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned: #570 re-counts a count-noun stock (6 eggs, had 2), cloud-38 D13)",
   "line": "6 eggs, nope, had 2",
   "input": [
    {
@@ -558,15 +558,17 @@
   ],
   "expect": [
    {
-    "rawText": "6 eggs",
+    "rawText": "2 eggs",
     "normalizedForm": "eggs"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned: #570 re-counts a count-noun stock (6 eggs, had 2), cloud-38 D13)",
   "line": "6 eggs, had 2",
   "input": [
    {
@@ -577,12 +579,14 @@
   ],
   "expect": [
    {
-    "rawText": "6 eggs",
+    "rawText": "2 eggs",
     "normalizedForm": "eggs"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1",

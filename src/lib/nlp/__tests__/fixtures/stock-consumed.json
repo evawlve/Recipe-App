@@ -2681,10 +2681,11 @@
    }
   ],
   "expectRawTexts": [
-   "2 eggs",
-   "2"
+   "2 eggs"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r1 refute",
@@ -2696,9 +2697,11 @@
    }
   ],
   "expectRawTexts": [
-   "3 eggs"
+   "2 eggs"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r1 refute",
