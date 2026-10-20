@@ -1075,7 +1075,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1 CAP",
+  "src": "refute-r1 CAP (re-pinned on merging #568: drank re-counts a stock, cloud-38 D7)",
   "line": "a 6 pack of beer, drank 2",
   "input": [
    {
@@ -1086,12 +1086,14 @@
   ],
   "expect": [
    {
-    "rawText": "a 6 pack of beer",
+    "rawText": "2 beer",
     "normalizedForm": "beer"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1 CAP",
@@ -1880,7 +1882,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned on merging #568: drank re-counts a stock, cloud-38 D7)",
   "line": "a 12 pack of soda, drank 2",
   "input": [
    {
@@ -1891,15 +1893,17 @@
   ],
   "expect": [
    {
-    "rawText": "a 12 pack of soda",
+    "rawText": "2 soda",
     "normalizedForm": "soda"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned on merging #568: drank re-counts a stock, cloud-38 D7)",
   "line": "a 6 pack of beer, i drank 2",
   "input": [
    {
@@ -1910,12 +1914,14 @@
   ],
   "expect": [
    {
-    "rawText": "a 6 pack of beer",
+    "rawText": "2 beer",
     "normalizedForm": "beer"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
   "src": "refute-r1",
@@ -1939,7 +1945,7 @@
   "changed": false
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned on merging #568: drank re-counts a stock, cloud-38 D7)",
   "line": "a 6 pack of soda, drank 2",
   "input": [
    {
@@ -1950,15 +1956,17 @@
   ],
   "expect": [
    {
-    "rawText": "a 6 pack of soda",
+    "rawText": "2 soda",
     "normalizedForm": "soda"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  },
  {
-  "src": "refute-r1",
+  "src": "refute-r1 (re-pinned on merging #568: drank re-counts a stock, cloud-38 D7)",
   "line": "a 6 pack of beer, drank 2",
   "input": [
    {
@@ -1969,11 +1977,13 @@
   ],
   "expect": [
    {
-    "rawText": "a 6 pack of beer",
+    "rawText": "2 beers",
     "normalizedForm": "beers"
    }
   ],
-  "expectKinds": [],
-  "changed": false
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
  }
 ]
