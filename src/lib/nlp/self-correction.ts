@@ -42,6 +42,8 @@
  *
  * An addition is not a correction: an ADD word or `as well` the segmenter stripped out of j (`a ham sandwich too`) still
  * keeps j, and in the trailing block an `and` in the gap right before the last item keeps the earlier reading (two foods).
+ * A later comma piece of hesitation words only (`, um,`) is transparent to the addition tail, so
+ * `..., a ham sandwich, um, too` keeps the turkey sandwich (S240, cloud-40 F1).
  *
  * Pure; never mutates its input (items are copied before any write).
  */
@@ -292,7 +294,15 @@ export function resolveSelfCorrections<T extends Item>(
         if (full !== e) break; // the piece runs past stop: not a pure tail piece
         let pure = true;
         for (let r = q; r < e; r++) if (!TAILW(toks[r].w)) { pure = false; break; }
-        if (!pure) break;
+        if (!pure) {
+          // S240 (cloud-40 F1): a piece of hesitation words only (`, um,`) is transparent - skip it and read on, so the `too` behind it
+          // still keeps j an addition (`a turkey sandwich, actually a ham sandwich, um, too`).
+          let hes = true;
+          for (let r = q; r < e; r++) if (!QTY_ONLY.has(toks[r].w)) { hes = false; break; }
+          if (!hes) break;
+          q = e;
+          continue;
+        }
         for (let r = q; r < e; r++) idx.push(r);
         q = e;
       }
