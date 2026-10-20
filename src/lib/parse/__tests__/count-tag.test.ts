@@ -89,6 +89,9 @@ const LEADING_QTY_TAG_CLASS: Array<[string, unknown]> = [
 /** Guard (g): N is a pack size, not a count of the food. */
 const PACK_SIZE_DECLINES: string[] = ["coke x12 pack", "water (x24 case)", "coke (x12 pack)", "la croix x8 pk"];
 
+/** Guard (g), cloud-40 F4: a drinkware/container word after N would become the head noun; the tag declines. */
+const CONTAINER_DECLINES: string[] = ["wine x2 glasses", "beer x2 cans", "water x2 bottles", "coffee x2 mugs", "wine (x2 glasses)"];
+
 /** resolveCountTag(line) must return the line untouched. */
 const FN_CONTROLS: string[] = [
   "⅓ bagel x2",
@@ -141,6 +144,11 @@ describe('count tag reads as a leading count', () => {
 
   it.each(PACK_SIZE_DECLINES)('guard (g): %s is a pack size, the tag declines', (line) => {
     expect(resolveCountTag(line)).toBe(line);
+  });
+
+  it.each(CONTAINER_DECLINES)('guard (g): %s keeps master\'s parse (the container never becomes the head noun)', (line) => {
+    expect(resolveCountTag(line)).toBe(line);
+    expect(parseIngredientLine(line)?.name).not.toMatch(/^(?:wine|beer|water|coffee) (?:glasses|cans|bottles|mugs)$/);
   });
 
   it('a few wings x2 declines at the tag (an article-led line; with #583 it joins the leading-quantity class)', () => {

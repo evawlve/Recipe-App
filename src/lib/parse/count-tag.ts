@@ -30,7 +30,9 @@
  *   (e) the character before the tag is not a letter, `.` or `)` (so `ihop 2 x 2 x 2` stays);
  *   (f) a mass/volume unit follows N (`x2 cups`, `x2 oz`);
  *   (g) a pack/container word follows N (`coke x12 pack`, `water (x24 case)`): N is the PACK SIZE, not a
- *       count of the food (deploy-3 integration finding, MGR 2026-10-20T00:33Z).
+ *       count of the food (deploy-3 integration finding, MGR 2026-10-20T00:33Z); and a DRINKWARE/container word
+ *       follows N (`wine x2 glasses`, `beer x2 cans`, `water x2 bottles`): rewriting would make the container the
+ *       head noun (`2 wine glasses`), so the line keeps master's parse (cloud-40 F4, backend #587).
  * The leading `<N>x` rule is checked first and never matches when a digit follows the `x`, so
  * `2 x 200g`, `2x200g`, `2 x 15 oz cans`, `5x5 workout bar`, `9x13 pan` and `2 x 4` are untouched.
  * Collisions pinned as declined: `xbox`, `xo sauce`, `x2o water`, `2xl shirt`, `x2 cups`.
@@ -78,8 +80,12 @@ function massOrVolumeFollows(rest: string): boolean {
   return kind === 'mass' || kind === 'volume';
 }
 
-/** Guard (g): the word after N names a pack size (`x12 pack`), so N is not a count of the food. */
-const PACK_WORD = /^(?:pack|packs|pk|pks|multipack|ct|count|case|cases|carton|cartons|box|boxes|tray|trays)\b/i;
+/**
+ * Guard (g): the word after N names a pack size (`x12 pack`), so N is not a count of the food; or it names the
+ * drinkware/container the food came in (`wine x2 glasses`), which a rewrite would turn into the head noun.
+ */
+const PACK_WORD =
+  /^(?:pack|packs|pk|pks|multipack|ct|count|case|cases|carton|cartons|box|boxes|tray|trays|glass|glasses|can|cans|bottle|bottles|mug|mugs|jar|jars|tin|tins)\b/i;
 function packWordFollows(rest: string): boolean {
   return PACK_WORD.test(rest.trim());
 }
