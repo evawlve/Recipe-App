@@ -404,9 +404,14 @@ function rewriteStackOfPancakes(mergedTokens: string[]): void {
   const noun = mergedTokens[nounAt]?.toLowerCase();
   const first = f + 3 + size;
   if ((noun !== 'pancakes' && noun !== 'pancake') || nounAt < first) return;
-  for (let k = first; k < nounAt; k++) {
+  // A STATED count wins over the stack default: "a stack of three buttermilk
+  // pancakes" drops the stack prefix and keeps "three" (its twin bills 3 pieces).
+  const stated = parseQuantityTokens(mergedTokens.slice(first, nounAt));
+  const modsFrom = first + (stated ? stated.consumed : 0);
+  for (let k = modsFrom; k < nounAt; k++) {
     if (!PANCAKE_STACK_MODS.has(mergedTokens[k].toLowerCase())) return;
   }
+  if (stated) { mergedTokens.splice(f, 3 + size); return; }
   mergedTokens.splice(f, 3 + size, PANCAKE_STACK_COUNTS.get(size ? at(1) : '')!);
 }
 
@@ -550,8 +555,25 @@ function stripApproximatorBeforeMeasure(line: string): string {
   if (/^(?:a|an)$/i.test(tokens[k] ?? '')) k += 1;
   return isMeasureToken(tokens[k]) ? m[1] + rest : line;
 }
+// C70 definite-frame row (the #518/#537 family: a qualifier that never changes the measure is dropped before parsing): a line-start DEFINITE
+// FRAME `(the|my|our)? (last|remaining|other|final)` -- or a bare `last` / `remaining` -- before a COUNT. `the last 2 slices of pizza`
+// parsed as qty 1 / name `the last 2 of pizza` (unitHint slice), because the frame sits at tokens[0] where parseQuantityTokens() reads
+// no quantity, and the vanished pizza then resolved to "The Last Tradition - Machacado". Dropped ONLY when the very next tokens are a
+// quantity that parseQuantityTokens() reads AND at least one more word follows it (`the last 2` has none and stays). Controls that
+// stay: `the last tradition machacado`, `the other half`, `leftover pizza`, `last night's pizza`, `the last of the pizza`. Runs FIRST
+// in stripQuantityHedges()'s chain; the other strips read the line after it. Tested in definite-frame.test.ts.
+const DEFINITE_FRAME_RE = /^(\s*)(?:(?:the|my|our)\s+(?:last|remaining|other|final)|last|remaining)\s+(?=\S)/i;
+function stripDefiniteFrameBeforeCount(line: string): string {
+  const m = DEFINITE_FRAME_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  const tokens = rest.split(/\s+/).filter((t) => t.length > 0);
+  const q = parseQuantityTokens(tokens.map((t) => t.toLowerCase()));
+  if (!q || q.consumed >= tokens.length) return line;
+  return m[1] + rest;
+}
 function stripQuantityHedges(line: string): string {
-  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(line)))
+  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(stripDefiniteFrameBeforeCount(line))))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
     .replace(/~\s*(?=\d)/g, '')
     .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
