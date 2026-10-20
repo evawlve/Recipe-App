@@ -52,9 +52,6 @@ const CONTROLS: Array<[string, unknown]> = [
   ["about 2 eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
   ["the last 2 slices of pizza x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"pizza x2","notes":null,"unitHint":null}],
   ["the last 2 slices x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"x2","notes":null,"unitHint":null}],
-  ["at least 2 wings x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"at least 2 wings x2","notes":null,"unitHint":null}],
-  ["upwards of 3 beers x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"upwards of 3 beers x2","notes":null,"unitHint":null}],
-  ["at least a dozen wings x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"at least a dozen wings x2","notes":null,"unitHint":null}],
   ["9x13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
   ["9 x 13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
   ["2 x 4", null],
@@ -74,6 +71,24 @@ const CONTROLS: Array<[string, unknown]> = [
   ["red bull 2x", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"red bull 2 x","notes":null,"unitHint":null}],
 ];
 
+/**
+ * KNOWN MISS, pre-existing class (deploy-3 integration, 2026-10-20): a LEADING QUANTITY plus a tag. The
+ * tag declines (guard a/b/c) and the parse is the owner's, so the stray `x<N>` stays in the name exactly
+ * as master parses plain `2 wings x2`. With #572 (approximator before a bare count) merged, the hedge
+ * lines below parse like their un-hedged twins and JOIN this class. Choosing a meaning for `N food xM`
+ * (multiplier M vs dropping the tag) is a separate design row, not this one.
+ */
+const LEADING_QTY_TAG_CLASS: Array<[string, unknown]> = [
+  ["2 wings x2", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
+  ["at least 2 wings x2", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
+  ["upwards of 3 beers x2", {"qty":3,"multiplier":1,"unit":null,"rawUnit":null,"name":"beers x2","notes":null,"unitHint":null}],
+  ["at least a dozen wings x2", {"qty":12,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
+  ["about 3 wings x2", {"qty":3,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
+];
+
+/** Guard (g): N is a pack size, not a count of the food. */
+const PACK_SIZE_DECLINES: string[] = ["coke x12 pack", "water (x24 case)", "coke (x12 pack)", "la croix x8 pk"];
+
 /** resolveCountTag(line) must return the line untouched. */
 const FN_CONTROLS: string[] = [
   "⅓ bagel x2",
@@ -86,9 +101,6 @@ const FN_CONTROLS: string[] = [
   "about 2 eggs x2",
   "the last 2 slices of pizza x2",
   "the last 2 slices x2",
-  "at least 2 wings x2",
-  "upwards of 3 beers x2",
-  "at least a dozen wings x2",
   "chicken x2 12 oz",
   "eggs x2 and toast x2",
   "toast x2 cups",
@@ -120,6 +132,19 @@ describe('count tag reads as a leading count', () => {
 
   it.each(CONTROLS)('control %s keeps its master parse', (line, expected) => {
     expect(parseIngredientLine(line)).toEqual(expected);
+  });
+
+  it.each(LEADING_QTY_TAG_CLASS)('known miss (leading quantity + tag) %s keeps the owner parse', (line, expected) => {
+    expect(parseIngredientLine(line)).toEqual(expected);
+    expect(resolveCountTag(line)).toBe(line);
+  });
+
+  it.each(PACK_SIZE_DECLINES)('guard (g): %s is a pack size, the tag declines', (line) => {
+    expect(resolveCountTag(line)).toBe(line);
+  });
+
+  it('a few wings x2 declines at the tag (an article-led line; with #583 it joins the leading-quantity class)', () => {
+    expect(resolveCountTag('a few wings x2')).toBe('a few wings x2');
   });
 
   it.each(FN_CONTROLS)('resolveCountTag declines %s', (line) => {

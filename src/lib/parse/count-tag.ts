@@ -28,7 +28,9 @@
  *   (c) the first token is in HEDGE_OR_FRAME_LEAD (hedges, approximators, definite frames);
  *   (d) the text AFTER the tag holds a digit (`chicken x2 12 oz`, `eggs x2 and toast x2`);
  *   (e) the character before the tag is not a letter, `.` or `)` (so `ihop 2 x 2 x 2` stays);
- *   (f) a mass/volume unit follows N (`x2 cups`, `x2 oz`).
+ *   (f) a mass/volume unit follows N (`x2 cups`, `x2 oz`);
+ *   (g) a pack/container word follows N (`coke x12 pack`, `water (x24 case)`): N is the PACK SIZE, not a
+ *       count of the food (deploy-3 integration finding, MGR 2026-10-20T00:33Z).
  * The leading `<N>x` rule is checked first and never matches when a digit follows the `x`, so
  * `2 x 200g`, `2x200g`, `2 x 15 oz cans`, `5x5 workout bar`, `9x13 pan` and `2 x 4` are untouched.
  * Collisions pinned as declined: `xbox`, `xo sauce`, `x2o water`, `2xl shirt`, `x2 cups`.
@@ -70,6 +72,12 @@ function massOrVolumeFollows(rest: string): boolean {
   return kind === 'mass' || kind === 'volume';
 }
 
+/** Guard (g): the word after N names a pack size (`x12 pack`), so N is not a count of the food. */
+const PACK_WORD = /^(?:pack|packs|pk|pks|multipack|ct|count|case|cases|carton|cartons|box|boxes|tray|trays)\b/i;
+function packWordFollows(rest: string): boolean {
+  return PACK_WORD.test(rest.trim());
+}
+
 /** True when the line already opens with a quantity, a hedge or a frame that another owner reads. */
 function opensWithOwnedQuantity(line: string): boolean {
   if (/^\s*(?:a|an)\b/i.test(line)) return true;
@@ -84,17 +92,17 @@ export function resolveCountTag(line: string): string {
   if (opensWithOwnedQuantity(line)) return line;
 
   let m = PAREN_X_NOUN.exec(line);
-  if (m) return Number(m[3]) >= 1 ? `${m[1]}${m[3]} ${m[2]} ${m[4]}` : line;
+  if (m) return Number(m[3]) >= 1 && !packWordFollows(m[4]) ? `${m[1]}${m[3]} ${m[2]} ${m[4]}` : line;
 
   m = PAREN_X.exec(line);
   if (m) {
-    if (Number(m[3]) < 1 || /\d/.test(m[4])) return line;
+    if (Number(m[3]) < 1 || /\d/.test(m[4]) || packWordFollows(m[4])) return line;
     return `${m[1]}${m[3]} ${m[2]}${m[4] ? ' ' + m[4] : ''}`;
   }
 
   m = TAIL_X.exec(line);
   if (m) {
-    if (Number(m[3]) < 1 || /\d/.test(m[4]) || massOrVolumeFollows(m[4])) return line;
+    if (Number(m[3]) < 1 || /\d/.test(m[4]) || massOrVolumeFollows(m[4]) || packWordFollows(m[4])) return line;
     return `${m[1]}${m[3]} ${m[2]}${m[4] ? ' ' + m[4] : ''}`;
   }
   return line;
