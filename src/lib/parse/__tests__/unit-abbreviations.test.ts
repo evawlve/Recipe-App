@@ -26,6 +26,14 @@ describe('abbreviated unit equals its spelled-out twin', () => {
     ['1 cn black beans', '1 can black beans', { qty: 1, unit: 'can', name: 'black beans' }],
     ['1 btl water', '1 bottle water', { qty: 1, unit: 'bottle', name: 'water' }],
     ['1 c. of rice', '1 cup of rice', { qty: 1, unit: 'cup', name: 'rice' }],
+    ['1 svg tortilla chips', '1 serving tortilla chips', { qty: 1, unit: 'serving', name: 'tortilla chips' }],
+    ['2 svgs pasta', '2 servings pasta', { qty: 2, unit: 'serving', name: 'pasta' }],
+    ['2 slcs pizza', '2 slices pizza', { qty: 2, unit: 'slice', name: 'pizza' }],
+    ['2 ts cinnamon', '2 tsp cinnamon', { qty: 2, unit: 'tsp', name: 'cinnamon' }],
+    ['1 bx mac and cheese', '1 box mac and cheese', { qty: 1, unit: 'box', name: 'mac and cheese' }],
+    ['1 pkg instant ramen', '1 package instant ramen', { qty: 1, unit: 'package', name: 'instant ramen' }],
+    ['2 pkt instant oatmeal', '2 packets instant oatmeal', { qty: 2, unit: 'packet', name: 'instant oatmeal' }],
+    ['1 ctn greek yogurt', '1 carton greek yogurt', { qty: 1, unit: 'carton', name: 'greek yogurt' }],
   ];
 
   test.each(twins)('%s', (abbrev, twin, expected) => {
@@ -57,6 +65,24 @@ describe('controls stay as master parses them', () => {
     ['1 can black beans', { qty: 1, unit: 'can', name: 'black beans' }],
     ['1 bottle water', { qty: 1, unit: 'bottle', name: 'water' }],
     ['1 cnt eggs', { qty: 1, unit: null, name: 'cnt eggs' }],
+    ['2 TS cinnamon', { qty: 2, unit: null, name: 'TS cinnamon' }],
+    ['1 svg', { qty: 1, unit: null, name: 'svg' }],
+    ['2 ts de canela', { qty: 2, unit: null, name: 'ts de canela' }],
+    ['svg tortilla chips', { qty: 1, unit: null, name: 'svg tortilla chips' }],
+    ['2 tbsp', { qty: 2, unit: 'tbsp', name: 'tbsp' }],
+    ['16oz', { qty: 16, unit: 'oz', name: 'oz' }],
+    ['1/2cup oats', { qty: 0.5, unit: null, name: 'oats' }],
+    ['1 oz. cheddar', { qty: 1, unit: 'oz', name: 'cheddar' }],
+    ['1 TBSP maple syrup', { qty: 1, unit: 'tbsp', name: 'maple syrup' }],
+    ['1 tsp. sugar', { qty: 1, unit: 'tsp', name: 'sugar' }],
+    ['3 tbsps hummus', { qty: 3, unit: 'tbsp', name: 'hummus' }],
+    ['2 Tbsp. olive oil', { qty: 2, unit: 'tbsp', name: 'olive oil' }],
+    ['.5 cup cottage cheese', { qty: 0.5, unit: 'cup', name: 'cottage cheese' }],
+    ['0.25 c walnuts', { qty: 0.25, unit: 'cup', name: 'walnuts' }],
+    ['1 ½ cups almond milk', { qty: 1.5, unit: 'cup', name: 'almond milk' }],
+    ['1 1/2 tbsp peanut butter', { qty: 1.5, unit: 'tbsp', name: 'peanut butter' }],
+    ['1.5c cooked rice', { qty: 1.5, unit: 'cup', name: 'rice', qualifiers: ['cooked'] }],
+    ['1 c. OJ', { qty: 1, unit: 'cup', name: 'OJ' }],
   ];
 
   test.each(unchanged)('%s', (line, expected) => {
