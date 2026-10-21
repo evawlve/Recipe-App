@@ -15,9 +15,12 @@
  * consulted at exactly one call site.
  *
  * Table (EXACT whole-token match, no regex over the line):
- *   case-SENSITIVE:   `T` `T.` -> tbsp ; `t` `t.` -> tsp
+ *   case-SENSITIVE:   `T` `T.` -> tbsp ; `t` `t.` `ts` `ts.` -> tsp
  *   case-insensitive: `c` `c.` -> cup ; `tbs` `tbs.` `tbl` `tbl.` `tbls` -> tbsp ;
- *                     `cn` `cns` -> can ; `btl` `btls` -> bottle
+ *                     `cn` `cns` -> can ; `btl` `btls` -> bottle ;
+ *                     `svg` `svg.` `svgs` -> serving ; `slc` `slc.` `slcs` -> slice ;
+ *                     `bx` `bxs` -> box ; `pkg` `pkg.` `pkgs` -> package ;
+ *                     `pkt` `pkts` -> packet ; `ctn` `ctns` -> carton
  * Every target is a non-`unknown` normalizeUnitToken() key (pinned in the test,
  * so the two lists cannot drift apart).
  *
@@ -49,6 +52,8 @@ const CASE_SENSITIVE: Readonly<Record<string, string>> = {
   'T.': 'tbsp',
   t: 'tsp',
   't.': 'tsp',
+  ts: 'tsp',
+  'ts.': 'tsp',
 };
 
 const CASE_INSENSITIVE: Readonly<Record<string, string>> = {
@@ -63,6 +68,21 @@ const CASE_INSENSITIVE: Readonly<Record<string, string>> = {
   cns: 'can',
   btl: 'bottle',
   btls: 'bottle',
+  svg: 'serving',
+  'svg.': 'serving',
+  svgs: 'serving',
+  slc: 'slice',
+  'slc.': 'slice',
+  slcs: 'slice',
+  bx: 'box',
+  bxs: 'box',
+  pkg: 'package',
+  'pkg.': 'package',
+  pkgs: 'package',
+  pkt: 'packet',
+  pkts: 'packet',
+  ctn: 'carton',
+  ctns: 'carton',
 };
 
 const SPANISH_DE = new Set(['de', 'del']);
