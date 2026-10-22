@@ -118,8 +118,8 @@ describe('the number-word lists agree', () => {
     expect(() => setMembersOf("'one', ...MORE")).toThrow(/unrecognised entry/);
   });
 
-  test('both literals name the same fourteen words', () => {
-    const expected = ['couple', 'dozen', 'eight', 'eleven', 'five', 'four', 'nine',
+  test('both literals name the same fifteen words', () => {
+    const expected = ['couple', 'dozen', 'eight', 'eleven', 'few', 'five', 'four', 'nine',
       'one', 'seven', 'six', 'ten', 'three', 'twelve', 'two'];
     expect([...parserMapWords()].sort()).toEqual(expected);
     expect([...guardSetWords()].sort()).toEqual(expected);
