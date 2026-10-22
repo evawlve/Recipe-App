@@ -326,6 +326,9 @@ const KNOWN_INDIRECT_ASSIGNMENTS: Readonly<Record<string, string>> = Object.free
         'applyOffBareQueryGuard() return; its literals are scanned at their producer',
     // Pass-throughs onto a log/validator payload. None stamps a result.
     'input.servingTier': 'cache-validator payload pass-through',
+    // a-bit-of row: the amount-hedge wrapper reads the core's tier to decide whether to scale; it assigns no new tier.
+    'served.servingTier': 'amount-hedge wrapper read of the core tier; assigns nothing',
+    'served.servingTier ?? null': 'amount-hedge wrapper audit-log pass-through',
     'result.servingTier ?? null': 'mapper -> analysis-log pass-through',
     'isMapped ? ((mapped as any).servingTier ?? null) : null':
         '/api/nlp/parse -> MappingEventLog row pass-through',

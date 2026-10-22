@@ -1,0 +1,3466 @@
+[
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pint of ice cream, finished half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 20 oz bottle of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, i've eaten 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pitcher of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a carafe of wine, drank 2",
+  "input": [
+   {
+    "rawText": "a carafe of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a carafe of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bagel, drank 2",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coke, drank 2",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a case of water, drank 3",
+  "input": [
+   {
+    "rawText": "a case of water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a case of water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pot of coffee, drank 2 cups",
+  "input": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, and a steak",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "a steak",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "a steak"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pitcher of beer, drank half",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pitcher of beer, finished 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a carafe of wine, drank half",
+  "input": [
+   {
+    "rawText": "a carafe of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a carafe of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a jug of water, drank 2",
+  "input": [
+   {
+    "rawText": "a jug of water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a jug of water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pot of coffee, drank half",
+  "input": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a growler of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a growler of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a growler of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a growler of beer, drank half",
+  "input": [
+   {
+    "rawText": "a growler of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a growler of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 2 liter of coke, drank 2",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 2 liter of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 liter of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 2 liter of coke, drank 2 cups",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 cups of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a case of beer, drank 4",
+  "input": [
+   {
+    "rawText": "a case of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a case of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 24 pack of water, drank 3",
+  "input": [
+   {
+    "rawText": "a 24 pack of water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 24 pack of water, drank 30",
+  "input": [
+   {
+    "rawText": "a 24 pack of water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 24 pack of water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a can of coke, drank half",
+  "input": [
+   {
+    "rawText": "a can of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 can of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a can of coke, drank 2",
+  "input": [
+   {
+    "rawText": "a can of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a can of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 oz can of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 12 oz can of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 oz can of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank 2",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank 2 glasses",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 glasses of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, finished it",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bag of chips, finished the bag",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank it all",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half a glass",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half of it",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, finished 2 of them",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank 2 of them",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, bought 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, opened 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, opened half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, poured 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a box of wine, drank 2",
+  "input": [
+   {
+    "rawText": "a box of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a box of wine, drank half",
+  "input": [
+   {
+    "rawText": "a box of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 box of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a carton of milk, drank 2",
+  "input": [
+   {
+    "rawText": "a carton of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a carton of milk, drank half",
+  "input": [
+   {
+    "rawText": "a carton of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a carton of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a gallon of milk, drank 2",
+  "input": [
+   {
+    "rawText": "a gallon of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a gallon of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a gallon of milk, finished half",
+  "input": [
+   {
+    "rawText": "a gallon of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 gallon of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a glass of wine, drank half",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a mug of tea, drank half",
+  "input": [
+   {
+    "rawText": "a mug of tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a mug of tea",
+    "normalizedForm": "tea"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, we drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, we had half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, my wife drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, the kids drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, the kids drank 4",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, never finished half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, only drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half last night",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank 2 a day",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank 2 today and 2 yesterday",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank 2, then 2 more",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished half yesterday, half today",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished the other half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished the last half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished off half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/3 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished three quarters",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank 2 left",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, drank all but 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, finished 2 for breakfast",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine with dinner, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half and a steak",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, and drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, then a second, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a large coffee, drank half",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a large pizza, finished 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a large pizza, finished 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 16 oz steak, finished 8",
+  "input": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 16 oz steak, finished half",
+  "input": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "16 oz steak",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "8 oz steak",
+    "normalizedForm": "16 oz steak"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a family size bag of chips, finished 3",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a box of cookies, finished 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a box of cookies, finished 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "box of cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "box of cookies"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bag of chips, finished half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 6 pack of beer, drank half",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, eaten 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, i have eaten 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a sandwich, drank 2",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bagel, finished half",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, ate half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, had half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, about half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, had 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "d",
+    "normalizedForm": "r",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "d",
+    "normalizedForm": "r"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "i drank 2",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pint of ice cream, finished half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "finished half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   },
+   {
+    "rawText": "drank half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 20 oz bottle of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke",
+    "brand": ""
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "finished 2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pitcher of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a pitcher of beer, drank half",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "drank half",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank half",
+    "normalizedForm": ""
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine, drank half, and a steak",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a",
+    "normalizedForm": " ",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a",
+    "normalizedForm": " "
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a steak and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a",
+    "normalizedForm": " ",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a",
+    "normalizedForm": " "
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a 12 pack of soda and chips, drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "c",
+    "normalizedForm": "h",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   },
+   {
+    "rawText": "c",
+    "normalizedForm": "h"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bottle of wine and cheese, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "chips and a 12 pack of soda, drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 hours ago",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, finished 2 days ago",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a dozen eggs, finished 2 hours ago",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bag of chips, finished it in 2 days",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bag of chips, finished half in 2 days",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 beers",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 cans",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 cans of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 liters",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 liters of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 2 bottles",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bottles of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 2 sprites",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, i didn't drink half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, didnt finish half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, finished 2 minutes",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 yesterday",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 oz",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 oz of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 large",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 13",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 1.5",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank two",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank a couple",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 2 and a half",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank half",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 1 and a half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 1/2",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 0.5",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a box of wine, had 2",
+  "input": [
+   {
+    "rawText": "a box of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a carton of milk, had 2",
+  "input": [
+   {
+    "rawText": "a carton of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, had 2, then 2 more",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 2 liter of coke, had half",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 liter of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, had 2 glasses",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 glasses of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a dozen eggs, had 2 of them",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank half the bottle",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank a glass",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 glass of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank one glass",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 glass of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank 1 glass",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 glass of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, drank 1",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a pint of ice cream, finished half, a cookie",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a pint of ice cream, a cookie, finished half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, so drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, then drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, just drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "12 pack of soda",
+    "normalizedForm": "12 pack of soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "12 pack of soda",
+    "normalizedForm": "12 pack of soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "pack of soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "pack of soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a 12 pack of soda, i drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "12 soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "12 soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "dozen eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "dozen eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "bottle of wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "bottle of wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of red wine",
+    "normalizedForm": "red wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of red wine",
+    "normalizedForm": "red wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a pint of ice cream, finished a third, second one today",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a pint of ice cream, ate a third, second one today",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a pint of ice cream, a third, second one today",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "another pint of ice cream, finished a third",
+  "input": [
+   {
+    "rawText": "another pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "another pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "another pint of ice cream, ate a third",
+  "input": [
+   {
+    "rawText": "another pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "another pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a bottle of wine, and had half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a bottle of wine, plus drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a bottle of wine, drank half, um",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases3 (re-pinned: an um gap no longer hides the clause once #563 merged in)",
+  "line": "a bottle of wine, um, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases3 (re-pinned: an um gap no longer hides the clause once #563 merged in)",
+  "line": "a bottle of wine, um, had half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "bottle of wine, had half",
+  "input": [
+   {
+    "rawText": "bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a 12 pack of soda, wait no, drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a 12 pack of soda, actually drank 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases3",
+  "line": "a 12 pack of soda, actually had 2",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ }
+]

@@ -1,0 +1,1668 @@
+[
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, actually a ham sandwich, too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, actually a ham sandwich, as well",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, sorry, a ham sandwhich too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, actually a ham sandwich",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two eggs, actually three eggs, extra crispy",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two eggs, no wait, three eggs, extra large",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "4 pancakes, wait no, 3 pancakes, more or less",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "4 pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "3 pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coffee, actually a tea, and a muffin too",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "a muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea",
+   "a muffin"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a turkey sandwich, sorry, a ham sandwhich",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a beer, wait, a second beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "a beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "a second beer",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a tea, more please",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a tea, extra hot",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a tea, plus tip",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a tea, thanks again",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a tea, extra",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, more or less",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, actually a large tea, extra large",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a large tea",
+    "normalizedForm": "a large tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a large tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, plus a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, plus a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "plus a coke",
+    "normalizedForm": "plus a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "plus a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, extra a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, another coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, a coke too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, a cokee too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, actually a ham sandwich, a dite coke too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a diet coke",
+    "normalizedForm": "a diet coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a diet coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, a second cofee",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a second coffee",
+    "normalizedForm": "a second coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "a second coffee"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, and a second coffee",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a second coffee",
+    "normalizedForm": "a second coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "a second coffee"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, two more cofees",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two more coffees",
+    "normalizedForm": "two more coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "two more coffees"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, 2 more coffees",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two more coffees",
+    "normalizedForm": "two more coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "two more coffees"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a sandwich, sorry, a sammich too",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "a sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "a sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a sandwich, sorry, a sammich",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "a sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "a sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, sorry, a hamm sandwich too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, sorry, a hamm sandwich",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, sorry, a ham sandwhich, extra mayo",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a turkey sandwich, sorry, a ham sandwhich, a cokee too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, actually three eggs, as well",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, um, three eggs, too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, um, three eggs too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "two eggs, um, three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bagel, um, two, too",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "two"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bagel, um, two",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ],
+  "expectKinds": [
+   "qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bagel, actually make that two, too",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "two"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a bagel, actually make that two",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "a bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ],
+  "expectKinds": [
+   "qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, wait no, a tea, too",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, wait no, a tea, extra hot",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea"
+  ],
+  "expectKinds": [
+   "swap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a coffee, oops, a tea, too",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a large coffee, actually a medium coffee, extra shot",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "a large coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a medium coffee",
+    "normalizedForm": "a medium coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a medium coffee"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a large coffee, actually a medium coffee, with an extra shot",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "a large coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a medium coffee",
+    "normalizedForm": "a medium coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a medium coffee"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a burger, actually a cheeseburger, fries too",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "a burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "a cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger",
+   "fries"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a burger, actually a cheeseburger, frys too",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "a burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "a cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger",
+   "fries"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a burger, actually a cheeseburger, large frys, plus a shake",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "a burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "a cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "large fries",
+    "normalizedForm": "large fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a shake",
+    "normalizedForm": "a shake",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger",
+   "large fries",
+   "a shake"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "a burger, actually a cheeseburger, and fries, too",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "a burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "a cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger",
+   "fries"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "four pancakes, wait no, three pancakes, i forgot",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "four pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "three pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "four pancakes, wait no, three pancakes, syrup too",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "four pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "three pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "four pancakes, wait no, three pancakes, syrup too",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "four pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "three pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes",
+   "syrup"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "four pancakes, wait no, three pancakes, sirup too",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "four pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "three pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes",
+   "syrup"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases1",
+  "line": "four pancakes, wait no, three pancakes, maple sirup, too",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "four pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "three pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "maple syrup",
+    "normalizedForm": "maple syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes",
+   "maple syrup"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a coffee, wait no, a tea too",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "two eggs, actually three eggs as well",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a turkey sandwich, sorry, a ham sandwhich, too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a turkey sandwich, sorry, a ham sandwhich, as well",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a turkey sandwich, actually a ham sandwich, too, and a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "a turkey sandwich, actually a ham sandwich, a cokee",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "a turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "a ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "two eggs, actually three eggs, 2 more coffees",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 more coffees",
+    "normalizedForm": "2 more coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "2 more coffees"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "two eggs, actually three eggs, two coffees, too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two coffees",
+    "normalizedForm": "two coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "two coffees"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 cases2",
+  "line": "two eggs, actually three eggs, two cofees, too",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two coffees",
+    "normalizedForm": "two coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "two coffees"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": false
+ }
+]

@@ -404,6 +404,43 @@ describe('mapIngredientWithFallback filtering', () => {
         }
     });
 
+    it('bills pint/quart/gallon water by volume and leaves the private cells alone', async () => {
+        const run = (line: string, normalizedForm?: string) =>
+            mapIngredientWithFallback(line, { minConfidence: 0, skipFdc: true, ...(normalizedForm ? { normalizedForm } : {}) });
+        const move: Array<[string, number, string?]> = [
+            ['a quart of water', 946.4],
+            ['a pint of water', 473.2, 'water'],
+            ['a gallon of water', 3785.4],
+            ['half gallon of water', 1892.7],
+            ['2 pints water', 946.4],
+        ];
+        for (const [line, grams, nf] of move) {
+            const r = await run(line, nf);
+            expect(r?.foodId).toBe('water_default');
+            expect(r?.kcal).toBe(0);
+            expect(r?.grams).toBeCloseTo(grams, 1);
+        }
+        const same: Array<[string, number, string?]> = [
+            ['a liter of sparkling water', 1000],
+            ['a glass of water', 237, 'water'],
+            ['1 btl water', 237],
+            ['a bottle of water', 237],
+            ['16 oz water', 473.12],
+            ['2 cups water', 474],
+            ['1 cup of water', 237],
+            ['water', 237],
+            ['500 ml water', 500],
+            ['3 liters of water', 3000],
+            ['three glasses of water', 711],
+            ['1 cup ice', 237],
+        ];
+        for (const [line, grams, nf] of same) {
+            const r = await run(line, nf);
+            expect(r?.foodId).toBe('water_default');
+            expect(r?.grams).toBeCloseTo(grams, 1);
+        }
+    });
+
     it('fires the zero-calorie fast-path for whole-line water beverage variants', async () => {
         for (const line of ['sparkling water', 'ice water', 'still water']) {
             const result = await mapIngredientWithFallback(line, {
