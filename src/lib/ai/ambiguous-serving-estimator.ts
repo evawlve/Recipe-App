@@ -304,7 +304,7 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
     // peppers are produce, 'cinnamon roll/toast/…' are flavor names, and bare
     // 'vanilla' is a flavor word on countless products ('vanilla extract'
     // stays covered by the extract token).
-    if (/\b(spice|cinnamon(?!\s*(roll|bun|toast|crunch|swirl))|nutmeg|paprika|chili powder|cumin|salt|(?<!bell\s)pepper|extract|seasoning)\b/.test(nameStr)) {
+    if (/\b(spice|cinnamon(?!\s*(roll|bun|toast|crunch|swirl))|nutmeg|paprika|chili powder|cumin|salt|(?<!\b(?:bell|dr|dr\.|green|yellow|orange|roasted red|sweet|mini|jalapeno|jalapeño|poblano|serrano|anaheim|fresno|cubanelle|habanero|banana|shishito|padron|padrón|scotch bonnet)\s)pepper|extract|seasoning)\b/.test(nameStr)) {
         return { grams: 2.5, description: "1 tsp (standard bare query serving)" };
     }
     
