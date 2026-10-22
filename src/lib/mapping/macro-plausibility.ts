@@ -696,6 +696,104 @@ function brewedTeaReason(queryName: string, macrosPer100g?: MacroPlausibilityInp
     return `rank:brewed_tea_kcal_${round1(kcal)}_over_${BREWED_TEA_MAX_KCAL}`;
 }
 
+// Diet / zero drink panel (D19): `powerade zero grape`, `a diet cherry coke`, `diet dr pepper` can resolve to a record that carries a
+// REGULAR-sugar panel (22-42 kcal/100g: a mislabeled OFF "Diet" row, or a flavour-only record) while 0-kcal records sit in the pool.
+// A diet / zero soft drink is under a few kcal/100g, so anything above DIET_DRINK_MAX_KCAL is a regular-sugar panel.
+// RANK-TIME ONLY, same shape as the brewed-tea rule: the reason lives in assessRankTimePlausibility() alone and demotes through the
+// floor-hit partition; the save gate, Step 3d and assessMacroPlausibility() are untouched. No brand skip: here the brand IS the drink.
+// The DIET word is read from queryName, or from headLine's head clause only (`coke with a diet pepsi` never fires for `coke`).
+// The DRINK word is read from queryName only. Exemption words over the WHOLE queryName and headLine keep non-drink foods silent.
+const DIET_DRINK_MAX_KCAL = 12;
+const DIET_DRINK_DIET_PATTERN = / (?:diet|zero|zero sugar|zero calorie|0 calorie|sugar free|sugarfree) /;
+const DIET_DRINK_WORDS = [
+    'coke', 'cola', 'pepsi', 'sprite', '7up', 'dr pepper', 'mountain dew', 'mtn dew', 'fanta', 'fresca', 'root beer', 'ginger ale', 'tonic',
+    'soda', 'pop', 'lemonade', 'gatorade', 'powerade', 'bodyarmor', 'body armor', 'propel', 'red bull', 'redbull', 'monster', 'rockstar',
+    'celsius', 'bang', 'reign', 'alani', 'energy drink', 'sports drink', 'snapple', 'arizona', 'vitaminwater', 'squirt', 'sunkist',
+    'canada dry', 'schweppes',
+];
+const DIET_DRINK_EXEMPT_WORDS = [
+    'latte', 'coffee', 'creamer', 'protein', 'shake', 'syrup', 'sauce', 'jello', 'gelatin', 'jelly', 'jam', 'yogurt', 'ice cream', 'pudding',
+    'candy', 'gum', 'cookie', 'bar', 'mix', 'powder', 'tart', 'tarts', 'ketchup', 'dressing', 'float', 'cake', 'popsicle', 'ice pop',
+];
+function dietDrinkPadded(text: string): string {
+    return ` ${(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
+}
+// Plural folding for the two drink rules (cloud-42 F1/F2): a word matches in its exact form OR a folded form of either side, so
+// `diet cokes` fires, `monster cookies` is exempt, and `celsius` / `schweppes` / `sports` (which fold to `celsiu` ...) still match.
+// The `ies`->`y` form is a third FORM, never a replacement: it makes `candies` exempt while `cookies` still folds to `cookie`.
+function foldToken(w: string, y: boolean): string {
+    if (y && w.length > 4 && w.endsWith('ies')) return `${w.slice(0, -3)}y`;
+    if (/(?:s|x|z|ch|sh)es$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+    return w;
+}
+function pluralForms(padded: string): string[] {
+    const t = padded.trim().split(' ');
+    return [padded,` ${t.map((w) => foldToken(w, false)).join(' ')} `, ` ${t.map((w) => foldToken(w, true)).join(' ')} `];
+}
+function hasWholeWordFolded(padded: string, words: string[]): boolean {
+    const forms = pluralForms(padded);
+    return words.some((w) => pluralForms(` ${w} `).some((e) => forms.some((f) => f.includes(e))));
+}
+// headLine exemptions are read from its first clause: a SIBLING item's word (`diet coke and a protein bar`) must not silence the item.
+// No comma: a comma-suffixed modifier (`coffee, instant`, `diet lemonade, powder`) keeps exempting.
+const DRINK_SIBLING_BREAK = /\s(?:with|and|plus|&|\+)\s|\sw\//;
+function dietDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= DIET_DRINK_MAX_KCAL) return null;
+    const q = dietDrinkPadded(queryName);
+    const h = headLine != null ? dietDrinkPadded(headLine.toLowerCase().split(DRINK_SIBLING_BREAK)[0]) : '';
+    if (hasWholeWordFolded(q, DIET_DRINK_EXEMPT_WORDS) || (h && hasWholeWordFolded(h, DIET_DRINK_EXEMPT_WORDS))) return null;
+    if (!hasWholeWordFolded(q, DIET_DRINK_WORDS)) return null;
+    const headWords = headLine != null ? ` ${headClauseWords(headLine).join(' ')} ` : '';
+    if (!pluralForms(q).some((f) => DIET_DRINK_DIET_PATTERN.test(f)) && !(headWords.trim() && pluralForms(headWords).some((f) => DIET_DRINK_DIET_PATTERN.test(f)))) return null;
+    return `rank:diet_drink_kcal_${round1(kcal)}_over_${DIET_DRINK_MAX_KCAL}`;
+}
+
+// Poured-drink dry panel (S242 / D20): a brewed drink line (`espresso`, `masala chai`, `thai iced tea`, `vietnamese iced coffee`) can
+// resolve to a DRY-MIX, CONCENTRATE or FOOD record (241 / 375 / 333 / 220 kcal/100g) while drink records sit in the pool.
+// HEAD rule, as in the S202 prepared-drink rule: the drink word must be the query's head noun, so `coffee cake`, `espresso beans` and
+// `chai concentrate` never fire. Ceiling = PREPARED_DRINK_MAX_KCAL: USDA brewed coffee and tea are ~1 kcal/100g and espresso ~9; a sweetened
+// milky pour (Thai iced tea, Vietnamese iced coffee, masala chai with milk and sugar) stays near 60-110. Instant or dry mixes run 330-450.
+// RANK-TIME ONLY: the reason lives in assessRankTimePlausibility() alone and demotes through the floor-hit partition. The save gate,
+// Step 3d and assessMacroPlausibility() are untouched (S202 refute r2 F1/F2). The HEAD is read from queryName ONLY (brewed-tea refute M1),
+// and the exemption words are read over the WHOLE queryName and headLine. There is no brand skip: no poured brewed drink, branded or not,
+// sits above 150, and the brand IS the drink (`twisted tea original`). Spirits are deliberately absent: the pool has no spirit record to
+// promote (FdcFood holds none), so demoting `Gin Gin` would only promote a non-alcoholic gin and tonic.
+// It does NOT extend PREPARED_DRINK_HEADS: preparedDrinkHeadWord() also drives the bare-drink cup rule in bare-query-guard.ts.
+const POURED_DRINK_CEILINGS: Record<string, number> = {
+    coffee: PREPARED_DRINK_MAX_KCAL, espresso: PREPARED_DRINK_MAX_KCAL, americano: PREPARED_DRINK_MAX_KCAL, brew: PREPARED_DRINK_MAX_KCAL,
+    tea: PREPARED_DRINK_MAX_KCAL, chai: PREPARED_DRINK_MAX_KCAL,
+};
+// Trailing words that never name the drink, on top of headClauseWords()' size/temperature list (`twisted tea original`, `espresso shot`).
+const POURED_DRINK_TRAILING = new Set(['original', 'classic', 'shot', 'shots', 'black', 'unsweetened']);
+// `heavy cream in coffee`, `honey in my tea`, `scotch on the rocks`: the food before in/into/on/over is the item, the drink is its place.
+const POURED_DRINK_PLACE_BREAK = /\s(?:in|into|on|over)\s/;
+const POURED_DRINK_EXEMPT_PATTERN = new RegExp(
+    `\\b(?:${[
+        'instant', 'powder', 'powdered', 'mix', 'ground', 'grounds', 'beans?', 'concentrate', 'syrup', 'creamer', 'protein', 'keto',
+        'bulletproof', 'butter', 'buttered', 'mct', 'whipped', 'dalgona', 'cake', 'candy', 'liqueur', 'ice cream', 'gelato', 'frozen',
+        'latte', 'frappuccino', 'frappe', 'milkshake', 'shake', 'smoothie', 'boba', 'bubble', 'matcha', 'leaves', 'bag', 'bags', 'pods?', 'k cups?', 'kcups?', 'island', 'hard', 'spiked', 'boozy',
+    ].join('|')})\\b`
+);
+function pouredDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= PREPARED_DRINK_MAX_KCAL) return null;
+    const words = headClauseWords((queryName || '').toLowerCase().split(POURED_DRINK_PLACE_BREAK)[0]);
+    while (words.length > 1 && POURED_DRINK_TRAILING.has(words[words.length - 1])) words.pop();
+    if (words.length === 0) return null;
+    const last = words[words.length - 1];
+    const head = last.endsWith('s') && POURED_DRINK_CEILINGS[last.slice(0, -1)] != null ? last.slice(0, -1) : last;
+    const ceiling = Object.prototype.hasOwnProperty.call(POURED_DRINK_CEILINGS, head) ? POURED_DRINK_CEILINGS[head] : undefined;
+    if (ceiling == null || kcal <= ceiling) return null;
+    const lowered = [queryName, (headLine || '').toLowerCase().split(DRINK_SIBLING_BREAK)[0]].map((t) => (t || '').toLowerCase());
+    const exemptTexts = [...lowered, ...lowered.flatMap((t) => pluralForms(dietDrinkPadded(t)))];
+    if (exemptTexts.some((t) => POURED_DRINK_EXEMPT_PATTERN.test(t))) return null;
+    return `rank:poured_drink_kcal_${round1(kcal)}_over_${ceiling}`;
+}
+
 /**
  * Rank-time plausibility: composes assessMacroPlausibility with the SAME
  * deterministic floors as the save-time gate (collectDeterministicFloorReasons
@@ -723,12 +821,23 @@ export function assessRankTimePlausibility(
     const floorReasons = collectDeterministicFloorReasons(queryName, candidateName, macrosPer100g);
     const drinkReason = preparedDrinkReason(queryName, macrosPer100g, headLine);
     const teaReason = brewedTeaReason(queryName, macrosPer100g, headLine);
-    const reasons = [...base.reasons, ...floorReasons, ...(drinkReason ? [drinkReason] : []), ...(teaReason ? [teaReason] : [])];
+    const dietReason = dietDrinkReason(queryName, macrosPer100g, headLine);
+    const pouredReason = pouredDrinkReason(queryName, macrosPer100g, headLine);
+    const reasons = [
+        ...base.reasons,
+        ...floorReasons,
+        ...(drinkReason ? [drinkReason] : []),
+        ...(teaReason ? [teaReason] : []),
+        ...(dietReason ? [dietReason] : []),
+        ...(pouredReason ? [pouredReason] : []),
+    ];
 
     const floorHit =
         floorReasons.length > 0 ||
         drinkReason != null ||
         teaReason != null ||
+        dietReason != null ||
+        pouredReason != null ||
         base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
     const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
 
