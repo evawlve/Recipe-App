@@ -38,8 +38,19 @@ export async function POST(req: NextRequest) {
 
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
-	const { getCurrentUser } = await import("@/lib/auth");
+	const { authenticateRequest } = await import("@/lib/auth/request-auth");
 	const { z } = await import("zod");
+
+	// WHO may create a community food. Until 2026-10-21 this route read the web
+	// cookie session and let a null user through (`src/middleware.ts` skips `/api/*`),
+	// so anyone who could reach the public origin could write a `Food` row with no
+	// identity attached. Now every caller goes through the shared chokepoint: the dev
+	// key (eval tooling, no user), a Supabase bearer (the mobile client) or the web
+	// cookie. `userId` is null only for the key.
+	const auth = await authenticateRequest(req, { accept: ['key', 'bearer', 'cookie'] });
+	if (!auth.via) {
+		return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+	}
 
 	const Body = z.object({
 		name: z.string().min(2),
@@ -88,8 +99,7 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
-    const user = await getCurrentUser();
-    const userId = user?.id || null;
+    const userId = auth.userId;
 
     const food = await prisma.food.create({
       data: {
