@@ -25,10 +25,25 @@
  * single-item shortcut so the second food survives) and restoreLeadingPour() (put the measure back on
  * the topping after a split). The restored segment bills as the standalone line does today.
  *
+ * HEURISTIC SPLIT (C70 S239 C1, cloud-36). forceSegmentText() - the segmenter's fallback when the LLM errors or passes
+ * its deadline - has no on/in split, so `a splash of syrup on pancakes` stays ONE item and the pancakes are never billed
+ * (the cloud-35 F9 / #514 / #538 / #542 family closed this on the solo path and the LLM path only). So
+ * restoreLeadingPour() also cuts such an item at the first POUR_VEHICLE_RX-accepted vehicle preposition into
+ * `<pour> of <liquid>` + the vehicle food, every other field kept. Only an item with an EMPTY (or absent)
+ * normalizedForm is cut: forceSegmentText always emits '' and 0 of 997 cached LLM segments carry one. The contract is
+ * implicit and fail-soft: an LLM item with an empty normalizedForm would be split too, to the heuristic answer. `restored`
+ * now counts these splits as well as restores. An LLM one-item echo WITH a normalizedForm (R2) is never split: 185 of
+ * 198 one-item cache rows are exact echoes of the line, and splitting them would turn a latency-only cost into a billed
+ * phantom on the happy path. Accepted fallback phantom: `a swig of beer in vegas` -> a `vegas` item (POUR_VEHICLE_RX
+ * excludes non-food objects by list, and bare place/time nouns are not on it). Known misses: an article-led or
+ * excluded object (`on a bagel`, `on total`) and a product name holding the preposition (`chipotle in adobo`).
+ *
  * Mobile parity: SHORT_LINE_POUR_RX in the mobile repo's src/lib/magic-flow-timing.ts mirrors this
  * regex for a cosmetic chip animation; it lags until the device day (MGR 2026-10-19), and by the
  * TOPPING_RX words besides - the mismatch is cosmetic only.
  */
+
+import { MAX_SEGMENTED_ITEMS } from '../nlp/parse-bounds';
 
 export const LOOSE_POUR_FLOZ: Record<string, number> = { swig: 1.5, gulp: 1, sip: 0.5, splash: 0.5, drizzle: 0.5 };
 
@@ -120,14 +135,42 @@ export function resolveLoosePourMeasures(line: string): string {
 // `[splash of syrup] [pancakes]`), and drop a leading preposition a draw left on the second food (`on eggs`).
 // Runs on every split (cache hit or fresh); the SegmentationCache keeps the segmenter's own split.
 const LEADING_PREP_RX = /^\s*(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?=\S)/i;
-export function restoreLeadingPour<T extends { rawText: string }>(lineKey: string, items: T[]): { items: T[]; restored: number } {
+// C1 (cloud-36): see the header's HEURISTIC SPLIT paragraph. Splits ONE heuristic item (empty normalizedForm) holding
+// a whole pour-onto phrase into the topping and the second food, each shaped as forceSegmentText emits an item.
+function splitPourOntoItem<T extends { rawText: string }>(it: T): T[] | null {
+  const rec = it as unknown as Record<string, unknown>;
+  if (typeof rec.normalizedForm === 'string' && rec.normalizedForm.trim() !== '') return null;
+  const text = it.rawText.replace(/\s+/g, ' ').trim().replace(/[.,;:!?]+$/, '').trim();
+  const m = TOPPING_RX.exec(text);
+  if (!m) return null;
+  const rest = ' ' + text.slice(m[0].length);
+  const v = /\s(?:on|onto|over|in|into)\s/i.exec(rest);
+  // The FIRST vehicle preposition (where the >=2-item path cuts) must be one POUR_VEHICLE_RX accepts.
+  const ok = POUR_VEHICLE_RX.exec(rest);
+  if (!v || !ok || ok.index !== v.index) return null;
+  const liquid = rest.slice(0, v.index).trim();
+  // Refute gate (e): strip every leading possessive (also a bare trailing `my`); refuse when no letter is left.
+  const food = rest.slice(v.index + v[0].length).trim().replace(/^(?:(?:my|your|his|her|our|their)(?:\s+|$))+/i, '');
+  if (!liquid || !/\p{L}/u.test(food)) return null;
+  const half = (rawText: string): T => ({ ...it, rawText });
+  return [half(`${m[0].trim()} ${liquid}`), half(food)];
+}
+
+export function restoreLeadingPour<T extends { rawText: string }>(lineKey: string, input: T[]): { items: T[]; restored: number } {
+  let split = 0;
+  const expanded: T[] = [];
+  for (const it of input) {
+    const parts = splitPourOntoItem(it);
+    if (parts) { split++; expanded.push(...parts); } else expanded.push(it);
+  }
+  const items = split ? expanded.slice(0, MAX_SEGMENTED_ITEMS) : input;
   const m = TOPPING_RX.exec(lineKey);
-  if (!m || items.length < 2) return { items, restored: 0 };
+  if (!m || items.length < 2) return { items, restored: split };
   const rest = lineKey.slice(m[0].length);
   const v = /\s(?:on|onto|over|in|into)\s/i.exec(' ' + rest);
-  if (!v) return { items, restored: 0 };
+  if (!v) return { items, restored: split };
   const liquid = rest.slice(0, Math.max(0, v.index - 1)).trim().toLowerCase();
-  if (!liquid) return { items, restored: 0 };
+  if (!liquid) return { items, restored: split };
   const word = m[3].toLowerCase();
   const bare = (t: string): string => t.trim().toLowerCase().replace(/^(?:a|an|the|some)\s+/, '');
   // The line's own second food: the text after the vehicle word, bare (articles / possessives dropped).
@@ -159,5 +202,5 @@ export function restoreLeadingPour<T extends { rawText: string }>(lineKey: strin
     }
     return it;
   });
-  return { items: restored ? out : items, restored };
+  return { items: restored ? out : items, restored: restored + split };
 }

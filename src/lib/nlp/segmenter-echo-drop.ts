@@ -9,7 +9,8 @@
  *
  * RULE. Item j (j >= 1) is an echo, and is dropped, when ALL hold:
  * 1. It has no span of its own in the line. Spans are found left-to-right with a cursor over the line's words
- *    (rawText words, else normalizedForm words), exactly as foldDrinkMilk() computes them; a j whose words occur
+ *    (rawText words, else normalizedForm words), as foldDrinkMilk() computes them, plus one repair (S240, cloud-38 D9): an item
+ *    never keeps a span that lies inside the span a later item needs (it moves to a later free occurrence, or has none); a j whose words occur
  *    only BEFORE the cursor has none (`salad with chicken and more chicken` keeps the second mention).
  * 2. It carries no amount: no rawText word is a digit, a|an, a number word, half, some, extra, more, ... and no
  *    vulgar fraction. The host also keeps its echo when an amount sits between its `with` and the matched part
@@ -93,6 +94,29 @@ export function dropSegmenterEchoes<T extends Item>(
     const sp = findSpan(toks, words(it.rawText), cur) ?? findSpan(toks, words(it.normalizedForm ?? ''), cur);
     spans.push(sp);
     if (sp) cur = sp.end;
+  }
+  // S240 (cloud-38 D9): an item may not take its span from INSIDE the span a later item needs (`coffee with milk, wait no, oat
+  // milk` -> [`coffee with milk` | `milk` | `oat milk`]: `milk` sits inside `oat milk`). Then the later item keeps that span and the
+  // earlier one has none of its own (an echo candidate under guard 1).
+  for (let k = 1; k < items.length; k++) {
+    if (spans[k]) continue;
+    for (let j = k - 1; j >= 0; j--) {
+      const sj = spans[j];
+      if (!sj) continue;
+      let from = 0;
+      for (let p = j - 1; p >= 0; p--) if (spans[p]) { from = spans[p]!.end; break; }
+      const kw = words(items[k].rawText);
+      const K = findSpan(toks, kw, from);
+      if (K && K.start <= sj.start && sj.end <= K.end) {
+        spans[k] = K;
+        // j keeps a real occurrence AFTER K that no other item claims (the segmenter emitted the real second mention before the
+        // item that contains the echo's words); only an item whose ONLY occurrence is inside K loses its span.
+        const J2 = findSpan(toks, words(items[j].rawText), K.end);
+        const free = J2 && !spans.some((x, q) => q !== j && x && x.start < J2.end && J2.start < x.end);
+        spans[j] = free ? J2 : null;
+      }
+      break;
+    }
   }
 
   const drop = new Set<number>();
