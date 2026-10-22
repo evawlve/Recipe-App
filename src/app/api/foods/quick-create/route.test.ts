@@ -10,11 +10,19 @@ jest.mock('@/lib/db', () => ({
   },
 }));
 
+// The auth chokepoint. Every existing test below runs as the dev key (no user), which
+// is the arm that keeps `createdById: null`; the two tests at the bottom pin the gate.
+const mockAuthenticateRequest = jest.fn();
+jest.mock('@/lib/auth/request-auth', () => ({
+  authenticateRequest: (...a: unknown[]) => mockAuthenticateRequest(...a),
+}));
+
 describe('/api/foods/quick-create', () => {
   const { prisma } = require('@/lib/db');
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthenticateRequest.mockResolvedValue({ via: 'key', userId: null, email: null });
   });
 
   test('should create food with valid payload', async () => {
@@ -160,5 +168,56 @@ describe('/api/foods/quick-create', () => {
     const data = await response.json();
     expect(data.success).toBe(false);
     expect(data.error).toBe('gramsPerServing required or inferable from servingLabel (e.g., "100 g")');
+  });
+
+  test('rejects a request with no credentials and writes nothing', async () => {
+    mockAuthenticateRequest.mockResolvedValue({ via: null, reason: 'missing_credentials' });
+
+    const request = new NextRequest('http://localhost:3000/api/foods/quick-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Test Food',
+        servingLabel: '100 g',
+        kcal: 350,
+        protein: 10,
+        carbs: 70,
+        fat: 5,
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(401);
+    const data = await response.json();
+    expect(data).toEqual({ success: false, error: 'Unauthorized' });
+    expect(prisma.food.create).not.toHaveBeenCalled();
+    expect(mockAuthenticateRequest).toHaveBeenCalledWith(expect.anything(), {
+      accept: ['key', 'bearer', 'cookie'],
+    });
+  });
+
+  test('a bearer caller owns the row it creates', async () => {
+    mockAuthenticateRequest.mockResolvedValue({ via: 'bearer', userId: 'user-42', email: null });
+    prisma.food.create.mockResolvedValue({ id: 'new-food-789' });
+
+    const request = new NextRequest('http://localhost:3000/api/foods/quick-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt' },
+      body: JSON.stringify({
+        name: 'Test Food',
+        servingLabel: '100 g',
+        kcal: 350,
+        protein: 10,
+        carbs: 70,
+        fat: 5,
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(201);
+    expect(prisma.food.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ createdById: 'user-42' }),
+      select: { id: true },
+    });
   });
 });

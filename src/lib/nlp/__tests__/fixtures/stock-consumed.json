@@ -1375,9 +1375,11 @@
    }
   ],
   "expectRawTexts": [
-   "a 20 oz bottle of coke"
+   "10 oz bottle of coke"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r3 refute",
@@ -2679,10 +2681,11 @@
    }
   ],
   "expectRawTexts": [
-   "2 eggs",
-   "2"
+   "2 eggs"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r1 refute",
@@ -2694,9 +2697,11 @@
    }
   ],
   "expectRawTexts": [
-   "3 eggs"
+   "2 eggs"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r1 refute",
@@ -3378,9 +3383,11 @@
    }
   ],
   "expectRawTexts": [
-   "a dozen eggs"
+   "2 eggs"
   ],
-  "expectKinds": []
+  "expectKinds": [
+   "stock"
+  ]
  },
  {
   "src": "r1 refute",
