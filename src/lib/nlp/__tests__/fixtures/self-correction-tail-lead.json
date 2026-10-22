@@ -1,0 +1,518 @@
+[
+ {
+  "src": "#588 refute-r1 MAJOR 1",
+  "line": "a turkey sandwich, actually a ham sandwich, um, also, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": true
+ },
+ {
+  "src": "#588 refute-r1 MAJOR 1",
+  "line": "a turkey sandwich, actually a ham sandwich, also, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": true
+ },
+ {
+  "src": "#588 refute-r1 MAJOR 1",
+  "line": "a coffee, wait no, a tea, plus, a muffin",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea",
+   "a muffin"
+  ],
+  "expectKinds": [
+   "swap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat control",
+  "line": "a burger, make that a cheeseburger, uh, and also, fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cheeseburger",
+   "fries"
+  ],
+  "expectKinds": [
+   "swap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "#588 refute-r1 MAJOR 1",
+  "line": "two eggs, actually three eggs, another, a slice of toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a slice of toast",
+    "normalizedForm": "slice of toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "a slice of toast"
+  ],
+  "expectKinds": [
+   "restate-qty"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat control",
+  "line": "a latte, sorry, a mocha, ok, also, a croissant",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha",
+    "brand": ""
+   },
+   {
+    "rawText": "a croissant",
+    "normalizedForm": "croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "a mocha",
+   "a croissant"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, too, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, um, too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, as well, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, again, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a burger, make that a cheeseburger, uh, also",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a burger, make that a cheeseburger, also",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich too, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich too",
+    "normalizedForm": "ham sandwich too",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich too",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, also a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "also a coke",
+    "normalizedForm": "also a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "also a coke"
+  ],
+  "expectKinds": [
+   "restate-replace"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a coffee, a tea, also, a muffin",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a tea",
+   "a muffin"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a coffee, wait no, a tea, um, and a muffin",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea",
+   "a muffin"
+  ],
+  "expectKinds": [
+   "swap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat control",
+  "line": "a turkey sandwich, actually a ham sandwich, too, also, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ],
+  "expectKinds": [],
+  "changed": false
+ }
+]
