@@ -9,14 +9,19 @@
  * TRIGGER. The dish item is followed in the line by `made with` / `i made with`, or (when the line says
  * `homemade` / `home made` / `i made a ...`) by `with` / `on <bread>`. A blend-class dish (smoothie,
  * pancakes, french toast) takes only the `made with` form.
+ * readMadeWithHeads() (S240, MGR 18:44Z (2)) reads an item that carries its own personal `i/we made (it) with` marker, or `made with` on a homemade item, as its head for retrieval; label claims stay; it runs in the route after the echo drop.
  *
  * DEFAULT-KEEP POSTURE. An item after the marker is dropped only when it is a BARE KNOWN PART of the dish's
  * class (a filling, a protein, a bread, a sauce, ... per class table). Anything else stays and keeps its
  * bill: a named filling (`cilantro lime rice`), a separate food (`a coke`), a side. A determiner- or
  * number-led later item ends the list (it is a new food), as does a side-like item (chips, soup, a drink).
+ * An AMOUNT of a known part (a number or fraction, or a/an before a unit or fraction word; never a container like bowl / side / can) continues
+ * the list instead (S240, MGR 18:44Z, Option A's letter), unless an additive word (also / along with / as well as / plus) sits in the gap or it restates an earlier kept item.
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
+ * An uncovered word that opens a later comma piece also ends the list, except a joiner, an article, a quantity lead, a part modifier, a topping phrase (`topped with`, `lots of`) or a correction marker (S240, cloud-36 C2); the comma forms only.
+ * A provenance phrase runs from from/since/over to the next joiner, step word, sentence boundary or comma piece, and no word inside it counts (S240, cloud-36 C12); a meal frame (for/at/as [filler] <meal>, or this morning) ends a provenance phrase (S240, cloud-38 D1).
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
  * with the parts gone the fold can attach `two slices` to the dish. The SegmentationCache keeps the
@@ -64,7 +69,8 @@ const FILL = [
   'mustard', 'ketchup', 'sauce', 'salsa', 'pesto', 'peppers', 'pepper', 'jalapenos', 'jalapeno', 'spinach',
   'mushrooms', 'mushroom', 'olives', 'sour cream',
 ];
-const PROT = [
+/** Protein part words. Also read by extra-portion.ts (S240). */
+export const PROT = [
   'chicken', 'beef', 'turkey', 'ham', 'bacon', 'steak', 'pork', 'sausage', 'pepperoni', 'patty', 'patties',
   'egg', 'eggs', 'tuna', 'salmon', 'shrimp', 'tofu', 'carnitas', 'chorizo', 'fish',
 ];
@@ -106,6 +112,26 @@ const CLAUSE = new Set([
 ]);
 // A clause word right after one of these is a part's provenance (`chicken from dinner`), not a new clause.
 const PROVENANCE = new Set(['from', 'since', 'over']);
+const MEAL_FRAME = new Set(['for', 'at', 'as']);
+const MEALS = new Set(['breakfast', 'lunch', 'dinner', 'brunch', 'snack', 'supper', 'dessert']);
+const JOINERS = new Set(['and', 'or', 'plus', 'with']);
+// A meal frame: `for|at|as` + up to two filler words (`my`, `a late`, `today's`) + a meal word (plural ok), or `this morning`.
+function mealFrameAt(g: string[], i: number): boolean {
+  if (g[i] === 'this') return g[i + 1] === 'morning';
+  if (!MEAL_FRAME.has(g[i])) return false;
+  for (let k = i + 1; k <= i + 3 && k < g.length; k++) {
+    const x = g[k];
+    if (MEALS.has(x) || MEALS.has(x.replace(/e?s$/, ''))) return true;
+    if (JOINERS.has(x) || PROVENANCE.has(x) || STEP.has(x) || MEAL_FRAME.has(x)) return false;
+  }
+  return false;
+}
+// Words that may open a comma piece inside a parts list: articles, part modifiers and correction markers.
+const GAP_OK = new Set([
+  'a', 'an', 'the', 'some', 'my', 'more', 'extra', 'double', 'light', 'little', 'bit', 'fresh', 'melted', 'shredded', 'grilled',
+  'w', 'leftover', 'leftovers', 'instead', 'rather', 'actually', 'sorry', 'wait', 'no', 'oops', 'um', 'uh', 'er', 'ok', 'okay', 'i', 'mean', 'scratch', 'make', 'it', 'that', 'correction',
+]);
+const STEP = new Set(['then', 'later', 'after', 'afterwards', 'afterward', 'followed']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
   'grilled', 'shredded', 'diced', 'sliced', 'chopped', 'fried', 'crispy', 'fresh', 'roasted', 'sauteed', 'melted',
@@ -116,6 +142,9 @@ const MODS = new Set([
 ]);
 const MEASURE_LEAD =
   /^(a|an|one|two|three)?\s*(slices?|strips?|dollops?|drizzles?|sprinkles?|spoonfuls?|pinch(es)?|dash(es)?|handful|scoops?|tbsp|tsp|tablespoons?|teaspoons?)\s+of\s+/i;
+// S240 (MGR 18:44Z, Option A's letter): an AMOUNT before a part (`2 eggs`, `a quarter cup of cheese`, `half a cup of rice`).
+const AMOUNT_LEAD =
+  /^(?:(?:about|maybe|like|around)\s+)?(?:a|an|one|two|three|four|five|six|half|quarter|some|\d+(?:[./]\d+)?)(?:\s+(?:a|an|quarter|half|third|couple|few))?(?:\s+(?:of\s+)?(?:cups?|c|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|grams?|g|lbs?|pounds?|slices?|strips?|pieces?|handfuls?|scoops?|dollops?|spoonfuls?|pinch(?:es)?|dash(?:es)?|cans?|cloves?|bunch(?:es)?|stalks?|leaves|links?|patties|patty))?(?:\s+of)?\s+/i;
 const COOK = new Set(['fried', 'crispy', 'roasted', 'grilled', 'smoked', 'pulled']);
 const COOK_OK = new Set<DishClass>(['handheld', 'burrito', 'pizza', 'bowl']);
 const SIDEISH = new Set([
@@ -157,6 +186,7 @@ function isPart(it: Item, cls: DishClass): boolean {
   const raw = it.rawText
     .trim()
     .replace(MEASURE_LEAD, '')
+    .replace(AMOUNT_LEAD, '')
     .replace(/^\s*(a|an|the|some|one|two|three|four|five|six|\d+(\.\d+)?)\s+/i, '');
   const w = words(it.normalizedForm && it.normalizedForm.trim() ? it.normalizedForm : raw);
   if (!w.length || w.length > 3) return false;
@@ -169,11 +199,24 @@ function isPart(it: Item, cls: DishClass): boolean {
   return w.length === 1 || (w.length === 2 && (MODS.has(w[0]) || COOK.has(w[0])));
 }
 
+/** An item that is an amount of a known part (`2 eggs`, `a quarter cup of cheese`) - a part of the dish, not a new food. */
+// A bare a/an/some is a DETERMINER, not an amount: a determiner-led new food still bills. An amount is a number or fraction, or a/an
+// before a fraction or unit word; a container (bowl, plate, side, bag, order, serving, can, glass) is never a part's amount.
+const AMOUNT_NUM =
+  /^(?:(?:about|maybe|like|around)\s+)?(?:one|two|three|four|five|six|half|quarter|\d+(?:[./]\d+)?|(?:a|an)\s+(?=(?:quarter|half|third|couple|few|cups?|c|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|grams?|g|lbs?|pounds?|slices?|strips?|pieces?|handfuls?|scoops?|dollops?|spoonfuls?|pinch(?:es)?|dash(?:es)?|cans?|cloves?|bunch(?:es)?|stalks?|leaves|links?|patties|patty)\b))\b/i;
+const ADDITIVE = new Set(['also', 'along', 'plus', 'additionally']);
+const CONTAINER = /\b(cans?|bowls?|plates?|sides?|bags?|orders?|servings?|box(?:es)?|platters?|glass(?:es)?)\b/i;
+function amountPart(it: Item, cls: DishClass): boolean {
+  const r = it.rawText.trim();
+  return AMOUNT_NUM.test(r) && !CONTAINER.test(r) && isPart(it, cls);
+}
+
 export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { items: T[]; drops: DishPartDrop[] } {
   const none = { items: items.slice(), drops: [] as DishPartDrop[] };
   if (items.length < 2) return none;
   const ptoks = tokenizeWithPieces(lineKey);
   const toks = ptoks.map(t => t.w);
+  const bounds = sentTokBounds(lineKey);
   const spans: Array<Span | null> = [];
   let cur = 0;
   for (const it of items) {
@@ -213,6 +256,7 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
     if (kind === 'with' && MADE_ONLY.has(dc.cls)) continue;
     const dropIdx: number[] = [];
     let seen = 0;
+    const okPiece = new Set<number>();
     for (let j = d + 1; j < items.length; j++) {
       const js = spans[j];
       const jt = items[j].rawText.trim();
@@ -227,17 +271,67 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
       // never count, so a trailing meal tag (`… cheese and salsa for breakfast`) keeps base behaviour.
       let gs = m;
       for (let k = d; k < j; k++) if (spans[k] && spans[k]!.end > gs) gs = spans[k]!.end;
-      if (toks.slice(gs, js.start).some((w, i) => CLAUSE.has(w) && !PROVENANCE.has(toks[gs + i - 1]))) break;
+      // S240 (cloud-36 C12): a provenance phrase (`from last night's dinner`, `from lunch yesterday`) runs from from/since/over to
+      // the next joiner, step word, sentence boundary or comma piece, and no word inside it counts. A clause word outside it (a step
+      // word included) still ends the list (`… from lunch. later steak` keeps the steak).
+      const g = toks.slice(gs, js.start);
+      // a token opens its comma piece when it is the piece's first token, or follows only an `and` that opens it
+      const opensPiece = (q: number): boolean => {
+        const p = ptoks[q]?.piece;
+        if (p === undefined || q === 0) return false;
+        if (ptoks[q - 1]?.piece !== p) return true;
+        return ptoks[q - 1]?.w === 'and' && ptoks[q - 2]?.piece !== p;
+      };
+      // the gap tokens after q that stay in q's comma piece
+      const restOfPiece = (q: number): string[] => {
+        const out: string[] = [];
+        for (let r = q + 1; r < js.start && ptoks[r]?.piece === ptoks[q]?.piece; r++) out.push(toks[r]);
+        return out;
+      };
+      let inProv = false;
+      let clause = false;
+      for (let i = 0; i < g.length; i++) {
+        const w = g[i];
+        const q = gs + i;
+        if (inProv && (JOINERS.has(w) || STEP.has(w) || bounds.has(q) || ptoks[q]?.piece !== ptoks[q - 1]?.piece)) inProv = false;
+        // S240 (cloud-38 D1): a meal frame (`for lunch`, `at dinner`, `as a snack`) ends the provenance phrase, and its meal word
+        // then ends the list (`chicken from yesterday for lunch and steak for dinner` keeps the steak).
+        if (inProv && !PROVENANCE.has(g[i - 1] ?? '') && mealFrameAt(g, i)) inProv = false;
+        if (PROVENANCE.has(w)) { inProv = true; continue; }
+        if (!inProv && CLAUSE.has(w)) { clause = true; break; }
+        // S240 (cloud-36 C2): an uncovered word that OPENS a later comma piece (after an optional `and`) also opens a new clause
+        // (`, also steak`, `, next steak`, `, and at 7pm steak`, `, thn steak`) — never a joiner, an article, a part modifier
+        // (`, extra swiss`) or a correction marker (`, actually steak`, which self-correction owns), and never in the first gap.
+        // A quantity lead (`two eggs` — #556's amount rule reads it), a part modifier, or a topping phrase (`topped with`, `lots of`)
+        // never opens a clause; an additive word (`also`, `plus`) still does (S240, cloud-36 C2 refute r1).
+        const toppingPhrase = !ADDITIVE.has(w) && restOfPiece(q).some(x => x === 'of' || x === 'with');
+        if (!inProv && seen > 0 && opensPiece(q) && !JOINERS.has(w) && !GAP_OK.has(w) && !LEAD_STOP.has(w) && !/^\d/.test(w)
+          && !MODS.has(w) && !toppingPhrase) { clause = true; break; }
+      }
+      if (clause) break;
+      // S240 (MGR 18:44Z): an amount part continues the list, except after an ADDITIVE word in the gap (`also`, `along with`,
+      // `as well as`, `plus`: a new food, s202 refute-r4 pins) or when it RESTATES an earlier KEPT item's head (`scrambled eggs,
+      // cheese, two eggs`: that item's quantity, left for the trailing-quantity fold).
+      const additive = g.some(w => ADDITIVE.has(w)) || g.join(' ').includes('as well as');
+      const lastw = (it: Item) => { const w = words(it.normalizedForm || it.rawText); return (w[w.length - 1] ?? '').replace(/e?s$/, ''); };
+      const restates =
+        items.slice(d + 1, j).some((it, i) => spans[d + 1 + i] && !dropIdx.includes(d + 1 + i) && lastw(it) === lastw(items[j]));
+      const amt = (it: Item) => !additive && !restates && amountPart(it, dc.cls);
       // A new comma piece whose FIRST lineKey token (after an optional `and`) is a determiner/number ends the list.
       if (ptoks[js.start] && ptoks[m] && ptoks[js.start].piece > ptoks[m].piece) {
         let f = ptoks.findIndex(t => t.piece === ptoks[js.start].piece);
         if (f >= 0 && toks[f] === 'and') f++;
-        if (f >= 0 && (LEAD_STOP.has(toks[f]) || /^\d/.test(toks[f] ?? ''))) break;
+        if (f >= 0 && (LEAD_STOP.has(toks[f]) || /^\d/.test(toks[f] ?? ''))) {
+          // The piece's lead belongs to its FIRST item: once that item is an amount part, a later item in the same piece is not
+          // ended by the leader's number (`two eggs and peas`).
+          const pc = ptoks[js.start].piece;
+          if (!okPiece.has(pc)) { if (amt(items[j])) okPiece.add(pc); else break; }
+        }
       }
       // ANY later item whose lineKey span starts with a determiner/number ENDS the list, joiner-independent -
       // except the first item after the marker, a part MEASURE (`a slice of cheddar`) and an item right after `on`.
       const detLed = LEAD_STOP.has(toks[js.start]) || /^\d/.test(toks[js.start] ?? '');
-      if (detLed && seen > 0 && toks[js.start - 1] !== 'on' && !MEASURE_LEAD.test(toks.slice(js.start, js.end).join(' '))) break;
+      if (detLed && seen > 0 && toks[js.start - 1] !== 'on' && !MEASURE_LEAD.test(toks.slice(js.start, js.end).join(' ')) && !amt(items[j])) break;
       seen++;
       const hs = dc.head.replace(/e?s$/, '');
       if (jw.some(x => x.replace(/e?s$/, '') === hs)) continue;
@@ -257,3 +351,78 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
   }
   return none;
 }
+
+/** Token indexes that open a new sentence (after `.` / `:` / ` - `, not between digits) in the lineKey. */
+function sentTokBounds(lineKey: string): Set<number> {
+  const out = new Set<number>();
+  const parts = lineKey.split(/(?<!\d)[.:](?!\d)|\s-\s/);
+  let n = 0;
+  for (let p = 0; p < parts.length; p++) {
+    if (p > 0) out.add(n);
+    n += tokenizeWithPieces(parts[p]).length;
+  }
+  return out;
+}
+
+/**
+ * S240 (MGR 18:44Z (2), narrowed 19:44Z): an item that carries its OWN personal made-with marker (`pasta i made with olive oil`,
+ * `a homemade smoothie bowl made with frozen berries`) is the dish (Option A inside one item): its normalizedForm becomes the head,
+ * so retrieval never answers the whole phrase (`Green olive paste … for pasta`). rawText is kept. A bare `made with` on a non-homemade
+ * item is a label claim (`cookies made with almond flour`, `gummies made with real fruit juice`) and stays as typed.
+ */
+export interface MadeWithHead {
+  index: number;
+  rawText: string;
+  head: string;
+}
+
+const MW_LEAD = new Set(['a', 'an', 'the', 'some', 'my', 'homemade', 'home', 'made']);
+const MW_REL = new Set(['that', 'which']);
+const MW_STOP = new Set(['what', 'something', 'stuff', 'thing', 'things', 'one', 'it', 'this', 'that', 'which', 'who', 'dinner', 'lunch',
+  'breakfast', 'brunch', 'supper', 'snack', 'meal', 'leftovers', 'food', 'i', 'we', 'just', 'my', 'our', 'mom', 'dad', 'home', 'style']);
+const MW_COUNT = new Set(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'twelve', 'dozen', 'half', 'couple', 'few']);
+
+export function readMadeWithHeads<T extends Item>(lineKey: string, items: T[]): { items: T[]; heads: MadeWithHead[] } {
+  const heads: MadeWithHead[] = [];
+  const lk = words(lineKey);
+  // `homemade` counts on the item or right before its span, never anywhere in the line (`homemade bread and gummies made with
+  // real fruit juice` keeps the gummies' label claim).
+  const homeBefore = (w0: string[]): boolean => {
+    for (let s = 0; s + w0.length <= lk.length; s++) {
+      if (w0.every((x, i) => lk[s + i] === x)) return lk[s - 1] === 'homemade' || (lk[s - 1] === 'made' && lk[s - 2] === 'home');
+    }
+    return false;
+  };
+  const out = items.map((it, index) => {
+    if (it.brand && it.brand.trim()) return it;
+    const w = words(it.rawText);
+    let at = -1;
+    let personal = false;
+    for (let k = 1; k + 1 < w.length; k++) {
+      if (w[k] !== 'made') continue;
+      const next = w[k + 1] === 'it' ? w[k + 2] : w[k + 1];
+      if (next !== 'with') continue;
+      personal = w[k - 1] === 'i' || w[k - 1] === 'we';
+      at = personal ? k - 1 : k;
+      break;
+    }
+    if (at < 1) return it;
+    if (!personal && !homeBefore(w) && !w.slice(0, at).some(x => x === 'homemade') && !(w.slice(0, at).join(' ').includes('home made'))) return it;
+    // Only a normalizedForm that still carries the phrase (or none) is rewritten; one the segmenter already digested
+    // (`chicken burrito`, `turkey sandwich`, `chicken` for `dinner i made with chicken`) is kept.
+    const nfw = words(it.normalizedForm ?? '');
+    if (nfw.length && !nfw.includes('with') && !nfw.includes('made')) return it;
+    const headWords = w.slice(0, at);
+    // the head's own count stays in rawText for the parser (`2 pancakes i made with oat flour` -> `pancakes`)
+    while (headWords.length && (MW_LEAD.has(headWords[0]) || /^[\d/.]+$/.test(headWords[0]) || MW_COUNT.has(headWords[0]))) headWords.shift();
+    while (headWords.length && MW_REL.has(headWords[headWords.length - 1])) headWords.pop();
+    // A head that is not a food (`what`, `dinner`, `leftovers`) or still holds a clause is refused.
+    if (!headWords.length || headWords.some(x => /\d/.test(x) || MW_STOP.has(x))) return it;
+    const head = headWords.join(' ');
+    if ((it.normalizedForm ?? '').trim() === head) return it;
+    heads.push({ index, rawText: it.rawText, head });
+    return { ...it, normalizedForm: head };
+  });
+  return { items: out, heads };
+}
+

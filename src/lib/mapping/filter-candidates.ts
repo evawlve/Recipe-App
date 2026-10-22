@@ -868,6 +868,12 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['macaroni', 'pasta', 'elbow macaroni', 'penne', 'spaghetti'],
         excludeIfContains: ['cracker', 'crackers', 'saltines', 'saltine']
     },
+    // Bread-carrier sandwich vs cracker sandwiches (C70 S239)
+    {
+        query: ['bagel sandwich', 'bagel sandwiches', 'croissant sandwich', 'croissant sandwiches', 'english muffin sandwich',
+            'english muffin sandwiches', 'sub sandwich', 'sub sandwiches'],
+        excludeIfContains: ['cracker', 'crackers']
+    },
     // === NEW: Plant-based cheese vs Meat balls ===
     {
         query: ['rice cheese', 'vegan cheese', 'mozzarella style'],
@@ -2683,6 +2689,30 @@ export function isDietaryConstraintViolation(
 
 
 // ============================================================
+// Serving-vessel head nouns (relaxed pass only) -- see the block in filterCandidatesByTokens()
+// ============================================================
+
+/**
+ * Serving vessels: a trailing `plate`/`platter` names how the food is served, not what it is.
+ * `bowl`, `basket`, `box`, `board` and `combo` are deliberately NOT here: they are dish or product
+ * heads in the corpus (burrito bowl, poke bowl, chicken strip basket, bento box, charcuterie board).
+ */
+export const VESSEL_WORDS: ReadonlySet<string> = new Set(['plate', 'plates', 'platter', 'platters']);
+
+/**
+ * Words that, directly before a vessel word, make the PAIR the dish (`dinner plate`, `combo plate`,
+ * `kids plate`, `party platter`, `sampler platter`): the vessel word is then the head noun and must
+ * stay the relax key. Measured set from the C70 S239 refute. Removing `dinner` re-opens
+ * `dinner plate` -> `Dinner Ham`/`Dinner Roll`.
+ */
+export const VESSEL_QUALIFIER_WORDS: ReadonlySet<string> = new Set([
+    'breakfast', 'brunch', 'lunch', 'dinner', 'supper', 'meal', 'entree', 'combo', 'combination',
+    'kids', 'kid', 'childrens', 'mixed', 'assorted', 'party', 'family', 'sampler', 'appetizer',
+    'deli', 'big', 'small', 'large', 'huge', 'full', 'half', 'hot', 'cold', 'side', 'dessert',
+    'snack', 'paper', 'special', 'house', 'value', 'mini', 'bbq', 'barbecue',
+]);
+
+// ============================================================
 // Main Filter Function
 // ============================================================
 
@@ -2775,9 +2805,41 @@ export function filterCandidatesByTokens(
             : new Set<string>();
         const brandToken = mustHaveTokens.find(t =>
             relaxBrandTokens.has(t) || relaxBrandTokens.has(foldApostrophes(t)));
+        const requiredTokens = mustHaveTokens;
         const headNoun = mustHaveTokens[mustHaveTokens.length - 1];
         if (brandToken && brandToken !== headNoun) headNounRelaxFallback = headNoun;
         mustHaveTokens = [brandToken ?? headNoun];
+
+        // VESSEL HEAD RE-AIM (C70 S239). `falafel plate` derives [falafel, plate]; no record carries
+        // both, strict admits 0, and this relaxed pass keeps only the LAST slot, `plate`. The only
+        // gathered record naming `plate` is the FatSecret cut `Veal Breast (Plate Half, Cooked,
+        // Braised)`, which survives alone, skips simpleRerank() (single_candidate, 0.95) and clears
+        // the save gate: the food vanishes. A trailing vessel word is how the food is served, not
+        // what it is, so on that shape relax on the FOOD token before it, and keep the vessel word
+        // as the FALLBACK key (the existing S3 second pass below) so that an empty food-token pass
+        // returns exactly master's result. This is a re-aim with an ordered fallback, NON-MONOTONE
+        // on its fire set (a line may lose master's `[plate]` admissions when the food token admits
+        // >= 1); it is NOT admit-only. It is byte-identical to master on every line it does not fire on.
+        //
+        // Fires only when ALL hold: relaxed (we are inside that block); NOT branded
+        // (`!relaxDetection.isBranded`, and not a brand-token test: on a brand line the brand key
+        // and its S3 fallback already own the re-aim, and the brand's own `plate` is the dish, e.g.
+        // `panda express plate`); >= 2 required tokens (block guard); the last required token is a
+        // vessel word AND the line's last word; the token before it is not itself a vessel word and
+        // not in VESSEL_QUALIFIER_WORDS (`dinner plate`, `kids plate`, `party platter` name the dish;
+        // the food token there would admit `Dinner Ham`, `Kids Combo`, `Party Mix`).
+        //
+        // KNOWN RESIDUAL, STATED NOT HIDDEN: this fixes IDENTITY only. One falafel patty is ~17 g
+        // against a plate's 68-102 g, so `falafel plate` bills ~57 kcal where veal billed 240:
+        // the right food, under-billed about 4-6x. That is a separate PORTION question.
+        if (!relaxDetection.isBranded && VESSEL_WORDS.has(headNoun)) {
+            const lastWord = normalizedName.trim().toLowerCase().split(/\s+/).pop()?.replace(/[^\w]+$/, '') ?? '';
+            const prev = requiredTokens[requiredTokens.length - 2];
+            if (lastWord === headNoun && !VESSEL_WORDS.has(prev) && !VESSEL_QUALIFIER_WORDS.has(prev)) {
+                headNounRelaxFallback = headNoun;
+                mustHaveTokens = [prev];
+            }
+        }
     }
 
     if (mustHaveTokens.length === 0) {

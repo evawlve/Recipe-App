@@ -1,0 +1,2178 @@
+[
+ {
+  "src": "s240 draw",
+  "line": "a protein shake with two scoops in milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a protein shake with two scoops in milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops in milk",
+    "normalizedForm": "scoops in milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a protein shake with two scoops in milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "in milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a protein shake with 2 scoops and almond milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a smoothie with two scoops of protein and a banana",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops of protein",
+    "normalizedForm": "protein",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "two scoops of protein",
+    "normalizedForm": "protein"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a coffee with two sugars and cream",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two sugars",
+    "normalizedForm": "sugars",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "two sugars",
+    "normalizedForm": "sugars"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "oatmeal with two scoops, and a coffee",
+  "input": [
+   {
+    "rawText": "oatmeal with two scoops",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with two scoops",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "oatmeal with two scoops, and a coffee",
+  "input": [
+   {
+    "rawText": "oatmeal with two scoops",
+    "normalizedForm": "oatmeal with two scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with two scoops",
+    "normalizedForm": "oatmeal with two scoops"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 draw",
+  "line": "a shake with a scoop in water",
+  "input": [
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop in water",
+    "normalizedForm": "scoop in water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake"
+   },
+   {
+    "rawText": "a scoop in water",
+    "normalizedForm": "scoop in water"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A1",
+  "line": "ice cream with two scoops of sprinkles",
+  "input": [
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops of sprinkles",
+    "normalizedForm": "sprinkles",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream"
+   },
+   {
+    "rawText": "two scoops of sprinkles",
+    "normalizedForm": "sprinkles"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A2",
+  "line": "a sundae with 3 scoops",
+  "input": [
+   {
+    "rawText": "a sundae",
+    "normalizedForm": "sundae",
+    "brand": ""
+   },
+   {
+    "rawText": "3 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 scoops of sundae",
+    "normalizedForm": "sundae"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A2b",
+  "line": "a sundae with 3 scoops and hot fudge",
+  "input": [
+   {
+    "rawText": "a sundae",
+    "normalizedForm": "sundae",
+    "brand": ""
+   },
+   {
+    "rawText": "3 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "hot fudge",
+    "normalizedForm": "hot fudge",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sundae",
+    "normalizedForm": "sundae"
+   },
+   {
+    "rawText": "3 scoops",
+    "normalizedForm": "scoops"
+   },
+   {
+    "rawText": "hot fudge",
+    "normalizedForm": "hot fudge"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A3",
+  "line": "oatmeal with a packet",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "a packet",
+    "normalizedForm": "packet",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 packet of oatmeal",
+    "normalizedForm": "oatmeal"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A3b",
+  "line": "a packet of oatmeal with 2 servings",
+  "input": [
+   {
+    "rawText": "a packet of oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a packet of oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A4",
+  "line": "coffee with 2 packets",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 packets of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A4b",
+  "line": "coffee with 2 packets and cream",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A4c",
+  "line": "a coffee with 2 packets and a splash of milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets",
+    "brand": ""
+   },
+   {
+    "rawText": "a splash of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets"
+   },
+   {
+    "rawText": "a splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A5",
+  "line": "tea with a packet",
+  "input": [
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a packet",
+    "normalizedForm": "packet",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 packet of tea",
+    "normalizedForm": "tea"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A5b",
+  "line": "tea with a packet and a cookie",
+  "input": [
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "a packet",
+    "normalizedForm": "packet",
+    "brand": ""
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea"
+   },
+   {
+    "rawText": "a packet",
+    "normalizedForm": "packet"
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A6",
+  "line": "rice with 2 servings",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 servings of rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A6b",
+  "line": "rice with 2 servings and chicken",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A7",
+  "line": "a protein shake with 2 scoops of peanut butter",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops of peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "2 scoops of peanut butter",
+    "normalizedForm": "peanut butter"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A7b",
+  "line": "a protein shake with 2 scoops, peanut butter",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 A8",
+  "line": "a smoothie with a scoop",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 scoop of smoothie",
+    "normalizedForm": "smoothie"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A8b",
+  "line": "a smoothie with a scoop and a banana",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A8c",
+  "line": "a strawberry smoothie with a scoop and almond milk",
+  "input": [
+   {
+    "rawText": "a strawberry smoothie",
+    "normalizedForm": "strawberry smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a strawberry smoothie",
+    "normalizedForm": "strawberry smoothie"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A9",
+  "line": "a protein bar with 2 servings",
+  "input": [
+   {
+    "rawText": "a protein bar",
+    "normalizedForm": "protein bar",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 servings of protein bar",
+    "normalizedForm": "protein bar"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 A10",
+  "line": "a whey shake with 1.5 scoops",
+  "input": [
+   {
+    "rawText": "a whey shake",
+    "normalizedForm": "whey shake",
+    "brand": ""
+   },
+   {
+    "rawText": "1.5 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1.5 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 A10b",
+  "line": "a whey shake with 1.5 scoops and water",
+  "input": [
+   {
+    "rawText": "a whey shake",
+    "normalizedForm": "whey shake",
+    "brand": ""
+   },
+   {
+    "rawText": "1.5 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1.5 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 A11",
+  "line": "a protein shake with two scoops and a banana",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 A12",
+  "line": "a brownie with a scoop and coffee",
+  "input": [
+   {
+    "rawText": "a brownie",
+    "normalizedForm": "brownie",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a brownie",
+    "normalizedForm": "brownie"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A12b",
+  "line": "apple pie with a scoop and a coffee",
+  "input": [
+   {
+    "rawText": "apple pie",
+    "normalizedForm": "apple pie",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "apple pie",
+    "normalizedForm": "apple pie"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A12c",
+  "line": "a waffle with 2 scoops and syrup",
+  "input": [
+   {
+    "rawText": "a waffle",
+    "normalizedForm": "waffle",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a waffle",
+    "normalizedForm": "waffle"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A12d",
+  "line": "a root beer float with 2 scoops and fries",
+  "input": [
+   {
+    "rawText": "a root beer float",
+    "normalizedForm": "root beer float",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a root beer float",
+    "normalizedForm": "root beer float"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A13",
+  "line": "a protein smoothie with 2 scoops and a banana",
+  "input": [
+   {
+    "rawText": "a protein smoothie",
+    "normalizedForm": "protein smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein smoothie",
+    "normalizedForm": "protein smoothie"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A14",
+  "line": "greek yogurt with a scoop and berries",
+  "input": [
+   {
+    "rawText": "greek yogurt",
+    "normalizedForm": "greek yogurt",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "berries",
+    "normalizedForm": "berries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "greek yogurt",
+    "normalizedForm": "greek yogurt"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "berries",
+    "normalizedForm": "berries"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A15",
+  "line": "a protein shake with 2 packets and water",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets",
+    "brand": ""
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "2 packets",
+    "normalizedForm": "packets"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 A16",
+  "line": "a protein shake with 2 servings and water",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 B1",
+  "line": "a premier protein shake with 2 scoops",
+  "input": [
+   {
+    "rawText": "a premier protein shake",
+    "normalizedForm": "protein shake",
+    "brand": "premier protein"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 B1b",
+  "line": "a premier protein shake with 2 scoops in milk",
+  "input": [
+   {
+    "rawText": "a premier protein shake",
+    "normalizedForm": "protein shake",
+    "brand": "premier protein"
+   },
+   {
+    "rawText": "2 scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 B2",
+  "line": "a protein smoothie with 2 scoops of ice cream",
+  "input": [
+   {
+    "rawText": "a protein smoothie",
+    "normalizedForm": "protein smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein smoothie",
+    "normalizedForm": "protein smoothie"
+   },
+   {
+    "rawText": "2 scoops of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 B3",
+  "line": "a chocolate protein shake with 2 scoops in milk",
+  "input": [
+   {
+    "rawText": "a chocolate protein shake",
+    "normalizedForm": "chocolate protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 B4",
+  "line": "a vegan protein shake with 2 scoops in oat milk",
+  "input": [
+   {
+    "rawText": "a vegan protein shake",
+    "normalizedForm": "vegan protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 B5",
+  "line": "a protein milkshake with 2 scoops",
+  "input": [
+   {
+    "rawText": "a protein milkshake",
+    "normalizedForm": "protein milkshake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein milkshake",
+    "normalizedForm": "protein milkshake"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 B6",
+  "line": "a casein shake with a scoop in water",
+  "input": [
+   {
+    "rawText": "a casein shake",
+    "normalizedForm": "casein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop in water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 scoop of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 B7",
+  "line": "a shake with a scoop of protein in milk",
+  "input": [
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop of protein in milk",
+    "normalizedForm": "protein",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a shake",
+    "normalizedForm": "shake"
+   },
+   {
+    "rawText": "a scoop of protein in milk",
+    "normalizedForm": "protein"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 B8",
+  "line": "a ghost protein shake with 2 scoops in water",
+  "input": [
+   {
+    "rawText": "a ghost protein shake",
+    "normalizedForm": "protein shake",
+    "brand": "ghost"
+   },
+   {
+    "rawText": "2 scoops in water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C1",
+  "line": "a protein shake with two scoops in my oatmeal",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops in my oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "two scoops in my oatmeal",
+    "normalizedForm": "oatmeal"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 C2",
+  "line": "coffee with 2 packets in it",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 packets in it",
+    "normalizedForm": "packets",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2 packets in it",
+    "normalizedForm": "packets"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 C3",
+  "line": "a protein shake with 2 scoops in total",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in total",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C4",
+  "line": "a protein shake with 2 scoops in a shaker bottle",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in a shaker bottle",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C5",
+  "line": "a protein shake with 2 scoops in the morning",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in the morning",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C7",
+  "line": "a protein shake with two scoops in 8 oz of milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops in 8 oz of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "8 oz of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C8",
+  "line": "a protein shake with 2 scoops in milk and a banana",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in milk and a banana",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "2 scoops in milk and a banana",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 C9",
+  "line": "a protein shake with 2 scoops in it and almond milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in it",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 C10",
+  "line": "oatmeal with a packet in water",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "a packet in water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "a packet in water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 C11",
+  "line": "a protein shake with 2 scoops in water",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in water",
+    "normalizedForm": "scoops in water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 D1",
+  "line": "a protein latte with 2 scoops and almond milk",
+  "input": [
+   {
+    "rawText": "a protein latte",
+    "normalizedForm": "protein latte",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein latte",
+    "normalizedForm": "protein latte"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 D2",
+  "line": "a protein shake with milk with 2 scoops",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 D3",
+  "line": "a protein shake with 2 scoops, no milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "no milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "no milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 D4",
+  "line": "a protein shake with 3 scoops, wait no, 2 scoops",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "3 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 D5",
+  "line": "a protein shake with 2 scoops, i gave half to my friend",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 D6",
+  "line": "a protein shake with two scoops of protein in milk",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops of protein in milk",
+    "normalizedForm": "protein",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   },
+   {
+    "rawText": "two scoops of protein in milk",
+    "normalizedForm": "protein"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 D7",
+  "line": "a mcdonalds shake with 2 scoops",
+  "input": [
+   {
+    "rawText": "a mcdonalds shake",
+    "normalizedForm": "shake",
+    "brand": "mcdonald's"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "scoops",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of mcdonalds shake",
+    "normalizedForm": "shake"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "refute-r1 D8",
+  "line": "a coffee with a scoop of collagen",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   },
+   {
+    "rawText": "collagen",
+    "normalizedForm": "collagen",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   },
+   {
+    "rawText": "collagen",
+    "normalizedForm": "collagen"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 E1",
+  "line": "a protein shake with 2 scoops in milk, about a cup",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 E1b",
+  "line": "a protein shake with 2 scoops in milk, 1 cup",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "1 cup",
+    "normalizedForm": "cup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "1 cup",
+    "normalizedForm": "cup"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 E2",
+  "line": "a protein shake with half a scoop in water",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "half a scoop in water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 scoop of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ },
+ {
+  "src": "refute-r1 E3",
+  "line": "a smoothie with banana with a scoop",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "scoop"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 E4",
+  "line": "oatmeal with blueberries with 2 servings",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "blueberries",
+    "normalizedForm": "blueberries",
+    "brand": ""
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "blueberries",
+    "normalizedForm": "blueberries"
+   },
+   {
+    "rawText": "2 servings",
+    "normalizedForm": "servings"
+   }
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "refute-r1 E5",
+  "line": "a protein shake with a couple scoops in water",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "a couple scoops in water",
+    "normalizedForm": "water",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ]
+ }
+]

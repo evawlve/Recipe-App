@@ -1,0 +1,2585 @@
+[
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coffee, no a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coffee, no a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no a tea",
+    "normalizedForm": "no a tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "no a tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coffee no a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee no tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee, no tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee, no tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no tea",
+    "normalizedForm": "no tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "no tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke no sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "sprite"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke no sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coca-cola",
+    "brand": ""
+   },
+   {
+    "rawText": "sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "sprite"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke, no, a sprite",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sprite"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "chicken, no, beef",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "beef",
+    "normalizedForm": "beef",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "beef"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "two eggs no three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "two eggs, no three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "two eggs no three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a latte no make it a mocha",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "a mocha"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a latte, no, make it a mocha",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a mocha"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "no a cappuccino",
+  "input": [
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cappuccino"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a latte, no a cappuccino",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cappuccino"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a latte. no a cappuccino",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cappuccino"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a burger no actually a hot dog",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a hot dog"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a burger, no, actually a hot dog",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a hot dog"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a burger, no actually, a hot dog",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a hot dog"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coffee, no tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no tea",
+    "normalizedForm": "no tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "no tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke, no pepsi",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coca-cola",
+    "brand": ""
+   },
+   {
+    "rawText": "pepsi",
+    "normalizedForm": "pepsi",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "pepsi"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke, no, pepsi",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coca-cola",
+    "brand": ""
+   },
+   {
+    "rawText": "pepsi",
+    "normalizedForm": "pepsi",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "pepsi"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coke, no a pepsi",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coca-cola",
+    "brand": ""
+   },
+   {
+    "rawText": "a pepsi",
+    "normalizedForm": "pepsi",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pepsi"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee. no. tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee - no - tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "coffee no, tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a coffee... no, a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a big mac, no, a quarter pounder",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "mcdonald's",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a big mac no a quarter pounder",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "mcdonald's",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "oatmeal, no granola",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal",
+   "granola"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "oatmeal, no, granola",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "granola"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a bagel, no, two bagels",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "two bagels",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ]
+ },
+ {
+  "src": "refute-r1 cases1.json",
+  "line": "a bagel no two bagels",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "two bagels",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a pizza, no the anchovies",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "the anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a pizza, no the anchovies",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "pizza, no the anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "the anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "soup, no 2 crackers",
+  "input": [
+   {
+    "rawText": "soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "2 crackers",
+    "normalizedForm": "2 crackers",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 crackers"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a soup, no 2 crackers",
+  "input": [
+   {
+    "rawText": "a soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "2 crackers",
+    "normalizedForm": "2 crackers",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 crackers"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a salad, no some croutons",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "some croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "some croutons"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a salad no croutons",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "croutons"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "tacos, no one onion",
+  "input": [
+   {
+    "rawText": "tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "one onion",
+    "normalizedForm": "one onion",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "one onion"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a burger, no the bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the bun"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a burger no the bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the bun"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a latte, no 2% milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "2% milk",
+    "normalizedForm": "2% milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2% milk"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a coffee, no two sugars",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two sugars",
+    "normalizedForm": "two sugars",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two sugars"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "coffee no 2 sugars",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 sugars",
+    "normalizedForm": "2 sugars",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 sugars"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a bagel, no my usual cream cheese",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "my usual cream cheese",
+    "normalizedForm": "my usual cream cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "my usual cream cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a sandwich, no half the mayo",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half the mayo",
+    "normalizedForm": "half the mayo",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "half the mayo"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a burger, no, avocado",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "avocado",
+    "normalizedForm": "avocado",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "avocado"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a burger, no, bacon",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "bacon"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a pizza, no, anchovies",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "pizza, no, anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "ramen, no, egg",
+  "input": [
+   {
+    "rawText": "ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "egg"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a pizza, no anchovies",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "pizza, no anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "pizza, no anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "no anchovies",
+    "normalizedForm": "no anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "no anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "ramen no egg",
+  "input": [
+   {
+    "rawText": "ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ramen",
+   "egg"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "ramen no egg",
+  "input": [
+   {
+    "rawText": "ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "no egg",
+    "normalizedForm": "no egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ramen",
+   "no egg"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a cheeseburger, no pickles, and a coke",
+  "input": [
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cheeseburger",
+   "pickles",
+   "a coke"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a cheeseburger no onions no pickles",
+  "input": [
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger",
+    "brand": ""
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions",
+    "brand": ""
+   },
+   {
+    "rawText": "pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cheeseburger",
+   "onions",
+   "pickles"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a coffee, no a tea, no sugar",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea",
+   "sugar"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a big mac, no pickles",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "mcdonald's",
+    "brand": ""
+   },
+   {
+    "rawText": "pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a big mac",
+   "pickles"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a big mac, no the pickles",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "mcdonald's",
+    "brand": ""
+   },
+   {
+    "rawText": "the pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the pickles"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a whopper, no 2 pickles",
+  "input": [
+   {
+    "rawText": "a whopper",
+    "normalizedForm": "burger king",
+    "brand": ""
+   },
+   {
+    "rawText": "2 pickles",
+    "normalizedForm": "2 pickles",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 pickles"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a pizza with no anchovies",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "pizza with no anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "chicken burrito, no sour cream or cheese",
+  "input": [
+   {
+    "rawText": "chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chicken burrito",
+   "sour cream",
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "a burrito, no the sour cream or cheese",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "the sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the sour cream",
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "an omelet, no, three eggs",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases2.json",
+  "line": "an omelet no 3 eggs",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "3 eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "six eggs no seven eggs",
+  "input": [
+   {
+    "rawText": "six eggs",
+    "normalizedForm": "six eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "seven eggs",
+    "normalizedForm": "seven eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "7 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "six eggs, no seven eggs",
+  "input": [
+   {
+    "rawText": "six eggs",
+    "normalizedForm": "six eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "seven eggs",
+    "normalizedForm": "seven eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "7 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "six eggs no seven",
+  "input": [
+   {
+    "rawText": "six eggs",
+    "normalizedForm": "six eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "seven",
+    "normalizedForm": "seven",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "7 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "eight wings no ten wings",
+  "input": [
+   {
+    "rawText": "eight wings",
+    "normalizedForm": "eight wings",
+    "brand": ""
+   },
+   {
+    "rawText": "ten wings",
+    "normalizedForm": "ten wings",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "10 wings"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "eight wings, no ten",
+  "input": [
+   {
+    "rawText": "eight wings",
+    "normalizedForm": "eight wings",
+    "brand": ""
+   },
+   {
+    "rawText": "ten",
+    "normalizedForm": "ten",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "10 wings"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "nine nuggets, no ten nuggets",
+  "input": [
+   {
+    "rawText": "nine nuggets",
+    "normalizedForm": "nine nuggets",
+    "brand": ""
+   },
+   {
+    "rawText": "ten nuggets",
+    "normalizedForm": "ten nuggets",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "10 nuggets"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "ten fries no twelve fries",
+  "input": [
+   {
+    "rawText": "ten fries",
+    "normalizedForm": "ten fries",
+    "brand": ""
+   },
+   {
+    "rawText": "twelve fries",
+    "normalizedForm": "twelve fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "12 fries"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a dozen eggs no a half dozen",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "dozen eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a half dozen",
+    "normalizedForm": "half dozen",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a half dozen"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two slices of pizza no three slices",
+  "input": [
+   {
+    "rawText": "two slices of pizza",
+    "normalizedForm": "two slices of pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "three slices",
+    "normalizedForm": "three slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 slices of pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two eggs no a couple eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a couple eggs",
+    "normalizedForm": "couple eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two cookies no several cookies",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "two cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "several cookies",
+    "normalizedForm": "several cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "several cookies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two cookies, no like three cookies",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "two cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "like three cookies",
+    "normalizedForm": "like three cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 cookies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two cookies, no like three",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "two cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "like three",
+    "normalizedForm": "like three",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 cookies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "two cookies no about three",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "two cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "about three",
+    "normalizedForm": "about three",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 cookies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "three tacos no maybe four",
+  "input": [
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "three tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "maybe four",
+    "normalizedForm": "maybe four",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "4 tacos"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a coffee, no an espresso",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "an espresso",
+    "normalizedForm": "espresso",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an espresso"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "one beer, no 2 beers",
+  "input": [
+   {
+    "rawText": "one beer",
+    "normalizedForm": "one beer",
+    "brand": ""
+   },
+   {
+    "rawText": "2 beers",
+    "normalizedForm": "2 beers",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "pizza no pizzas",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pizzas",
+    "normalizedForm": "pizzas",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizzas"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "one slice of pizza, no half a pizza",
+  "input": [
+   {
+    "rawText": "one slice of pizza",
+    "normalizedForm": "one slice of pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pizza",
+    "normalizedForm": "half a pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a cup of rice no one and a half cups",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "cup of rice",
+    "brand": ""
+   },
+   {
+    "rawText": "one and a half cups",
+    "normalizedForm": "one and a half cups",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1.5 cups of rice"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a cup of rice, no 1.5 cups",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "cup of rice",
+    "brand": ""
+   },
+   {
+    "rawText": "1.5 cups",
+    "normalizedForm": "1.5 cups",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1.5 cups of rice"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a cup of rice, no ½ cup",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "cup of rice",
+    "brand": ""
+   },
+   {
+    "rawText": "½ cup",
+    "normalizedForm": "½ cup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of rice",
+   "½ cup"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "twelve almonds no fifteen almonds",
+  "input": [
+   {
+    "rawText": "twelve almonds",
+    "normalizedForm": "twelve almonds",
+    "brand": ""
+   },
+   {
+    "rawText": "fifteen almonds",
+    "normalizedForm": "fifteen almonds",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fifteen almonds"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a pint of ice cream, no half a pint",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pint",
+    "normalizedForm": "half a pint",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pint of ice cream"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a large pizza, no a medium pizza",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "a medium pizza",
+    "normalizedForm": "medium pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a medium pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 cases3.json",
+  "line": "a large pizza, no medium",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "medium",
+    "normalizedForm": "medium",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "medium"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "coffee, no, tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no",
+    "normalizedForm": "no",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "",
+   "tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a coffee, no, a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "no",
+    "normalizedForm": "no",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "no",
+   "a tea"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "pizza no, anchovies",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a burger, no, wait, a hot dog",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a hot dog"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a burger; no; a hot dog",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a hot dog"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "two eggs, toast, no",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "pizza, anchovies, no",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "anchovies"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "two eggs, three eggs, no",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a salad, no dressing, a coke, no, a sprite",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "dressing",
+    "normalizedForm": "dressing",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "dressing",
+   "a sprite"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a salad, no dressing, a coke, no a sprite",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "dressing",
+    "normalizedForm": "dressing",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "a sprite",
+    "normalizedForm": "sprite",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "dressing",
+   "a sprite"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "a salad no dressing and a coke",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "dressing",
+    "normalizedForm": "dressing",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "dressing",
+   "a coke"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "pizza, no anchovies, no olives",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "anchovies",
+    "normalizedForm": "anchovies",
+    "brand": ""
+   },
+   {
+    "rawText": "olives",
+    "normalizedForm": "olives",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "anchovies",
+   "olives"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "oatmeal with no sugar, no, a bagel",
+  "input": [
+   {
+    "rawText": "oatmeal with no sugar",
+    "normalizedForm": "oatmeal with no sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal with no sugar",
+   "a bagel"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "pasta no cheese, two meatballs",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two meatballs",
+    "normalizedForm": "two meatballs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta",
+   "cheese",
+   "two meatballs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases4.json",
+  "line": "pasta, no cheese two meatballs",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two meatballs",
+    "normalizedForm": "two meatballs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta",
+   "cheese",
+   "two meatballs"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "bagel, no my usual cream cheese",
+  "input": [
+   {
+    "rawText": "bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "my usual cream cheese",
+    "normalizedForm": "my usual cream cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "my usual cream cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "toast no some butter",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "some butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "some butter"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "sandwich, no half the mayo",
+  "input": [
+   {
+    "rawText": "sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half the mayo",
+    "normalizedForm": "half the mayo",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "half the mayo"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "burger no the bun",
+  "input": [
+   {
+    "rawText": "burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "the bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the bun"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "ramen, no the egg",
+  "input": [
+   {
+    "rawText": "ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "the egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "the egg"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "coffee, no 2 sugars",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 sugars",
+    "normalizedForm": "2 sugars",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 sugars"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a burger, scratch that, avocado toast",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "avocado toast",
+    "normalizedForm": "avocado toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "avocado toast"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a burger, scratch that, bacon toast",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon toast",
+    "normalizedForm": "bacon toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "bacon toast"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a coffee, make it almond milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "almond milk"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a coffee, make it oat milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a burger, no, tenders",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "tenders",
+    "normalizedForm": "tenders",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "tenders"
+  ]
+ },
+ {
+  "src": "refute-r1 cases5.json",
+  "line": "a burger, no, chicken tenders",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken tenders",
+    "normalizedForm": "chicken tenders",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "chicken tenders"
+  ]
+ },
+ {
+  "src": "s240 repro",
+  "line": "ramen, no egg",
+  "input": [
+   {
+    "rawText": "ramen",
+    "normalizedForm": "ramen",
+    "brand": ""
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ramen",
+   "egg"
+  ]
+ },
+ {
+  "src": "s240 repro",
+  "line": "a coffee, no, a tea",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tea"
+  ]
+ },
+ {
+  "src": "s240 repro",
+  "line": "coffee, no, tea",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "tea"
+  ]
+ },
+ {
+  "src": "s240 repro",
+  "line": "two eggs, no, three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "two eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "three eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ }
+]

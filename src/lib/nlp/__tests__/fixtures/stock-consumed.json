@@ -1,0 +1,4422 @@
+[
+ {
+  "src": "s240 seg draw",
+  "line": "1 doz eggs for the week, ate 2",
+  "input": [
+   {
+    "rawText": "1 doz eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "1 doz eggs for the week, ate 2",
+  "input": [
+   {
+    "rawText": "1 doz eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 2 lb bag of baby carrots, i ate about a quarter",
+  "input": [
+   {
+    "rawText": "2 lb bag of baby carrots",
+    "normalizedForm": "baby carrots"
+   }
+  ],
+  "expectRawTexts": [
+   "0.5 lb bag of baby carrots"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 2 lb bag of baby carrots, i ate about a quarter",
+  "input": [
+   {
+    "rawText": "2 lb bag of baby carrots",
+    "normalizedForm": "baby carrots"
+   },
+   {
+    "rawText": "about a quarter",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "0.5 lb bag of baby carrots"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 2 lb bag of baby carrots, i ate about a quarter",
+  "input": [
+   {
+    "rawText": "a 2 lb bag of baby carrots",
+    "normalizedForm": "baby carrots"
+   },
+   {
+    "rawText": "about a quarter",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "0.5 lb bag of baby carrots"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "we split a 12 inch sub, i had half",
+  "input": [
+   {
+    "rawText": "half of a 12 inch sub",
+    "normalizedForm": "12 inch sub"
+   }
+  ],
+  "expectRawTexts": [
+   "half of a 12 inch sub"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "we split a 12 inch sub, i had half",
+  "input": [
+   {
+    "rawText": "half",
+    "normalizedForm": "sub"
+   }
+  ],
+  "expectRawTexts": [
+   "half"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "we split a 12 inch sub, i had half",
+  "input": [
+   {
+    "rawText": "12 inch sub",
+    "normalizedForm": "sub"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "sub"
+   }
+  ],
+  "expectRawTexts": [
+   "12 inch sub",
+   "half"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a dozen donuts for the office, i had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 donuts"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a dozen donuts for the office, i had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "2 donuts"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a bag of chips, ate half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bag of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a pint of ice cream, i ate about a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 pint of ice cream"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a pint of ice cream, i ate about a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   },
+   {
+    "rawText": "about a third",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 pint of ice cream"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a large pizza, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "3 slices",
+    "normalizedForm": "slices"
+   }
+  ],
+  "expectRawTexts": [
+   "3 slices of pizza"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a large pizza, i had 3 slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   },
+   {
+    "rawText": "3 slices",
+    "normalizedForm": "slices"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3 slices"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a box of cookies, ate 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "4 cookies"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a box of cookies, ate 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "4 cookies"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 6 pack of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 6 pack of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a 6 pack of beer, drank 2",
+  "input": [
+   {
+    "rawText": "6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a glass of lemonade with ice",
+  "input": [
+   {
+    "rawText": "a glass of lemonade",
+    "normalizedForm": "lemonade"
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice"
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of lemonade",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "iced coffee with ice",
+  "input": [
+   {
+    "rawText": "iced coffee",
+    "normalizedForm": "iced coffee"
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice"
+   }
+  ],
+  "expectRawTexts": [
+   "iced coffee",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "s240 seg draw",
+  "line": "a coke with ice",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice"
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "ice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a coffee at 8, a second coffee at 10, and a third coffee at 2",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a second coffee",
+    "normalizedForm": "second coffee"
+   },
+   {
+    "rawText": "a third coffee",
+    "normalizedForm": "third coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "8 coffee",
+   "a second coffee",
+   "2 third coffee"
+  ],
+  "expectKinds": [
+   "gap",
+   "gap"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a coffee, then a second coffee, then a third coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a second coffee",
+    "normalizedForm": "second coffee"
+   },
+   {
+    "rawText": "a third coffee",
+    "normalizedForm": "third coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a second coffee",
+   "a third coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a beer, then another beer, then a third beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "another beer",
+    "normalizedForm": "another beer"
+   },
+   {
+    "rawText": "a third beer",
+    "normalizedForm": "third beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "another beer",
+   "a third beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a slice of pizza, then a second slice, then a third slice",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "a second slice",
+    "normalizedForm": "second slice"
+   },
+   {
+    "rawText": "a third slice",
+    "normalizedForm": "third slice"
+   }
+  ],
+  "expectRawTexts": [
+   "a slice of pizza",
+   "a second slice",
+   "a third slice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "pizza, and then a third slice",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a third slice",
+    "normalizedForm": "third slice"
+   }
+  ],
+  "expectRawTexts": [
+   "pizza",
+   "a third slice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "pizza, and then a third slice",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "two slices of pizza, then a third slice",
+  "input": [
+   {
+    "rawText": "two slices of pizza",
+    "normalizedForm": "two slices of pizza"
+   },
+   {
+    "rawText": "a third slice",
+    "normalizedForm": "third slice"
+   }
+  ],
+  "expectRawTexts": [
+   "two slices of pizza",
+   "a third slice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a quarter pounder with cheese, and a quarter pounder",
+  "input": [
+   {
+    "rawText": "a quarter pounder with cheese",
+    "normalizedForm": "quarter pounder with cheese"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder with cheese",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a quarter pounder, a quarter pounder",
+  "input": [
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "rotisserie chicken, a quarter chicken",
+  "input": [
+   {
+    "rawText": "rotisserie chicken",
+    "normalizedForm": "rotisserie chicken"
+   },
+   {
+    "rawText": "a quarter chicken",
+    "normalizedForm": "quarter chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "rotisserie chicken",
+   "a quarter chicken"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pizza, a quarter of the pizza",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a quarter of the pizza",
+    "normalizedForm": "quarter of the pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "a quarter of the pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large pizza, i ate a quarter of the pizza",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   },
+   {
+    "rawText": "a quarter of the pizza",
+    "normalizedForm": "quarter of the pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "a quarter of the pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pizza, three quarters of a pizza",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "three quarters of a pizza",
+    "normalizedForm": "three quarters of a pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza",
+   "three quarters of a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, two thirds of the bag",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, ate two thirds",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pint of ice cream, ate three quarters",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pint of ice cream, ate three quarters of it",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pint of ice cream, ate one third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a banana, a quarter cup of oats",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "a quarter cup of oats",
+    "normalizedForm": "quarter cup of oats"
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "a quarter cup of oats"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "oatmeal, a quarter cup of oats",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "a quarter cup of oats",
+    "normalizedForm": "quarter cup of oats"
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal",
+   "a quarter cup of oats"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "overnight oats, a quarter cup of oats",
+  "input": [
+   {
+    "rawText": "overnight oats",
+    "normalizedForm": "overnight oats"
+   },
+   {
+    "rawText": "a quarter cup of oats",
+    "normalizedForm": "quarter cup of oats"
+   }
+  ],
+  "expectRawTexts": [
+   "overnight oats",
+   "a quarter cup of oats"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bagel, a quarter of an avocado on toast",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "a quarter of an avocado on toast",
+    "normalizedForm": "quarter of an avocado on toast"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "a quarter of an avocado on toast"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "toast, a quarter of an avocado",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "a quarter of an avocado",
+    "normalizedForm": "quarter of an avocado"
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "a quarter of an avocado"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "avocado toast, a quarter of an avocado",
+  "input": [
+   {
+    "rawText": "avocado toast",
+    "normalizedForm": "avocado toast"
+   },
+   {
+    "rawText": "a quarter of an avocado",
+    "normalizedForm": "quarter of an avocado"
+   }
+  ],
+  "expectRawTexts": [
+   "avocado toast",
+   "a quarter of an avocado"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "rice, a third of a cup of rice",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "a third of a cup of rice",
+    "normalizedForm": "third of a cup of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "rice",
+   "a third of a cup of rice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "rice, a third of a cup",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectRawTexts": [
+   "rice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cup of rice, and a half",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "cup of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of rice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cup of coffee, and a half",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a can of beer, and a half",
+  "input": [
+   {
+    "rawText": "a can of beer",
+    "normalizedForm": "can of beer"
+   },
+   {
+    "rawText": "and a half",
+    "normalizedForm": "and a half"
+   }
+  ],
+  "expectRawTexts": [
+   "a can of beer",
+   "and a half"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bagel, and a half",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bagel"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "cereal with milk, a quarter cup",
+  "input": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "cereal",
+   "milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a coffee, with a quarter cup of milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a quarter cup of milk",
+    "normalizedForm": "quarter cup of milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a quarter cup of milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of popcorn, a third",
+  "input": [
+   {
+    "rawText": "a bag of popcorn",
+    "normalizedForm": "bag of popcorn"
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "third"
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 bag of popcorn"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large bag of chips, ate half",
+  "input": [
+   {
+    "rawText": "a large bag of chips",
+    "normalizedForm": "large bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a large bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large pizza, ate half",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large pizza, about a quarter",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   },
+   {
+    "rawText": "about a quarter",
+    "normalizedForm": "about a quarter"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "about a quarter"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large coffee, drank half",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "large coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a large coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a large coffee, about half",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "large coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a large coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a medium fries, a third",
+  "input": [
+   {
+    "rawText": "a medium fries",
+    "normalizedForm": "medium fries"
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "third"
+   }
+  ],
+  "expectRawTexts": [
+   "a medium fries",
+   "a third"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a slice of pizza, ate half",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a slice of pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cup of coffee, about half",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 cup of coffee"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a glass of wine, about half",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "glass of wine"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 glass of wine"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 2 liter of coke, had a third",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "2 liter of coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a 2 liter of coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 2 liter of coke, had about a quarter",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "2 liter of coke"
+   }
+  ],
+  "expectRawTexts": [
+   "0.5 liter of coke"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 16 oz steak, ate half",
+  "input": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "16 oz steak"
+   }
+  ],
+  "expectRawTexts": [
+   "8 oz steak"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 6 pack of beer, half",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "6 pack of beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a 6 pack of beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 6 pack of beer, about half",
+  "input": [
+   {
+    "rawText": "6 pack of beer",
+    "normalizedForm": "6 pack of beer"
+   }
+  ],
+  "expectRawTexts": [
+   "6 pack of beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 12 pack of soda, about a quarter",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "12 pack of soda"
+   }
+  ],
+  "expectRawTexts": [
+   "a 12 pack of soda"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a dozen eggs, half",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "dozen eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a half gallon of milk, had a quarter",
+  "input": [
+   {
+    "rawText": "a half gallon of milk",
+    "normalizedForm": "half gallon of milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a half gallon of milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "1.5 cups of rice, half",
+  "input": [
+   {
+    "rawText": "1.5 cups of rice",
+    "normalizedForm": "1.5 cups of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "0.75 cups of rice"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pound of pasta, ate a third",
+  "input": [
+   {
+    "rawText": "a pound of pasta",
+    "normalizedForm": "pound of pasta"
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 pound of pasta"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 3 lb bag of carrots, ate a third",
+  "input": [
+   {
+    "rawText": "a 3 lb bag of carrots",
+    "normalizedForm": "3 lb bag of carrots"
+   }
+  ],
+  "expectRawTexts": [
+   "1 lb bag of carrots"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "2 cans of soup, ate half",
+  "input": [
+   {
+    "rawText": "2 cans of soup",
+    "normalizedForm": "2 cans of soup"
+   }
+  ],
+  "expectRawTexts": [
+   "1 cans of soup"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "3 cups of rice, ate a third",
+  "input": [
+   {
+    "rawText": "3 cups of rice",
+    "normalizedForm": "3 cups of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "1 cups of rice"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 20 oz bottle of coke, drank half",
+  "input": [
+   {
+    "rawText": "a 20 oz bottle of coke",
+    "normalizedForm": "20 oz bottle of coke"
+   }
+  ],
+  "expectRawTexts": [
+   "10 oz bottle of coke"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 100 calorie pack of almonds, ate half",
+  "input": [
+   {
+    "rawText": "a 100 calorie pack of almonds",
+    "normalizedForm": "100 calorie pack of almonds"
+   }
+  ],
+  "expectRawTexts": [
+   "a 100 calorie pack of almonds"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 2 pack of reeses, ate half",
+  "input": [
+   {
+    "rawText": "a 2 pack of reeses",
+    "normalizedForm": "2 pack of reeses"
+   }
+  ],
+  "expectRawTexts": [
+   "a 2 pack of reeses"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 3 piece chicken, ate a third",
+  "input": [
+   {
+    "rawText": "a 3 piece chicken",
+    "normalizedForm": "3 piece chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "a 3 piece chicken"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 10 piece nugget, ate half",
+  "input": [
+   {
+    "rawText": "a 10 piece nugget",
+    "normalizedForm": "10 piece nugget"
+   }
+  ],
+  "expectRawTexts": [
+   "a 10 piece nugget"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 12 oz can of coke, half",
+  "input": [
+   {
+    "rawText": "a 12 oz can of coke",
+    "normalizedForm": "12 oz can of coke"
+   }
+  ],
+  "expectRawTexts": [
+   "6 oz can of coke"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 500 ml bottle of water, half",
+  "input": [
+   {
+    "rawText": "a 500 ml bottle of water",
+    "normalizedForm": "500 ml bottle of water"
+   }
+  ],
+  "expectRawTexts": [
+   "250 ml bottle of water"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 1/2 lb burger, ate half",
+  "input": [
+   {
+    "rawText": "a 1/2 lb burger",
+    "normalizedForm": "1/2 lb burger"
+   }
+  ],
+  "expectRawTexts": [
+   "a 1/2 lb burger"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a 2 lb bag of carrots, ate about a quarter",
+  "input": [
+   {
+    "rawText": "a 2 lb bag of carrots",
+    "normalizedForm": "2 lb bag of carrots"
+   }
+  ],
+  "expectRawTexts": [
+   "0.5 lb bag of carrots"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "8 oz of pasta, about half",
+  "input": [
+   {
+    "rawText": "8 oz of pasta",
+    "normalizedForm": "8 oz of pasta"
+   }
+  ],
+  "expectRawTexts": [
+   "4 oz of pasta"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "300 g of rice, half",
+  "input": [
+   {
+    "rawText": "300 g of rice",
+    "normalizedForm": "300 g of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "150 g of rice"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "300g of rice, half",
+  "input": [
+   {
+    "rawText": "300g of rice",
+    "normalizedForm": "300g of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "300g of rice"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a sandwich, a bag of chips, ate half",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, a sandwich, ate half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips",
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, ate half, and a coke",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips",
+   "a coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, a coke, half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips",
+   "1/2 coke"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a can of soup, half, a sandwich",
+  "input": [
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "can of soup"
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a can of soup",
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bowl of cereal, half a banana",
+  "input": [
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "bowl of cereal"
+   },
+   {
+    "rawText": "half a banana",
+    "normalizedForm": "half a banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of cereal",
+   "half a banana"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bowl of cereal, a banana, half",
+  "input": [
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "bowl of cereal"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of cereal",
+   "1/2 banana"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a box of mac and cheese, half",
+  "input": [
+   {
+    "rawText": "a box of mac and cheese",
+    "normalizedForm": "box of mac and cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 box of mac and cheese"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a box of cereal, about a quarter",
+  "input": [
+   {
+    "rawText": "a box of cereal",
+    "normalizedForm": "box of cereal"
+   }
+  ],
+  "expectRawTexts": [
+   "1/4 box of cereal"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cup of rice, a third of it",
+  "input": [
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "cup of rice"
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 cup of rice"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bottle of wine, about a third",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "bottle of wine"
+   },
+   {
+    "rawText": "about a third",
+    "normalizedForm": "about a third"
+   }
+  ],
+  "expectRawTexts": [
+   "1/3 bottle of wine"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a can of tuna, half",
+  "input": [
+   {
+    "rawText": "a can of tuna",
+    "normalizedForm": "can of tuna"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 can of tuna"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bagel with a quarter cup of cream cheese",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "a quarter cup of cream cheese",
+    "normalizedForm": "quarter cup of cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "a quarter cup of cream cheese"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bagel, with about a quarter cup of cream cheese",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "cream cheese"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a smoothie, a third of a banana",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "a third of a banana",
+    "normalizedForm": "third of a banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a third of a banana"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a taco, a second taco, and a third",
+  "input": [
+   {
+    "rawText": "a taco",
+    "normalizedForm": "taco"
+   },
+   {
+    "rawText": "a second taco",
+    "normalizedForm": "second taco"
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "third"
+   }
+  ],
+  "expectRawTexts": [
+   "a taco",
+   "a second taco",
+   "a third"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a taco, another taco, and then a third",
+  "input": [
+   {
+    "rawText": "a taco",
+    "normalizedForm": "taco"
+   },
+   {
+    "rawText": "another taco",
+    "normalizedForm": "another taco"
+   }
+  ],
+  "expectRawTexts": [
+   "a taco",
+   "another taco"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a beer, another beer, and a third",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "another beer",
+    "normalizedForm": "another beer"
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "third"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "another beer",
+   "a third"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pint of ice cream, a cookie, and i ate about a third",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream",
+   "a cookie"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cookie, about a third",
+  "input": [
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "a cookie"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pizza, a quarter",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a coffee, a third coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a third coffee",
+    "normalizedForm": "third coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a third coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "coffee, then a third cup",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a third cup",
+    "normalizedForm": "third cup"
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "a third cup"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cup of coffee, then a third cup",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   },
+   {
+    "rawText": "a third cup",
+    "normalizedForm": "third cup"
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of coffee",
+   "a third cup"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a glass of wine, then a third glass",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "glass of wine"
+   },
+   {
+    "rawText": "a third glass",
+    "normalizedForm": "third glass"
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of wine",
+   "a third glass"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a glass of wine, and a third glass",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "glass of wine"
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of wine"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "wine, a second glass, a third glass",
+  "input": [
+   {
+    "rawText": "wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a second glass",
+    "normalizedForm": "second glass"
+   },
+   {
+    "rawText": "a third glass",
+    "normalizedForm": "third glass"
+   }
+  ],
+  "expectRawTexts": [
+   "wine",
+   "a second glass",
+   "a third glass"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a big mac, a quarter pounder",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a big mac",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a quarter pounder, fries, and a quarter pounder with cheese",
+  "input": [
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   },
+   {
+    "rawText": "a quarter pounder with cheese",
+    "normalizedForm": "quarter pounder with cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder",
+   "fries",
+   "a quarter pounder with cheese"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a double quarter pounder, and a quarter pounder",
+  "input": [
+   {
+    "rawText": "a double quarter pounder",
+    "normalizedForm": "double quarter pounder"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a double quarter pounder",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a quarter pounder meal, a quarter pounder",
+  "input": [
+   {
+    "rawText": "a quarter pounder meal",
+    "normalizedForm": "quarter pounder meal"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder meal",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a cheeseburger, a quarter pounder with cheese",
+  "input": [
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger"
+   },
+   {
+    "rawText": "a quarter pounder with cheese",
+    "normalizedForm": "quarter pounder with cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a cheeseburger",
+   "a quarter pounder with cheese"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, a quarter",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "a quarter",
+    "normalizedForm": "quarter"
+   }
+  ],
+  "expectRawTexts": [
+   "1/4 bag of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, i ate a quarter of the bag",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, i ate half the bag",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pint of ice cream, a third of the pint",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, and a quarter of a sandwich",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "a quarter of a sandwich",
+    "normalizedForm": "quarter of a sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips",
+   "a quarter of a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a sandwich, and a quarter of a sandwich",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "a quarter of a sandwich",
+    "normalizedForm": "quarter of a sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a quarter of a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a muffin, and a quarter of another muffin",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "a quarter of another muffin",
+    "normalizedForm": "quarter of another muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a muffin",
+   "a quarter of another muffin"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a pizza, and a quarter of another pizza",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bagel, and a third of another bagel",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a bag of chips, about a quarter left",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "a sandwich, and half of a sandwich",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "half of a sandwich",
+    "normalizedForm": "half of a sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a sandwich, and half a sandwich",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "half a sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 sandwich"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a glass of wine, then a glass",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "glass of wine"
+   },
+   {
+    "rawText": "a glass",
+    "normalizedForm": "glass"
+   }
+  ],
+  "expectRawTexts": [
+   "1 glass of glass of wine"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a beer, another beer, and half",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "another beer",
+    "normalizedForm": "another beer"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "1/2 another beer"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r3 refute",
+  "line": "a quarter pounder with cheese, and a quarter pounder",
+  "input": [
+   {
+    "rawText": "a quarter pounder with cheese",
+    "normalizedForm": "Quarter Pounder with Cheese"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "Quarter Pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "a quarter pounder with cheese",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r3 refute",
+  "line": "two quarter pounders with cheese, a quarter pounder",
+  "input": [
+   {
+    "rawText": "two quarter pounders with cheese",
+    "normalizedForm": "two quarter pounders with cheese"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder"
+   }
+  ],
+  "expectRawTexts": [
+   "two quarter pounders with cheese",
+   "a quarter pounder"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, made an omelette with 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "an omelette with 3 eggs",
+    "normalizedForm": "omelette"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "an omelette with 3 eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, made an omelette with 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate an omelette with 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bag of chips and ate 2 handfuls",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "2 handfuls",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "2 handfuls of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bag of chips and ate 2 handfuls",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "2 handfuls of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza, ate 2 slices then 2 more",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "2 slices",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "2 more",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "2 slices",
+   "2 more"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza, ate 2 slices then 2 more",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "4 slices",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "4 slices"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza, ate 2 slices then 2 more",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "6 pack of beer, drank 2 last night and 2 tonight",
+  "input": [
+   {
+    "rawText": "6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "6 pack of beer",
+   "2",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "6 pack of beer, drank 2 last night and 2 tonight",
+  "input": [
+   {
+    "rawText": "6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "6 pack of beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of 12 donuts, had 2 for breakfast",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "2 donuts"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of 12 donuts, had 2 for breakfast",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of 12 donuts"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "2 eggs, had 2",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "3 eggs, ate 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza, had 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza, had 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza for the family, i had 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a sandwich, ate 2",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 sandwich"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pint of ice cream, had 2 scoops",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "2 scoops of ice cream"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pint of ice cream, had 2",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "a pint of ice cream"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bottle of wine, drank 2 glasses",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "2 glasses",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectRawTexts": [
+   "2 glasses of wine"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bottle of wine, drank 2",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectRawTexts": [
+   "a bottle of wine",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "2 egg"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen large eggs, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen large eggs",
+    "normalizedForm": "large eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen large eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen large eggs, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen large eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of oreos, ate 4",
+  "input": [
+   {
+    "rawText": "a box of oreos",
+    "normalizedForm": "oreo cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "4 oreo cookies"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of krispy kreme donuts, had 2",
+  "input": [
+   {
+    "rawText": "a box of krispy kreme donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "2 donuts"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 6 pack of modelo, drank 2",
+  "input": [
+   {
+    "rawText": "a 6 pack of modelo",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 16 oz steak, ate 8",
+  "input": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "a 16 oz steak"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 16 oz ribeye, i ate about 8",
+  "input": [
+   {
+    "rawText": "a 16 oz ribeye",
+    "normalizedForm": "ribeye"
+   },
+   {
+    "rawText": "about 8",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a 16 oz ribeye",
+   "about 8"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 16 oz steak, ate 8 oz",
+  "input": [
+   {
+    "rawText": "a 16 oz steak",
+    "normalizedForm": "steak"
+   },
+   {
+    "rawText": "8 oz",
+    "normalizedForm": "steak"
+   }
+  ],
+  "expectRawTexts": [
+   "8 oz of steak"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 12 oz bag of chips, ate 3",
+  "input": [
+   {
+    "rawText": "a 12 oz bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "3 chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pound of pasta, ate 4",
+  "input": [
+   {
+    "rawText": "a pound of pasta",
+    "normalizedForm": "pasta"
+   }
+  ],
+  "expectRawTexts": [
+   "a pound of pasta"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 2 liter of coke, drank 2",
+  "input": [
+   {
+    "rawText": "a 2 liter of coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a 2 liter of coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a gallon of milk, had 2",
+  "input": [
+   {
+    "rawText": "a gallon of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a gallon of milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a whole chicken, ate 2",
+  "input": [
+   {
+    "rawText": "a whole chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "a whole chicken",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a whole rotisserie chicken, i had 2 pieces",
+  "input": [
+   {
+    "rawText": "a whole rotisserie chicken",
+    "normalizedForm": "rotisserie chicken"
+   },
+   {
+    "rawText": "2 pieces",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "2 pieces of rotisserie chicken"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large coffee, had 2",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large coffee",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen donuts, a large coffee, had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen donuts",
+   "a large coffee",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a venti latte, drank 2",
+  "input": [
+   {
+    "rawText": "a venti latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a venti latte"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a family size lasagna, had 2",
+  "input": [
+   {
+    "rawText": "a family size lasagna",
+    "normalizedForm": "lasagna"
+   }
+  ],
+  "expectRawTexts": [
+   "2 family size lasagna"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, the kids ate 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of cookies",
+   "4"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, the kids ate 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of cookies"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen donuts, my coworkers ate 8",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen donuts",
+   "8"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen donuts, my wife had 2",
+  "input": [
+   {
+    "rawText": "a dozen donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen donuts"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of donuts, had 2 left",
+  "input": [
+   {
+    "rawText": "a box of donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a box of donuts",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of donuts, had 2 left",
+  "input": [
+   {
+    "rawText": "a box of donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2 left",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a box of donuts",
+   "2 left"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "i had a dozen eggs, 2 for lunch",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "i had a dozen eggs, 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "had a 6 pack, 2",
+  "input": [
+   {
+    "rawText": "a 6 pack",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a 6 pack",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "had 12 eggs, 2",
+  "input": [
+   {
+    "rawText": "12 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "12 eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, we had 6",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "6",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "6 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "finished 2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, finished 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, i've eaten 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, eat 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate two",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate two",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate two",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, i only had 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, i only had 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs but i only had 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a large pizza but i only had 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a large pizza",
+   "3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, actually ate 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate 20",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, ate a couple",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "2 cookies"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bag of chips, had a handful",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "1 handful of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cereal, had a bowl",
+  "input": [
+   {
+    "rawText": "a box of cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "a bowl",
+    "normalizedForm": "cereal"
+   }
+  ],
+  "expectRawTexts": [
+   "1 bowl of cereal"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, a pack of bacon, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "a pack of bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2 pack of bacon"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs and a pack of bacon, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "a pack of bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "a pack of bacon",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, ate 4, and a milk",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   },
+   {
+    "rawText": "a milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of cookies",
+   "a milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, ate 4 of them",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "4 cookies"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, had already eaten 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of 12 donuts, had 2",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "12 donuts"
+   }
+  ],
+  "expectRawTexts": [
+   "a box of 12 donuts"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate 1",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "1 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate 1.5",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bag of chips, ate 2 bags",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "2 bags of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "2 bags of chips, ate 1 bag",
+  "input": [
+   {
+    "rawText": "2 bags of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "1 bag of chips"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pizza, ate 3",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "3 pizza"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pizza, ate 3 slices",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "3 slices of pizza"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bag of chips, ate 2",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a bag of chips"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a box of cookies, ate 4",
+  "input": [
+   {
+    "rawText": "a box of cookies",
+    "normalizedForm": "box of cookies"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a box of cookies",
+   "4"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a dozen eggs, ate 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "dozen eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a sleeve of crackers, ate 6",
+  "input": [
+   {
+    "rawText": "a sleeve of crackers",
+    "normalizedForm": "crackers"
+   }
+  ],
+  "expectRawTexts": [
+   "6 crackers"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a carton of eggs, had 3",
+  "input": [
+   {
+    "rawText": "a carton of eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a case of water, drank 3",
+  "input": [
+   {
+    "rawText": "a case of water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectRawTexts": [
+   "a case of water"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a 24 pack of water, drank 3",
+  "input": [
+   {
+    "rawText": "a 24 pack of water",
+    "normalizedForm": "water"
+   },
+   {
+    "rawText": "drank 3",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectRawTexts": [
+   "3 water"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pitcher of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a pitcher of beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pitcher of beer, had 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 pitcher of beer"
+  ],
+  "expectKinds": [
+   "gap"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pitcher of beer, drank 2",
+  "input": [
+   {
+    "rawText": "a pitcher of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a pitcher of beer",
+   "drank 2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a carafe of wine, drank 2",
+  "input": [
+   {
+    "rawText": "a carafe of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectRawTexts": [
+   "a carafe of wine"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a jug of water, drank 2",
+  "input": [
+   {
+    "rawText": "a jug of water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectRawTexts": [
+   "a jug of water"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pot of coffee, drank 2",
+  "input": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a pot of coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a pot of coffee, drank 2 cups",
+  "input": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a pot of coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a coke, drank 2",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a coke"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "water, drank 3 bottles",
+  "input": [
+   {
+    "rawText": "water",
+    "normalizedForm": "water"
+   }
+  ],
+  "expectRawTexts": [
+   "water"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a beer and then drank 2",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a beer with lunch, then drank 2 beers at dinner",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "2 beers",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ],
+  "expectKinds": [
+   "segment"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a beer with lunch, drank 2 beers",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2 beers",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "drank 2 beers"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "coffee, i drank half",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "coffee"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a smoothie, drank half",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "drank half",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "drank half"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a protein shake, drank 2 scoops",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake"
+   }
+  ],
+  "expectRawTexts": [
+   "a protein shake"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a glass of milk, drank 2",
+  "input": [
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a glass of milk"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a mug of tea, drank 2",
+  "input": [
+   {
+    "rawText": "a mug of tea",
+    "normalizedForm": "tea"
+   }
+  ],
+  "expectRawTexts": [
+   "a mug of tea"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a mimosa, drank 3",
+  "input": [
+   {
+    "rawText": "a mimosa",
+    "normalizedForm": "mimosa"
+   },
+   {
+    "rawText": "drank 3",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a mimosa",
+   "drank 3"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "drank 2 coffees, a bagel",
+  "input": [
+   {
+    "rawText": "2 coffees",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectRawTexts": [
+   "2 coffees",
+   "a bagel"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bagel, drank 2 coffees",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "drank 2 coffees",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "drank 2 coffees"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bagel, drank 2",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "drank 2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a sandwich, drank 2",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "four pancakes, wait no, drank 3",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "drank 3",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ],
+  "expectKinds": [
+   "stock"
+  ]
+ },
+ {
+  "src": "r1 refute",
+  "line": "a beer, actually drank 2",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "drank 2"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a beer, sorry drank 2 beers",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2 beers",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "drank 2 beers"
+  ],
+  "expectKinds": []
+ },
+ {
+  "src": "r1 refute",
+  "line": "a bottle of wine, we drank 2",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectRawTexts": [
+   "a bottle of wine"
+  ],
+  "expectKinds": []
+ }
+]

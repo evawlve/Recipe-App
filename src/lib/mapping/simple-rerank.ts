@@ -301,9 +301,10 @@ function normalizeCandidateNameForScoring(candidateName: string, query: string):
 // NEVER stripped — they change what the food IS, not how it's prepared.
 
 /** Prep words that describe physical cutting/shape — safe to strip */
+// NOT 'mashed' (C70 S239, cloud-36 C8): "mashed potatoes" is a dish, not raw potatoes (#509's normalization twin).
 const PREP_CUTTING_WORDS = new Set([
     'cut', 'diced', 'chopped', 'minced', 'sliced', 'julienned', 'cubed',
-    'halved', 'quartered', 'shredded', 'grated', 'mashed', 'torn',
+    'halved', 'quartered', 'shredded', 'grated', 'torn',
     'strips', 'chunks', 'pieces', 'rings', 'wedges',
 ]);
 

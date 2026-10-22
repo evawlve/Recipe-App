@@ -5,14 +5,20 @@
  * segmenter emits the first reading AND the correction as separate items, so the line bills both (seven
  * pancakes). Diego's ruling (the narrowed cut, 2026-10-17): the correction wins, but a DIFFERENT food after a
  * correction word replaces the previous item ONLY after `make that` / `make it` / `scratch that` / `wait no` /
- * `no wait` / a lone `no` comma piece. A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
+ * `no wait` / a lone `no` comma piece (a `no` that is not alone in its comma piece and not before an article/
+ * number-led item is `<no?>`, a weak marker (S240)). A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
  * quantity, restates the same food or swaps a part, but never swaps one food for another.
  * The weak markers also include `no i mean`, `oh wait i mean`, `wait i mean`, `oh wait`, `i meant` and `correction`:
  * `no i mean` left the `no` as an impure gap word (so both values billed), and `correction` was absent.
+ * `ok fine` / `okay fine` and a lone `wait` comma piece (any punctuation around it) are weak too: they correct a
+ * quantity or restate the food, never swap one food for another. The hesitation interjections (er, um, uh, hmm, oops,
+ * whoops, nope, okay, ok ...) are a QUANTITY-ONLY tier - qty / qty-on-qty / restate-qty only, never a swap, part,
+ * replace or trailing (S240, MGR 17:14Z).
  *
  * KINDS (each correction names the ORIGINAL index of the item it acted on).
  * - qty: a quantity-only item after the marker ("a bagel, actually make that two") rewrites the previous item's
- *   number ("2 bagel"); the quantity item goes.
+ *   number ("2 bagel"); the quantity item goes. It keeps the earlier item's unit when the new number is within
+ *   1/4..4x of it ("three slices of bacon, wait, four" -> "4 slices of bacon").
  * - qty-on-qty: the previous item is itself quantity-only ("two of them" then "three") - its number is rebuilt.
  * - restate-qty: the same head noun again with a quantity ("pizza ... actually 2 slices of pizza").
  * - restate-replace: the same head noun again with other words - the earlier item goes.
@@ -22,7 +28,9 @@
  * - trailing: the marker follows the last item ("two eggs, three eggs, actually").
  *
  * GUARDS. The gap between the two items must be a pure marker gap (no leftover words, no addition word such as
- * also / too / plus / another / extra / forgot / again / more, no `and`); a negated j ("no pickles") is left to
+ * also / too / plus / another / extra / forgot / again / more / second / third / fourth / 2nd / 3rd / 4th, no `and`;
+ * the trailing kind also skips a last item that holds an addition word; an ADD word in j's tail is not an addition when
+ * it is `more` next to `or`, `extra` + a modifier, or a pre-nominal ADD word right before the next item - S240, cloud-36 C10); a negated j ("no pickles") is left to
  * the negated-part drop (row 3); a size-word j ("make it a double") is never a replacer unless quantity-only;
  * a dish that carries an on / with / in phrase is never swapped away; a determiner-led earlier item needs a
  * determiner-led (or branded) correction; the earlier item's brand carries to the correction only for a
@@ -33,7 +41,11 @@
  * parts. The SegmentationCache keeps the uncorrected split.
  *
  * An addition is not a correction: an ADD word or `as well` the segmenter stripped out of j (`a ham sandwich too`) still
- * keeps j, and in the trailing block two items joined by `and` in one comma piece are two foods.
+ * keeps j, and in the trailing block an `and` in the gap right before the last item keeps the earlier reading (two foods).
+ * A later comma piece of hesitation words only (`, um,`) is transparent to the addition tail, so
+ * `..., a ham sandwich, um, too` keeps the turkey sandwich (S240, cloud-40 F1).
+ * A later pure addition piece that opens the NEXT item (`..., a ham sandwich, also, a coke`) is that item's lead, not
+ * the tail: only too / as well / again in it keep j an addition (S340, #588 refute-r1 MAJOR 1).
  *
  * Pure; never mutates its input (items are copied before any write).
  */
@@ -44,6 +56,7 @@ import {
   sameWord,
   tokenizeWithPieces,
   words,
+  HESITATION,
   type Clause,
   type Tok,
 } from './trailing-quantity-fold';
@@ -72,14 +85,26 @@ const STRONG = [
   'wait no', 'no wait', 'scratch that', 'make that', 'make it', 'i mean', 'well actually', 'actually', 'sorry',
   'more like', 'but i only had', 'i only had',
   'no i mean', 'oh wait i mean', 'wait i mean', 'oh wait', 'i meant', 'correction',
+  // S240 (C68 S238 run 3, post-deploy 1): `a pint of ice cream, ok fine half a pint` - weak (never a food swap).
+  'ok fine', 'okay fine',
+  // S240 (MGR 17:14Z, C68 run 5): a spoken-hesitation / self-repair interjection is a WEAK marker (`two slices of toast, er, one
+  // slice`, `three cookies, okay four`, `200 g of chicken, oops 250 g`, `three tacos, whoops, two tacos`): it corrects a quantity or
+  // restates the same food, never swaps foods (not in SWAP_OK). `oh` and `well` stay plain filler.
+  'er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok',
 ].map(m => m.split(' '));
+// S240 (MGR 17:14Z, refute-r1): the interjections are a QUANTITY-ONLY tier. Alone they fire qty / qty-on-qty / restate-qty only, and
+// only when nothing else follows the correction in its comma piece; never restate-replace, part or trailing (`a turkey sandwich, um,
+// a ham sandwich` and `two eggs, toast, three eggs, ok` keep every food).
+const QTY_ONLY = HESITATION;
 const SWAP_OK = new Set(['wait no', 'no wait', 'scratch that', 'make that', 'make it', '<no>']);
-const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more']);
+// S240: an ordinal is an addition (`a beer, wait, a second beer` is two beers).
+const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
 const SIZE_J = new Set([
   'double', 'triple', 'single', 'large', 'small', 'medium', 'big', 'regular', 'one', 'another', 'refill', 'grande',
   'venti', 'tall',
 ]);
 const NEGSTART = [['no'], ['without'], ['minus'], ['except'], ['hold', 'the'], ['skip', 'the']];
+const NO_LEADS = new Set(['a', 'an', 'the', 'one', 'two', 'three', 'four', 'five', 'six', 'half', 'some', 'my']);
 const FILLER = new Set(['and', 'oh', 'um', 'uh', 'ok', 'okay', 'well']);
 
 const fmt = (v: number): string => (v === 0.5 ? '1/2' : String(v));
@@ -139,7 +164,11 @@ function foodMinusQty(raw: string): string {
 const rewriteQ = (c: Clause, food: string): string =>
   c.unit ? `${fmt(c.value)} ${c.unit} of ${food}` : `${fmt(c.value)} ${food}`;
 
-function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Set<number> } {
+// S240 (refute of MGR 17:14Z b): `<no>` (a SWAP marker) is a comma piece that is exactly `no` IN THE LINE, or a `no` before an article-
+// or number-led item (`a coffee no a latte`); any other `no` in the gap is `<no?>`, a WEAK marker (corrects a quantity or restates the
+// same food, never swaps: `six eggs no seven eggs` still corrects). Reading only the gap's own tokens made `pizza, no anchovies` /
+// `ramen no egg` (the negated part split off bare) a `<no>` swap that dropped the pizza / ramen. `<wait>` keeps the gap reading.
+function markersIn(gap: Tok[], list: string[][], pieceLen?: Map<number, number>, jLead?: string): { found: string[]; covered: Set<number> } {
   const found: string[] = [];
   const covered = new Set<number>();
   for (const m of list) {
@@ -158,8 +187,15 @@ function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Se
     byPiece.set(t.piece, a);
   });
   for (const [, ks] of byPiece) {
+    const noIsMarker = !pieceLen || pieceLen.get(gap[ks[0]].piece) === 1 || (jLead !== undefined && (/^\d/.test(jLead) || NO_LEADS.has(jLead)));
     if (ks.length === 1 && gap[ks[0]].w === 'no') {
-      found.push('<no>');
+      found.push(noIsMarker ? '<no>' : '<no?>');
+      covered.add(ks[0]);
+    }
+    // S240 (C68 S238 run 3): a comma piece that is exactly `wait` (`three slices of bacon, wait, four`) - weak: it corrects a
+    // quantity or restates the food, never swaps one food for another (it is not in SWAP_OK).
+    if (ks.length === 1 && gap[ks[0]].w === 'wait') {
+      found.push('<wait>');
       covered.add(ks[0]);
     }
   }
@@ -175,6 +211,8 @@ export function resolveSelfCorrections<T extends Item>(
   const n = items.length;
   if (n < 2) return { items, corrections };
   const toks = tokenizeWithPieces(lineKey);
+  const pieceLen = new Map<number, number>();
+  for (const t of toks) pieceLen.set(t.piece, (pieceLen.get(t.piece) ?? 0) + 1);
   const spans = spansOf(toks, items);
   const removed = new Set<number>();
   const rew = new Map<number, T>();
@@ -193,6 +231,7 @@ export function resolveSelfCorrections<T extends Item>(
     // gap: previous found span end .. j's span start (j span null -> j's text not in line; use leading tokens)
     const gs = prevEnd(j);
     let ge = spans[j] ? spans[j]!.start : -1;
+    let gl = 0; // the length of the prefix matched for a span-less j (S240, cloud-36 C5)
     if (ge < 0) {
       // j's text is not in the line (the segmenter completed it): longest PREFIX of j found after gs
       for (let L = jw.length - 1; L >= 1 && ge < 0; L--) {
@@ -206,6 +245,7 @@ export function resolveSelfCorrections<T extends Item>(
           }
           if (ok) {
             ge = s;
+            gl = L;
             break;
           }
         }
@@ -215,7 +255,7 @@ export function resolveSelfCorrections<T extends Item>(
     const gap = toks.slice(gs, ge);
     // a marker the segmenter KEPT at the start of j's rawText counts too
     const lead = jw.map(w => ({ w, piece: -1 }));
-    const mkGap = markersIn(gap, STRONG);
+    const mkGap = markersIn(gap, STRONG, pieceLen, jw[0]);
     const mkLead = markersIn(lead.slice(0, 3), STRONG);
     let found = mkGap.found.slice();
     const covered = mkGap.covered;
@@ -231,13 +271,63 @@ export function resolveSelfCorrections<T extends Item>(
     if (gap.some((t, q) => ADD.has(t.w) && !covered.has(q)) || jw.some(w => ADD.has(w))) continue;
     // S202 (cloud-35 F3): an addition word the segmenter left OUT of j (`a ham sandwich too`,
     // `... as well`) still makes j an addition.
-    if (spans[j]) {
-      const pj = toks[spans[j]!.start].piece;
+    // S240 (cloud-36 C5): a span-less j (the segmenter fixed its spelling) reads its tail from the end of the matched prefix.
+    const jEnd = spans[j] ? spans[j]!.end : gl > 0 ? ge + gl : -1;
+    if (jEnd >= 0) {
       // S202 (cloud-35 F3): only j's OWN stripped tail - stop at the next item's span or the first joiner.
       let stop = toks.length;
-      for (let q = j + 1; q < n; q++) if (spans[q]) { stop = spans[q]!.start; break; }
-      for (let q = spans[j]!.end; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
-      const after = toks.slice(spans[j]!.end, stop).filter(t => t.piece === pj).map(t => t.w);
+      let next = -1;
+      for (let q = j + 1; q < n; q++) if (spans[q]) { stop = next = spans[q]!.start; break; }
+      for (let q = jEnd; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
+      // S240 (cloud-36 C10): the shipped window; an ADD word is NOT an addition in three shapes only, read on the raw tokens.
+      // S240 (cloud-36 C4): the window runs on through later comma pieces that are a pure addition tail (`…, a ham sandwich, too`).
+      const idx: number[] = [];
+      // j's own piece runs to `stop`; a LATER piece joins only when every word in it is a pure addition tail (an ADD word,
+      // `as`, `well`) — a piece with any other word may be an item whose span the segmenter rewrote (refute r1).
+      const TAILW = (w: string): boolean => ADD.has(w) || w === 'as' || w === 'well';
+      const pj = toks[jEnd - 1] ? toks[jEnd - 1].piece : -1;
+      for (let q = jEnd; q < stop; ) {
+        if (toks[q].piece === pj) { idx.push(q); q++; continue; }
+        const pc = toks[q].piece;
+        let e = q;
+        while (e < stop && toks[e].piece === pc) e++;
+        let full = e;
+        while (full < toks.length && toks[full].piece === pc) full++;
+        if (full !== e) break; // the piece runs past stop: not a pure tail piece
+        let pure = true;
+        for (let r = q; r < e; r++) if (!TAILW(toks[r].w)) { pure = false; break; }
+        if (!pure) {
+          // S240 (cloud-40 F1): a piece of hesitation words only (`, um,`) is transparent - skip it and read on, so the `too` behind it
+          // still keeps j an addition (`a turkey sandwich, actually a ham sandwich, um, too`).
+          let hes = true;
+          for (let r = q; r < e; r++) if (!QTY_ONLY.has(toks[r].w)) { hes = false; break; }
+          if (!hes) break;
+          q = e;
+          continue;
+        }
+        // S340 (#588 refute-r1 MAJOR 1): a pure piece that opens the NEXT item (`…, also, a coke`, hesitation pieces between
+        // skipped) is that item's lead, not j's tail - only a post-positional word (too / as well / again) in it still counts.
+        let lead = e;
+        while (next >= 0 && lead < next) {
+          let pe = lead;
+          while (pe < next && toks[pe].piece === toks[lead].piece) pe++;
+          let hes = true;
+          for (let r = lead; r < pe; r++) if (!QTY_ONLY.has(toks[r].w)) { hes = false; break; }
+          if (!hes) break;
+          lead = pe;
+        }
+        for (let r = q; r < e; r++) if (lead !== next || ['too', 'as', 'well', 'again'].includes(toks[r].w)) idx.push(r);
+        q = e;
+      }
+      const PRENOM = new Set(['plus', 'extra', 'more', 'another', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
+      const notAdd = (q: number): boolean => {
+        const w = toks[q].w, nx = toks[q + 1], pv = toks[q - 1], pq = toks[q].piece;
+        if (w === 'more' && ((nx && nx.piece === pq && nx.w === 'or') || (pv && pv.w === 'or'))) return true; // more or less / or more
+        if (w === 'extra' && nx && nx.piece === pq && q + 1 !== next && !ADD.has(nx.w) && !['and', 'with', 'or'].includes(nx.w)) return true; // extra large
+        if (PRENOM.has(w) && q + 1 === next && nx.piece === pq) return true; // plus|extra|more|another <next item>
+        return false;
+      };
+      const after = idx.filter(q => !(ADD.has(toks[q].w) && notAdd(q))).map(q => toks[q].w);
       const asWell = after.some((w, x) => w === 'as' && after[x + 1] === 'well' && after[x + 2] !== 'as');
       if (after.some(w => ADD.has(w)) || asWell) continue;
     }
@@ -245,6 +335,15 @@ export function resolveSelfCorrections<T extends Item>(
     if (NEGSTART.some(p => p.every((w, k) => jw[k] === w))) continue;
     if (found.every(f => f === 'rather')) continue;
     const cj = parseClause(jw);
+    const qtyOnly = found.every(f => QTY_ONLY.has(f.replace('@j', '')));
+    if (qtyOnly) {
+      const pc = toks[ge] ? toks[ge].piece : -1;
+      let nx = toks.length;
+      for (let q = j + 1; q < n; q++) if (spans[q] && spans[q]!.start >= ge) { nx = spans[q]!.start; break; }
+      const rest: string[] = [];
+      for (let q = ge; q < nx && toks[q].piece === pc && toks[q].w !== 'and'; q++) rest.push(toks[q].w);
+      if (!rest.every(w => jw.includes(w))) continue;
+    }
     const hj = headOf(J);
     const hjRaw = headOf({ rawText: J.rawText });
     if (((hj && SIZE_J.has(hj)) || (hjRaw && SIZE_J.has(hjRaw))) && !(cj && cj.food.length === 0)) continue;
@@ -272,7 +371,10 @@ export function resolveSelfCorrections<T extends Item>(
         continue;
       }
       if (!alone) continue;
-      const nr = rewriteQ(cj, foodMinusQty(cur(t).rawText));
+      // S240: a unitless correction keeps the earlier item's own unit (`three slices of bacon, wait, four` -> 4 slices of bacon).
+      // Only within 1/4..4x of the earlier number: `a handful of almonds, actually 15` is 15 almonds, not 15 handfuls.
+      const inherit = !cj.unit && !!ct?.unit && ct.value > 0 && cj.value / ct.value >= 0.25 && cj.value / ct.value <= 4;
+      const nr = rewriteQ(inherit ? { ...cj, unit: ct!.unit } : cj, foodMinusQty(cur(t).rawText));
       note('qty', t, cur(t).rawText, nr);
       rew.set(t, { ...cur(t), rawText: nr });
       removed.add(j);
@@ -299,6 +401,7 @@ export function resolveSelfCorrections<T extends Item>(
         rew.set(k, { ...K, rawText: nr });
         removed.add(j);
       } else {
+        if (qtyOnly) continue;
         note('restate-replace', k, K.rawText, J.rawText);
         removed.add(k);
         if (J.rawText !== items[j].rawText) items[j] = { ...items[j], rawText: J.rawText };
@@ -308,6 +411,7 @@ export function resolveSelfCorrections<T extends Item>(
     }
 
     // 3. part substitution: j's head noun (or j's preposition) inside an earlier item's modifier phrase
+    if (qtyOnly) continue;
     let done = false;
     for (let q = j - 1; q >= 0 && !done; q--) {
       if (removed.has(q)) continue;
@@ -360,25 +464,24 @@ export function resolveSelfCorrections<T extends Item>(
   if (n >= 2 && sl && !removed.has(L)) {
     const tail = toks.slice(sl.end);
     const mk = markersIn(tail, STRONG);
-    if (mk.found.length && tail.length === mk.covered.size) {
+    // S240: an addition word in the last item (`two eggs, two more eggs, wait`) is not a correction.
+    if (mk.found.length && !mk.found.every(f => QTY_ONLY.has(f)) && tail.length === mk.covered.size && !words(items[L].rawText).some(w => ADD.has(w))) {
       const hl = headOf(items[L]);
       const cl = parseClause(words(items[L].rawText));
       for (let k = L - 1; k >= 0; k--) {
         if (removed.has(k)) continue;
         const hk = headOf(cur(k));
         if (hl && hk && sameWord(hl, hk) && cl) {
-          // S202 (cloud-35 F3): the main loop's `and` guard — two items joined by `and` in one comma piece
+          // S202 (cloud-35 F3): the main loop's `and` guard — two items joined by `and`
           // are two foods (`a beef taco and 2 chicken tacos, sorry`), not a reading and its correction.
           const sk = spans[k];
-          const onePiece = !!sk && toks[sk.start].piece === toks[sl.start].piece;
-          // S202 (cloud-35 F3): only an `and` joining k and L directly (no live item between) over two DIFFERENT foods;
-          // a null span keeps base, and the same food at a new quantity is still a correction (`two eggs and three eggs, sorry`).
-          let between = false;
-          for (let q = k + 1; q < L; q++) if (!removed.has(q)) between = true;
+          // An `and` in the gap right before L keeps k, as the main loop reads the gap before j — across a comma (`a beef taco, and 2
+          // chicken tacos, sorry`) or past a live item (`… and a coke and 2 chicken tacos, sorry`) (S240, cloud-36 C3). A null span keeps
+          // base, and the same food at a new quantity is still a correction (`two eggs and three eggs, sorry`).
           const fk = words(foodMinusQty(cur(k).rawText));
           const fl = words(foodMinusQty(items[L].rawText));
           const sameFood = fk.length === fl.length && fk.every((w, x) => sameWord(w, fl[x]));
-          if (sk && onePiece && !between && !sameFood && toks.slice(sk.end, sl.start).some(t => t.w === 'and')) break;
+          if (sk && !sameFood && toks.slice(prevEnd(L), sl.start).some(t => t.w === 'and')) break;
           removed.add(k);
           note('trailing', k, cur(k).rawText, '');
           break;

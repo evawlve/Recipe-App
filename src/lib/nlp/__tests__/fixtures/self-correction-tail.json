@@ -1,0 +1,1227 @@
+[
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too please",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too thanks",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too. thanks",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too! lol",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too i think",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too for lunch",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich also today",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, wait, three eggs also",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, wait, three eggs also please",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, wait, three eggs more please",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a coffee, actually a latte too, thanks",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte, actually an iced latte too, thanks",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "an iced latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte, actually an iced latte too thanks",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "an iced latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "one taco, no wait, two tacos, plus a coke",
+  "input": [
+   {
+    "rawText": "one taco",
+    "normalizedForm": "taco",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 taco",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too, plus a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too, then a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too, and a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too and a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich also, a coke too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke too",
+    "normalizedForm": "coke too",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke too"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, wait, three eggs too, toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, wait, three eggs too, oh and toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich and also a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich and also a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "also a coke",
+    "normalizedForm": "also a coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich",
+   "also a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich too and also a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, sorry, a ham sandwich as well please",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, sorry, a ham sandwich as well, a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, sorry, a ham sandwich as well a coke",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, sorry, a ham sandwich or two as well",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes more or less",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes, more or less",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes more or less, and a coffee",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes",
+   "a coffee"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes more or less and a coffee",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes",
+   "a coffee"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes or more",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "4 pancakes, wait no, 3 pancakes or so",
+  "input": [
+   {
+    "rawText": "4 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 pancakes"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a bagel, actually two bagels or more",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "bagels",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, no wait, three eggs extra large",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, no wait, three eggs, extra large",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, no wait, three eggs extra large and toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, no wait, three eggs extra large, toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, no wait, three large eggs extra",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three large eggs",
+    "normalizedForm": "large eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three large eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "one taco, no wait, two tacos plus a coke",
+  "input": [
+   {
+    "rawText": "one taco",
+    "normalizedForm": "taco",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 taco",
+   "a coke"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "one taco, no wait, two tacos plus extra salsa",
+  "input": [
+   {
+    "rawText": "one taco",
+    "normalizedForm": "taco",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "one taco",
+   "two tacos",
+   "salsa"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "one taco, no wait, two tacos with extra salsa",
+  "input": [
+   {
+    "rawText": "one taco",
+    "normalizedForm": "taco",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 taco"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "one taco, no wait, two tacos plus",
+  "input": [
+   {
+    "rawText": "one taco",
+    "normalizedForm": "taco",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "one taco",
+   "two tacos"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a coffee, actually two coffees extra hot",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two coffees",
+    "normalizedForm": "coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 coffee"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte, make it a large latte extra hot",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a large latte",
+    "normalizedForm": "large latte",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a pizza, wait no, 2 slices of pizza more or less",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "slices of pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 slices of pizza"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich, too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, actually a ham sandwich, as well",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a turkey sandwich, sorry, a ham sandwhich too",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a beef taco, and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "2 chicken tacos"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a beef taco and a coke and 2 chicken tacos, sorry",
+  "input": [
+   {
+    "rawText": "a beef taco",
+    "normalizedForm": "beef taco",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "2 chicken tacos",
+    "normalizedForm": "chicken tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a beef taco",
+   "a coke",
+   "2 chicken tacos"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, three eggs, actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, three eggs too, actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two eggs, three eggs, actually, more or less",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three eggs"
+  ]
+ }
+]
