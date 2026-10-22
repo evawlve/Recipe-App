@@ -253,16 +253,21 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
   // "a couple of eggs" -> 2. Deliberately placed AFTER the "<N> and [a|one] <fraction>"
   // block above so that block still sees the literal "one"/"a" tokens.
   // "a"/"an" is NOT a number on its own (bare "a bagel" already defaults to
-  // qty 1); it only counts here as the article in "a dozen"/"a couple".
+  // qty 1); it only counts here as the article in "a dozen"/"a couple"/"a few".
+  // "a few" is a COUNT word like "a couple" (3, as "a couple" is 2) -- NOT the gram
+  // table the 2026-08-17 prose report section 6.5 declines (that ban covers "a bit of" /
+  // "a splash of" / "a drizzle of" / "some"); the grams still come from the record's
+  // per-unit serving.
   const WORD_NUMBERS: Record<string, number> = {
     one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
-    nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, couple: 2,
+    nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, couple: 2, few: 3,
   };
   const article = tokens[0].toLowerCase();
   const hasArticle =
     (article === 'a' || article === 'an') &&
     tokens.length >= 2 &&
-    (tokens[1].toLowerCase() === 'dozen' || tokens[1].toLowerCase() === 'couple');
+    (tokens[1].toLowerCase() === 'dozen' || tokens[1].toLowerCase() === 'couple' ||
+      tokens[1].toLowerCase() === 'few');
   const numIdx = hasArticle ? 1 : 0;
   const word = tokens[numIdx].toLowerCase();
   if (WORD_NUMBERS[word] !== undefined) {
