@@ -1,0 +1,42 @@
+# MGR (S242) pre-digest seeds, 2026-10-19, theme GROCERY run 1 of 2 (Mode G caps a run at 40 lines): store private label, deli/bakery counter, Costco food court. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (';' per item, '-' none; the CLI ignores col 5)
+# CONTROLS: the last 6 lines are bare generics; expectBrands '-' means a winner carrying a store/retailer brand (kirkland, trader joe's, aldi, great value, 365, good & gather, member's mark, kroger) is a finding, not a pass.
+a costco hot dog	1			costco
+costco hotdog and a fountain soda	2			costco;costco
+a slice of costco pizza	1			costco
+one slice of costco pepperoni pizza	1			costco
+costco chicken bake	1			costco
+half a costco chicken bake	1			costco
+a costco churro	1			costco
+a costco hot dog and a slice of costco cheese pizza	2			costco;costco
+costcos chicken bake	1			costco
+a polish dog from the costco food court	1			costco
+a quarter of a costco rotisserie chicken	1		portion	costco
+half a rotisserie chicken	1		portion	-
+1/4 rotisserie chicken	1		portion	-
+a whole rotisserie chicken	1		portion	-
+a rotisserie chicken thigh	1			-
+about 4 oz of rotisserie chicken breast	1			-
+a third of a sams club rotisserie chicken	1		portion	member's mark
+2 drumsticks from a rotisserie chicken	1		portion	-
+costco's rotisserie chicken, a quarter of it	1		portion	costco
+a quarter pound of boars head turkey	1		portion	boar's head
+1/4 lb of boar's head ovengold turkey	1		portion	boar's head
+a half pound of deli ham	1		portion	-
+3 slices of boars head provolone	1			boar's head
+a quarter pound of roast beef from the deli	1		portion	-
+4 thin slices of deli turkey	1		portion	-
+a thin slice of deli ham	1	BAD	portion	-
+2 oz boar's head black forest ham	1			boar's head
+a scoop of chicken salad from the publix deli	1			publix
+quarter pound of sliced deli turkey on 2 slices of wheat bread	2			-;-
+a bagel from the bakery	1			-
+an everything bagel from the grocery store bakery	1			-
+a bakery blueberry muffin	1			-
+a kirkland muffin	1			kirkland
+half a costco muffin	1		portion	costco
+almonds	1			-
+a handful of almonds	1			-
+greek yogurt	1			-
+2 eggs	1			-
+a chicken breast	1			-
+a cup of oatmeal	1			-
