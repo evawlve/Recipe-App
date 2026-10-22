@@ -1,0 +1,2898 @@
+[
+ {
+  "src": "C68 deploy-3 read (live)",
+  "line": "a bottle of wine, um, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "white wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "white wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "white wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, i drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half of a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pint of ice cream, ate half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, ate a quarter",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter of a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/4 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had three quarters",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "three quarters of a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3/4 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, and half a bottle of beer",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine and half a bottle of wine",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, then half a bottle of wine later",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, and a pizza",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "one egg, ate half a cup of egg whites",
+  "input": [
+   {
+    "rawText": "one egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "half a cup of egg whites",
+    "normalizedForm": "egg whites",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "one egg",
+    "normalizedForm": "egg"
+   },
+   {
+    "rawText": "half a cup of egg whites",
+    "normalizedForm": "egg whites"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, um, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, gave half away",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank a quarter",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 750 ml bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a 750 ml bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a 750 ml bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 750 ml bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a 750 ml bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "2 bottles of wine, drank half",
+  "input": [
+   {
+    "rawText": "2 bottles of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bottles of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a muffin, ate half",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "half a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burrito, um, ate half of it",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "half a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 burrito",
+    "normalizedForm": "burrito"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then half a bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then half a bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then half a bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine at dinner",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine at dinner",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then a half bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, then a half bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a half bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a half bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then another half bottle at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then half of another bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, i drank half, and later half of a bottle of wine",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, finished the other half later",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then the other half at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine at lunch, drank half, and a bottle of wine at dinner, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial",
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, and a bottle of wine for later",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of red wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of red wine",
+    "normalizedForm": "red wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of red wine",
+    "normalizedForm": "red wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "half a bottle of wine and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "half a bottle of wine and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "the bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "the bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half the bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "one bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "one bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half a glass",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, half and half in my coffee",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, and a pizza, ate half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, a sandwich, ate half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial",
+   "segment"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, and a sandwich",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank half",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "half a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "half a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pack of beer, drank half",
+  "input": [
+   {
+    "rawText": "a pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a six pack of beer, drank half",
+  "input": [
+   {
+    "rawText": "a six pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "half a six pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a six pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "half a six pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a case of beer, drank a quarter",
+  "input": [
+   {
+    "rawText": "a case of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter of a case of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a case of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a quarter of a case of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate half",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate half",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "half a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, ate half",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "half a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "half a dozen eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of cereal, had a quarter",
+  "input": [
+   {
+    "rawText": "a box of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter of a box of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/4 box of cereal",
+    "normalizedForm": "cereal"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a large pizza, ate half",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "half a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, no wait, half a bottle of wine",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, sorry, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, actually half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, actually i drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two bottles of wine, no, one bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "two bottles of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "one bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "two bottles of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a glass of wine, wait no, a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, um, ok, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, oh well i drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, but only drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a protein shake with 2 scoops, drank half",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "protein powder",
+    "brand": ""
+   },
+   {
+    "rawText": "half a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "half a protein shake",
+    "normalizedForm": "protein shake"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a protein shake with 2 scoops in milk, drank half",
+  "input": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops in milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "half a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scoops of protein powder",
+    "normalizedForm": "protein powder"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "half a protein shake",
+    "normalizedForm": "protein shake"
+   }
+  ],
+  "expectKinds": [
+   "dose"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, gave half to my friend, ate half",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a sandwich, gave half away, ate the rest",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a pizza, ate half, then ate half of what was left",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "an apple, ate half",
+  "input": [
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple",
+    "brand": ""
+   },
+   {
+    "rawText": "half an apple",
+    "normalizedForm": "apple",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 apple",
+    "normalizedForm": "apple"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a slice of pizza, ate half",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "half a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 slice of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank 1/2",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "1/2 a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had a fourth",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter of a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/4 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, then had half a sandwich",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine and a sandwich, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine and a sandwich, ate half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a pint of ice cream, ate half, then the rest later",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "half a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   },
+   {
+    "rawText": "half a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a cup of coffee with half and half, drank half",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half",
+    "brand": ""
+   },
+   {
+    "rawText": "half a cup of coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half"
+   },
+   {
+    "rawText": "half a cup of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a cup of coffee with half and half, drank half",
+  "input": [
+   {
+    "rawText": "a cup of coffee with half and half",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "half a cup of coffee with half and half",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a cup of coffee with half and half",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "half a cup of coffee with half and half",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a muffin and half a muffin",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "half a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a muffin, ate half, then another half muffin later",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "half a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a muffin, ate half, finished the other half later",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "half a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, finished the other half later",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a bottle of wine, drank half, then a half bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "a half bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "a half bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 B1/M1 control",
+  "line": "a pint of ice cream, ate half, then the rest later",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "Half a bottle of wine and a bottle of wine, drank half",
+  "input": [
+   {
+    "rawText": "A bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "Half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "A bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "Half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "C68 deploy-3 read (live)",
+  "line": "a bottle of wine, um, drank half",
+  "input": [
+   {
+    "rawText": "A bottle of wine",
+    "normalizedForm": "white wine",
+    "brand": ""
+   },
+   {
+    "rawText": "Half a bottle of wine",
+    "normalizedForm": "white wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "white wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half, about 2 glasses",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "2 glasses",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "2 glasses",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half last night",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, drank half of it",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, we drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, my wife drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, i had half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine, had half, and half a bottle of wine at dinner",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine for dinner, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bottle of wine for dinner, drank half",
+  "input": [
+   {
+    "rawText": "a bottle of wine for dinner",
+    "normalizedForm": "wine",
+    "brand": ""
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bottle of wine for dinner",
+    "normalizedForm": "wine"
+   },
+   {
+    "rawText": "half a bottle of wine",
+    "normalizedForm": "wine"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a can of soup, ate half, and a can of soup",
+  "input": [
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "half a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 can of soup",
+    "normalizedForm": "soup"
+   },
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a can of soup, and a can of soup, ate half",
+  "input": [
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "half a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup"
+   },
+   {
+    "rawText": "half a can of soup",
+    "normalizedForm": "soup"
+   },
+   {
+    "rawText": "a can of soup",
+    "normalizedForm": "soup"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ }
+]

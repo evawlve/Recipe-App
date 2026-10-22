@@ -718,19 +718,36 @@ const DIET_DRINK_EXEMPT_WORDS = [
 function dietDrinkPadded(text: string): string {
     return ` ${(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
 }
-function hasWholeWord(padded: string, words: string[]): boolean {
-    return words.some((w) => padded.includes(` ${w} `));
+// Plural folding for the two drink rules (cloud-42 F1/F2): a word matches in its exact form OR a folded form of either side, so
+// `diet cokes` fires, `monster cookies` is exempt, and `celsius` / `schweppes` / `sports` (which fold to `celsiu` ...) still match.
+// The `ies`->`y` form is a third FORM, never a replacement: it makes `candies` exempt while `cookies` still folds to `cookie`.
+function foldToken(w: string, y: boolean): string {
+    if (y && w.length > 4 && w.endsWith('ies')) return `${w.slice(0, -3)}y`;
+    if (/(?:s|x|z|ch|sh)es$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+    return w;
 }
+function pluralForms(padded: string): string[] {
+    const t = padded.trim().split(' ');
+    return [padded,` ${t.map((w) => foldToken(w, false)).join(' ')} `, ` ${t.map((w) => foldToken(w, true)).join(' ')} `];
+}
+function hasWholeWordFolded(padded: string, words: string[]): boolean {
+    const forms = pluralForms(padded);
+    return words.some((w) => pluralForms(` ${w} `).some((e) => forms.some((f) => f.includes(e))));
+}
+// headLine exemptions are read from its first clause: a SIBLING item's word (`diet coke and a protein bar`) must not silence the item.
+// No comma: a comma-suffixed modifier (`coffee, instant`, `diet lemonade, powder`) keeps exempting.
+const DRINK_SIBLING_BREAK = /\s(?:with|and|plus|&|\+)\s|\sw\//;
 function dietDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
     const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
     const kcal = raw == null ? NaN : Number(raw);
     if (!Number.isFinite(kcal) || kcal <= DIET_DRINK_MAX_KCAL) return null;
     const q = dietDrinkPadded(queryName);
-    const h = headLine != null ? dietDrinkPadded(headLine) : '';
-    if (hasWholeWord(q, DIET_DRINK_EXEMPT_WORDS) || (h && hasWholeWord(h, DIET_DRINK_EXEMPT_WORDS))) return null;
-    if (!hasWholeWord(q, DIET_DRINK_WORDS)) return null;
+    const h = headLine != null ? dietDrinkPadded(headLine.toLowerCase().split(DRINK_SIBLING_BREAK)[0]) : '';
+    if (hasWholeWordFolded(q, DIET_DRINK_EXEMPT_WORDS) || (h && hasWholeWordFolded(h, DIET_DRINK_EXEMPT_WORDS))) return null;
+    if (!hasWholeWordFolded(q, DIET_DRINK_WORDS)) return null;
     const headWords = headLine != null ? ` ${headClauseWords(headLine).join(' ')} ` : '';
-    if (!DIET_DRINK_DIET_PATTERN.test(q) && !(headWords.trim() && DIET_DRINK_DIET_PATTERN.test(headWords))) return null;
+    if (!pluralForms(q).some((f) => DIET_DRINK_DIET_PATTERN.test(f)) && !(headWords.trim() && pluralForms(headWords).some((f) => DIET_DRINK_DIET_PATTERN.test(f)))) return null;
     return `rank:diet_drink_kcal_${round1(kcal)}_over_${DIET_DRINK_MAX_KCAL}`;
 }
 
@@ -771,8 +788,9 @@ function pouredDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityI
     const head = last.endsWith('s') && POURED_DRINK_CEILINGS[last.slice(0, -1)] != null ? last.slice(0, -1) : last;
     const ceiling = Object.prototype.hasOwnProperty.call(POURED_DRINK_CEILINGS, head) ? POURED_DRINK_CEILINGS[head] : undefined;
     if (ceiling == null || kcal <= ceiling) return null;
-    const lowered = [queryName, headLine].map((t) => (t || '').toLowerCase());
-    if (lowered.some((t) => POURED_DRINK_EXEMPT_PATTERN.test(t))) return null;
+    const lowered = [queryName, (headLine || '').toLowerCase().split(DRINK_SIBLING_BREAK)[0]].map((t) => (t || '').toLowerCase());
+    const exemptTexts = [...lowered, ...lowered.flatMap((t) => pluralForms(dietDrinkPadded(t)))];
+    if (exemptTexts.some((t) => POURED_DRINK_EXEMPT_PATTERN.test(t))) return null;
     return `rank:poured_drink_kcal_${round1(kcal)}_over_${ceiling}`;
 }
 
