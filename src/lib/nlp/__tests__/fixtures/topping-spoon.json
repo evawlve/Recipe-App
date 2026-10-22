@@ -1,0 +1,842 @@
+[
+ {
+  "src": "seat",
+  "line": "oatmeal with peanut butter, 2 tbsp",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "salad with dressing, 2 tbsp",
+  "input": [
+   {
+    "rawText": "salad with dressing",
+    "normalizedForm": "salad with dressing",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "salad with dressing",
+    "normalizedForm": "salad with dressing"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "coffee with creamer, 2 tbsp",
+  "input": [
+   {
+    "rawText": "coffee with creamer",
+    "normalizedForm": "coffee with creamer",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee with creamer",
+    "normalizedForm": "coffee with creamer"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "toast with butter, a pat",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a pat",
+    "normalizedForm": "pat",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter"
+   },
+   {
+    "rawText": "a pat",
+    "normalizedForm": "pat"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "pasta with marinara, 2 cups",
+  "input": [
+   {
+    "rawText": "pasta with marinara",
+    "normalizedForm": "pasta with marinara",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cups",
+    "normalizedForm": "2 cups",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 cups of pasta with marinara",
+    "normalizedForm": "pasta with marinara"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "oatmeal with peanut butter, 2 bowls",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 bowls",
+    "normalizedForm": "2 bowls",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bowls of oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "oatmeal with peanut butter, 2 tbsp of honey",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp of honey",
+    "normalizedForm": "honey",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   },
+   {
+    "rawText": "2 tbsp of honey",
+    "normalizedForm": "honey"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "oatmeal with peanut butter and 2 tbsp",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "peanut butter with honey, 2 tbsp",
+  "input": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "peanut butter with honey, 4 tbsp",
+  "input": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey",
+    "brand": ""
+   },
+   {
+    "rawText": "4 tbsp",
+    "normalizedForm": "4 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "hummus with olive oil, 4 tbsp",
+  "input": [
+   {
+    "rawText": "hummus with olive oil",
+    "normalizedForm": "hummus with olive oil",
+    "brand": ""
+   },
+   {
+    "rawText": "4 tbsp",
+    "normalizedForm": "4 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "hummus with olive oil",
+    "normalizedForm": "hummus with olive oil"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "chia seeds with water, 2 tbsp",
+  "input": [
+   {
+    "rawText": "chia seeds with water",
+    "normalizedForm": "chia seeds with water",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "chia seeds with water",
+    "normalizedForm": "chia seeds with water"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "greek yogurt with honey, 6 tbsp",
+  "input": [
+   {
+    "rawText": "greek yogurt with honey",
+    "normalizedForm": "greek yogurt with honey",
+    "brand": ""
+   },
+   {
+    "rawText": "6 tbsp",
+    "normalizedForm": "6 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "greek yogurt with honey",
+    "normalizedForm": "greek yogurt with honey"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "olive oil with garlic, 1 tbsp",
+  "input": [
+   {
+    "rawText": "olive oil with garlic",
+    "normalizedForm": "olive oil with garlic",
+    "brand": ""
+   },
+   {
+    "rawText": "1 tbsp",
+    "normalizedForm": "1 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "olive oil with garlic",
+    "normalizedForm": "olive oil with garlic"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "cottage cheese with pineapple, 4 tbsp",
+  "input": [
+   {
+    "rawText": "cottage cheese with pineapple",
+    "normalizedForm": "cottage cheese with pineapple",
+    "brand": ""
+   },
+   {
+    "rawText": "4 tbsp",
+    "normalizedForm": "4 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "cottage cheese with pineapple",
+    "normalizedForm": "cottage cheese with pineapple"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "nutella with banana, 2 tbsp",
+  "input": [
+   {
+    "rawText": "nutella with banana",
+    "normalizedForm": "nutella with banana",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "nutella with banana",
+    "normalizedForm": "nutella with banana"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "sugar with cinnamon, 2 tsp",
+  "input": [
+   {
+    "rawText": "sugar with cinnamon",
+    "normalizedForm": "sugar with cinnamon",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tsp",
+    "normalizedForm": "2 tsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "sugar with cinnamon",
+    "normalizedForm": "sugar with cinnamon"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "ice cream with sprinkles, 3 spoonfuls",
+  "input": [
+   {
+    "rawText": "ice cream with sprinkles",
+    "normalizedForm": "ice cream with sprinkles",
+    "brand": ""
+   },
+   {
+    "rawText": "3 spoonfuls",
+    "normalizedForm": "3 spoonfuls",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "ice cream with sprinkles",
+    "normalizedForm": "ice cream with sprinkles"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "cream cheese with chives, 2 tbsp",
+  "input": [
+   {
+    "rawText": "cream cheese with chives",
+    "normalizedForm": "cream cheese with chives",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "cream cheese with chives",
+    "normalizedForm": "cream cheese with chives"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "almond butter with jam, 3 tbsp",
+  "input": [
+   {
+    "rawText": "almond butter with jam",
+    "normalizedForm": "almond butter with jam",
+    "brand": ""
+   },
+   {
+    "rawText": "3 tbsp",
+    "normalizedForm": "3 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "almond butter with jam",
+    "normalizedForm": "almond butter with jam"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "oatmeal w/ peanut butter, 2 tbsp",
+  "input": [
+   {
+    "rawText": "oatmeal w/ peanut butter",
+    "normalizedForm": "oatmeal w/ peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal w/ peanut butter",
+    "normalizedForm": "oatmeal w/ peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "oatmeal with peanut butter, a heaping tbsp",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a heaping tbsp",
+    "normalizedForm": "heaping tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "oatmeal with peanut butter, a tablespoon",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a tablespoon",
+    "normalizedForm": "tablespoon",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "coffee with sugar, 2 tsp",
+  "input": [
+   {
+    "rawText": "coffee with sugar",
+    "normalizedForm": "coffee with sugar",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tsp",
+    "normalizedForm": "2 tsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee with sugar",
+    "normalizedForm": "coffee with sugar"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a latte with oat milk, 2 tbsp",
+  "input": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "a latte with oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "a latte with oat milk"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "coffee with oat milk, 2 tbsp",
+  "input": [
+   {
+    "rawText": "coffee with oat milk",
+    "normalizedForm": "coffee with oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee with oat milk",
+    "normalizedForm": "coffee with oat milk"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a protein shake with milk, 2 tbsp",
+  "input": [
+   {
+    "rawText": "a protein shake with milk",
+    "normalizedForm": "a protein shake with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a protein shake with milk",
+    "normalizedForm": "a protein shake with milk"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "salad with chicken, 2 tbsp",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "oatmeal with peanut butter, 2 tbsp, and a coffee",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "topping"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a bowl of oatmeal with peanut butter, 2 tbsp",
+  "input": [
+   {
+    "rawText": "a bowl of oatmeal with peanut butter",
+    "normalizedForm": "a bowl of oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bowl of oatmeal with peanut butter",
+    "normalizedForm": "a bowl of oatmeal with peanut butter"
+   },
+   {
+    "rawText": "2 tbsp",
+    "normalizedForm": "2 tbsp"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "oatmeal with peanut butter, about 2 tbsp of it",
+  "input": [
+   {
+    "rawText": "oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "about 2 tbsp of it",
+    "normalizedForm": "about 2 tbsp of it",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tbsp of oatmeal with peanut butter",
+    "normalizedForm": "oatmeal with peanut butter"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "peanut butter with honey",
+  "input": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "peanut butter with honey",
+    "normalizedForm": "peanut butter with honey"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ }
+]
