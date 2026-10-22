@@ -22,7 +22,8 @@
  *   moved the serving onto corrupt powder panels (Matcha Latte 431 -> 953 kcal, London Fog 584 -> 1,120) and a
  *   milk appended to normalizedForm moved retrieval to worse records on 3 of 8 lines.
  *
- * - Second use (S202 cloud-35 F7): an `and` milk followed by `for|in|into` (or `with` + a possessive) + a non-meal, non-time
+ * - Second use (S202 cloud-35 F7): an `and` milk followed by `for|in|into` (or `with` + a possessive, or `with` + a word that opens a later
+ *   item that is not ice or a drink addition — S240, cloud-36 C6) + a non-meal, non-time
  *   word (`for my cereal`, `for the baby`) is a second use of the milk, so it is KEPT; with no such evidence it still folds.
  *   `in|into it` (singular drink) / `in|into them` (plural), with the drink first, and `for me|myself` when the drink's own span
  *   holds no `for`, are not a second use (S240, cloud-36 C11).
@@ -163,8 +164,11 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
         const poss = USE_DET.has(ptoks[q]?.w ?? '') && ptoks[q]?.piece === nx.piece;
         if (poss) q++;
         const obj = ptoks[q]?.piece === nx.piece ? ptoks[q]?.w : undefined;
+        // S240 (cloud-36 C6): `with` + a bare word is evidence too when that word OPENS a later item's span — the split itself
+        // names the second use (`a latte and milk with cereal` -> [latte | milk | cereal]).
+        const laterItem = spans.some((x, k) => k > j && x !== null && x.start === q && !isIceOnly(items[k].rawText) && !isDrinkAddition(items[k]));
         const use = (['for', 'in', 'into'].includes(nx.w) && !!obj && !NOT_A_USE.has(obj))
-          || (nx.w === 'with' && poss && !!obj && !NOT_A_USE.has(obj));
+          || (nx.w === 'with' && (poss || laterItem) && !!obj && !NOT_A_USE.has(obj));
         // S240 (cloud-36 C11): a pronoun object folds only when its antecedent can only be the drink / the eater.
         const head = words(items[d].normalizedForm || items[d].rawText).filter(x => x !== 'with' && x !== 'made' && x !== 'w');
         const plural = /s$/.test(head.find(x => DRINK1.has(x)) ?? '');
@@ -220,4 +224,15 @@ const ICE_GAP = new Set(['with', 'w', 'and', 'on', 'over', 'plus', 'with some', 
 function isIceOnly(text: string): boolean {
   const w = words(text).filter(x => !['some', 'extra', 'light', 'lots', 'of', 'a', 'an', 'little', 'crushed', 'cubed', 'the'].includes(x));
   return w.length >= 1 && w.length <= 2 && w[0] === 'ice' && (w.length === 1 || w[1] === 'cubes' || w[1] === 'cube');
+}
+
+// S240 (cloud-36 C6): a later item whose HEAD (last word) is something that goes INTO / ONTO the drink is not a second use of the milk.
+const DRINK_ADD = new Set([
+  'sugar', 'sugars', 'honey', 'cream', 'cinnamon', 'caramel', 'syrup', 'syrups', 'vanilla', 'hazelnut', 'shot', 'shots', 'foam',
+  'stevia', 'splenda', 'sweetener', 'sweeteners', 'espresso', 'drizzle', 'sprinkles', 'nutmeg', 'cocoa', 'pump', 'pumps', 'sauce',
+  'agave', 'truvia', 'equal', 'whip', 'topping', 'toppings',
+]);
+function isDrinkAddition(it: Item): boolean {
+  const w = words(it.normalizedForm || it.rawText);
+  return w.length > 0 && DRINK_ADD.has(w[w.length - 1]);
 }
