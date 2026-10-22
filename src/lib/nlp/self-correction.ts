@@ -42,6 +42,10 @@
  *
  * An addition is not a correction: an ADD word or `as well` the segmenter stripped out of j (`a ham sandwich too`) still
  * keeps j, and in the trailing block an `and` in the gap right before the last item keeps the earlier reading (two foods).
+ * A later comma piece of hesitation words only (`, um,`) is transparent to the addition tail, so
+ * `..., a ham sandwich, um, too` keeps the turkey sandwich (S240, cloud-40 F1).
+ * A later pure addition piece that opens the NEXT item (`..., a ham sandwich, also, a coke`) is that item's lead, not
+ * the tail: only too / as well / again in it keep j an addition (S340, #588 refute-r1 MAJOR 1).
  *
  * Pure; never mutates its input (items are copied before any write).
  */
@@ -292,8 +296,27 @@ export function resolveSelfCorrections<T extends Item>(
         if (full !== e) break; // the piece runs past stop: not a pure tail piece
         let pure = true;
         for (let r = q; r < e; r++) if (!TAILW(toks[r].w)) { pure = false; break; }
-        if (!pure) break;
-        for (let r = q; r < e; r++) idx.push(r);
+        if (!pure) {
+          // S240 (cloud-40 F1): a piece of hesitation words only (`, um,`) is transparent - skip it and read on, so the `too` behind it
+          // still keeps j an addition (`a turkey sandwich, actually a ham sandwich, um, too`).
+          let hes = true;
+          for (let r = q; r < e; r++) if (!QTY_ONLY.has(toks[r].w)) { hes = false; break; }
+          if (!hes) break;
+          q = e;
+          continue;
+        }
+        // S340 (#588 refute-r1 MAJOR 1): a pure piece that opens the NEXT item (`…, also, a coke`, hesitation pieces between
+        // skipped) is that item's lead, not j's tail - only a post-positional word (too / as well / again) in it still counts.
+        let lead = e;
+        while (next >= 0 && lead < next) {
+          let pe = lead;
+          while (pe < next && toks[pe].piece === toks[lead].piece) pe++;
+          let hes = true;
+          for (let r = lead; r < pe; r++) if (!QTY_ONLY.has(toks[r].w)) { hes = false; break; }
+          if (!hes) break;
+          lead = pe;
+        }
+        for (let r = q; r < e; r++) if (lead !== next || ['too', 'as', 'well', 'again'].includes(toks[r].w)) idx.push(r);
         q = e;
       }
       const PRENOM = new Set(['plus', 'extra', 'more', 'another', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);

@@ -168,10 +168,18 @@ describe('every guard declines to today\'s ladder', () => {
         expect(r?.servingTier).toBe('fdc_size_estimate');
     });
 
-    it.each(['1,5 cups blueberries', '1 pkg blueberries'])('lost unit `%s` stays 150 g', async (line) => {
+    it.each(['1,5 cups blueberries', '1 punnet blueberries'])('lost unit `%s` stays 150 g', async (line) => {
         const { r } = await run(line, BLUEBERRY);
         expect(r?.grams).toBe(150);
         expect(r?.servingTier).toBe('fdc_size_estimate');
+    });
+
+    // #590 made `pkg` a known unit (package), so it is no longer a LOST unit.
+    it('`1 pkg blueberries` is a package since #590: the ambiguous-unit ladder, not the count seed', async () => {
+        const { r } = await run('1 pkg blueberries', BLUEBERRY);
+        expect(r?.grams).toBe(100);
+        expect(r?.servingTier).toBe('count_unit_unresolved');
+        expect(r?.servingTier).not.toBe('seed_count_default');
     });
 
     it('a mass/volume token in the RAW line declines even when the parsed name is clean', async () => {

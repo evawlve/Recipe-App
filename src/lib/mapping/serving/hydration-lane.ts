@@ -22,6 +22,7 @@ import {
     servingLabelCountsPiece,
     inferDiscreteUnit,
 } from '../count-label';
+import { labelCountPerPiece } from './label-count-band';
 import { logger } from '../../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from '../client';
 import { getCachedFoodWithRelations, cacheFoodToDetails } from '../cache-search';
@@ -33,7 +34,8 @@ import { isEstimableUnknownUnit } from '../../ai/ambiguous-serving-estimator';
 import { extractPrepModifier } from '../preemptive-backfill';
 import { requestAiNutrition, createAiNutritionBudget, type AiNutritionBudget } from '../ai-nutrition-backfill';
 import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } from '../config';
-import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
+import { hydrateOffCandidate, type HydratedOffFood } from '../../openfoodfacts/hydrate';
+import { MAX_REAL_GTIN_LENGTH } from '../corrupt-mark';
 import {
     applyOffBareQueryGuard,
     bareDrinkCupOverride,
@@ -203,7 +205,8 @@ function annotateGroundMeatName(foodName: string, query: string): string {
  * multiply a whole serving, so the ordinary bare dispatch answers instead.
  */
 const TWIN_TIER_ALLOW = new Set([
-    'seed_count_default', 'label_count_derived', 'fs_label_count', 'fs_default_serving',
+    'seed_count_default', 'label_count_derived', 'label_count_band_derived', 'fs_label_count', 'fs_default_serving',
+    'name_count_derived',
 ]);
 
 /**
@@ -2715,6 +2718,50 @@ export function isTightNameGroup(p25: number, p75: number): boolean {
     return p75 / p25 <= NAME_GROUP_TIGHT_RATIO;
 }
 
+/**
+ * Per-piece grams for a CHAIN OFF record whose NAME carries its own piece count
+ * (C70 row 8, 2026-10-20). The synthetic-barcode chain import stores the N-piece
+ * serving panel as per-100 g ("Chick-Fil-A, 4 Grilled Nuggets" 74 kcal = the 4-ct),
+ * so 100 g is N pieces in weight AND kcal and one piece is 100 / N. Measured by SQL
+ * (OffFood, barcode length > 13, servingGrams = 100, name `<brand>, N <noun>s`):
+ * 447 records - wings 118, tenders 58, eggs 22, pancakes 21, strips 20, nuggets 19.
+ * DISPLACES on that class only: label_serving_default (qty x 100 g), the generic
+ * seed (wings 34 g) and count_unit_ai / count_unit_cached for piece/pc lines.
+ * Row 2's brand-led count hoist re-runs its arm after this lands. The id gate is
+ * structural (3 real-GTIN rows share the name shape), never cosmetic.
+ */
+function nameCountPerPieceGrams(
+    candidateId: string,
+    hydrated: HydratedOffFood,
+    itemName: string,
+    labelUnitWord: string | null,
+): { perPiece: number; n: number; noun: string } | null {
+    if (candidateId.replace(/^off_/, '').length <= MAX_REAL_GTIN_LENGTH) return null;
+    if (hydrated.servingGrams !== 100) return null;
+    if (!(labelUnitWord == null || ['serving', 'g', 'gram', 'portion'].includes(labelUnitWord))) return null;
+    const name = hydrated.foodName ?? '';
+    const comma = name.indexOf(', ');
+    if (comma < 0) return null;
+    const remainder = name.slice(comma + 2);
+    const m = remainder.match(/^(\d{1,2})\s+(?:([A-Za-z-]+)\s+)?(?:[A-Za-z-]+\s+){0,2}([A-Za-z]+)\b/);
+    if (!m) return null;
+    const n = +m[1];
+    if (!(n >= 2 && n <= 50)) return null;
+    const firstWord = remainder.split(/\s+/)[1]?.toLowerCase();
+    if (!firstWord || NAME_COUNT_SIZE_WORDS.has(firstWord)) return null;
+    const noun = m[3];
+    if (singularizeUnit(noun) === noun.toLowerCase()) return null;
+    if (!labelPieceMatchesItem(noun, itemName)) return null;
+    const perPiece = 100 / n;
+    if (!(perPiece >= 2 && perPiece <= 50)) return null;
+    return { perPiece, n, noun: noun.toLowerCase() };
+}
+
+const NAME_COUNT_SIZE_WORDS = new Set([
+    'inch', 'inches', 'in', 'oz', 'ounce', 'ounces', 'layer', 'layers', 'for', 'lb', 'lbs',
+    'ml', 'g', 'pack', 'packs', 'pk', 'piece', 'pieces', 'pc', 'pcs',
+]);
+
 // Exported for tests (tier cascade + bare-query guard wire-in).
 export async function buildOffResult(
     candidate: UnifiedCandidate,
@@ -3058,6 +3105,7 @@ export async function buildOffResult(
             ?? await borrowSiblingPackageGrams(brandForBorrow);
     }
 
+    let nc: ReturnType<typeof nameCountPerPieceGrams> = null;
     if (unit && weightToGrams[unit]) {
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
@@ -3140,6 +3188,20 @@ export async function buildOffResult(
             packageGrams: packageFallbackGrams,
             ownLabel: packageGrams != null,
         });
+    } else if (unit && GENERIC_PIECE_WORDS.has(singularizeUnit(unit)) && Number.isInteger(qty) && qty >= 2
+        && (nc = nameCountPerPieceGrams(candidate.id, hydrated, parsed?.name || hydrated.foodName, labelUnitWord)) != null) {
+        // The record's own name carries its piece count (nameCountPerPieceGrams):
+        // pre-empts getOrCreateAmbiguousServing() on the synthetic-barcode chain class.
+        grams = qty * nc.perPiece;
+        servingDescription = `${qty} ${nc.noun} (${nc.perPiece.toFixed(1)}g each, from the record's own count of ${nc.n})`;
+        servingTier = 'name_count_derived';
+        logger.info('off.build_result.name_count_derived', {
+            foodId: candidate.id,
+            name: hydrated.foodName,
+            recordCount: nc.n,
+            perPieceGrams: nc.perPiece,
+            arm: 'piece',
+        });
     } else if (unit && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
         // Count/size/unknown units ("slice", "medium", "can", "knob", "rasher"):
         // deterministic count defaults + cached per-food servings + AI estimation.
@@ -3196,6 +3258,40 @@ export async function buildOffResult(
                 name: itemNameForCount,
                 servingGrams: hydrated.servingGrams,
             });
+        }
+
+        // (0) LABEL COUNT BAND, ARTICLE-SINGULAR (C70 row 10, 2026-10-20): `a pop
+        // tart` on a `2 pastries (96 g)` label bills ONE piece (48 g), not the
+        // whole two-piece serving rung (1) below would bill. DISPLACES
+        // `bare_label_serving` on article-singular lines only. Admitted only when
+        // the label's per-piece weight is inside the noun's corpus band
+        // (label-count-band.ts) AND clears the bare-piece floor the seed table
+        // uses: a bare `a chip` / `a pretzel` must not bill one 1.5-3 g piece.
+        // The tier is in none of the bare guard's sets (CAP / HEAD_GATED /
+        // REPLACE / DECLARED), so applyOffBareQueryGuard() passes it through.
+        // `one` is stripped from the name by the parser, `a`/`an` are kept; the
+        // article test reads rawLine. A stick of gum etc. (unit `stick`) never
+        // enters this branch.
+        if (grams == null && bareRequest && !barePluralRequest && !doseAnchored
+            && /^\s*(a|an|one)\s/i.test(rawLine)) {
+            const lbs = labelCountPerPiece({
+                servingGrams: hydrated.servingGrams,
+                labelUnitCount,
+                labelUnitWord,
+                itemName: parsed.name || hydrated.foodName,
+            });
+            if (lbs && lbs.perPiece >= BARE_MIN_PIECE_SERVING_GRAMS) {
+                grams = lbs.perPiece;
+                servingDescription = `1 ${lbs.noun} (${lbs.perPiece.toFixed(1)}g each, from the label's count of ${lbs.n})`;
+                servingTier = 'label_count_band_derived';
+                logger.info('off.build_result.label_count_band_derived', {
+                    foodId: candidate.id,
+                    name: itemNameForCount,
+                    labelCount: lbs.n,
+                    perPieceGrams: lbs.perPiece,
+                    arm: 'singular',
+                });
+            }
         }
 
         // (1) OWN LABEL SERVING for a bare request (bare-serving defaults,
@@ -3314,6 +3410,58 @@ export async function buildOffResult(
                 labelUnitCount,
                 perPieceGrams: perLabelUnitGrams,
             });
+        }
+
+        // (A2) the record's own NAME count on a synthetic-barcode chain record
+        // (nameCountPerPieceGrams) - BEFORE (B), whose seed would bill wings at 34 g.
+        if (grams == null && !barePluralRequest && Number.isInteger(qty) && qty >= 2) {
+            const nc2 = nameCountPerPieceGrams(candidate.id, hydrated, itemNameForCount, labelUnitWord);
+            if (nc2) {
+                grams = qty * nc2.perPiece;
+                servingDescription = `${qty} ${nc2.noun} (${nc2.perPiece.toFixed(1)}g each, from the record's own count of ${nc2.n})`;
+                servingTier = 'name_count_derived';
+                logger.info('off.build_result.name_count_derived', {
+                    foodId: candidate.id,
+                    name: hydrated.foodName,
+                    recordCount: nc2.n,
+                    perPieceGrams: nc2.perPiece,
+                    arm: 'unitless',
+                });
+            }
+        }
+
+        // (A') LABEL COUNT BAND, COUNTED (C70 row 10, 2026-10-20): a unitless
+        // qty >= 2 on a real-GTIN record whose label counts N >= 2 pieces bills
+        // qty x (label grams / N) when that per-piece weight is inside the
+        // noun's corpus band (label-count-band.ts; `three tacos` 384 g -> 192 g,
+        // `2 pop tarts` 192 -> 96). The set-free arm of (A) was REFUTED
+        // (`4 oreo cookies` on `9 cookies (29 g)`); this admits by a measured
+        // band instead and cookies stay out (`cooky` has no band entry).
+        // DISPLACES: `label_serving_default` (qty x a multi-piece serving) AND
+        // `seed_count_default` on counted OFF lines whose label is multi-piece
+        // and in band (`2 eggo waffles` keeps 70 g, tier change only; it moves
+        // either way against the seed: `two sausage links` 90 -> 42.7 g).
+        // The tier is in none of the bare guard's sets (CAP / HEAD_GATED /
+        // REPLACE / DECLARED), so applyOffBareQueryGuard() passes it through.
+        if (grams == null && !barePluralRequest && Number.isInteger(qty) && qty >= 2) {
+            const lb = labelCountPerPiece({
+                servingGrams: hydrated.servingGrams,
+                labelUnitCount,
+                labelUnitWord,
+                itemName: itemNameForCount,
+            });
+            if (lb) {
+                grams = qty * lb.perPiece;
+                servingDescription = `${qty} ${lb.noun} (${lb.perPiece.toFixed(1)}g each, from the label's count of ${lb.n})`;
+                servingTier = 'label_count_band_derived';
+                logger.info('off.build_result.label_count_band_derived', {
+                    foodId: candidate.id,
+                    name: itemNameForCount,
+                    labelCount: lb.n,
+                    perPieceGrams: lb.perPiece,
+                    arm: 'counted',
+                });
+            }
         }
 
         // (B) GENERIC SEED TABLE — curated per-piece for common discrete items with
