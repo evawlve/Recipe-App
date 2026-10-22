@@ -33,7 +33,8 @@ import { isEstimableUnknownUnit } from '../../ai/ambiguous-serving-estimator';
 import { extractPrepModifier } from '../preemptive-backfill';
 import { requestAiNutrition, createAiNutritionBudget, type AiNutritionBudget } from '../ai-nutrition-backfill';
 import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } from '../config';
-import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
+import { hydrateOffCandidate, type HydratedOffFood } from '../../openfoodfacts/hydrate';
+import { MAX_REAL_GTIN_LENGTH } from '../corrupt-mark';
 import {
     applyOffBareQueryGuard,
     bareDrinkCupOverride,
@@ -204,6 +205,7 @@ function annotateGroundMeatName(foodName: string, query: string): string {
  */
 const TWIN_TIER_ALLOW = new Set([
     'seed_count_default', 'label_count_derived', 'fs_label_count', 'fs_default_serving',
+    'name_count_derived',
 ]);
 
 /**
@@ -2715,6 +2717,50 @@ export function isTightNameGroup(p25: number, p75: number): boolean {
     return p75 / p25 <= NAME_GROUP_TIGHT_RATIO;
 }
 
+/**
+ * Per-piece grams for a CHAIN OFF record whose NAME carries its own piece count
+ * (C70 row 8, 2026-10-20). The synthetic-barcode chain import stores the N-piece
+ * serving panel as per-100 g ("Chick-Fil-A, 4 Grilled Nuggets" 74 kcal = the 4-ct),
+ * so 100 g is N pieces in weight AND kcal and one piece is 100 / N. Measured by SQL
+ * (OffFood, barcode length > 13, servingGrams = 100, name `<brand>, N <noun>s`):
+ * 447 records - wings 118, tenders 58, eggs 22, pancakes 21, strips 20, nuggets 19.
+ * DISPLACES on that class only: label_serving_default (qty x 100 g), the generic
+ * seed (wings 34 g) and count_unit_ai / count_unit_cached for piece/pc lines.
+ * Row 2's brand-led count hoist re-runs its arm after this lands. The id gate is
+ * structural (3 real-GTIN rows share the name shape), never cosmetic.
+ */
+function nameCountPerPieceGrams(
+    candidateId: string,
+    hydrated: HydratedOffFood,
+    itemName: string,
+    labelUnitWord: string | null,
+): { perPiece: number; n: number; noun: string } | null {
+    if (candidateId.replace(/^off_/, '').length <= MAX_REAL_GTIN_LENGTH) return null;
+    if (hydrated.servingGrams !== 100) return null;
+    if (!(labelUnitWord == null || ['serving', 'g', 'gram', 'portion'].includes(labelUnitWord))) return null;
+    const name = hydrated.foodName ?? '';
+    const comma = name.indexOf(', ');
+    if (comma < 0) return null;
+    const remainder = name.slice(comma + 2);
+    const m = remainder.match(/^(\d{1,2})\s+(?:([A-Za-z-]+)\s+)?(?:[A-Za-z-]+\s+){0,2}([A-Za-z]+)\b/);
+    if (!m) return null;
+    const n = +m[1];
+    if (!(n >= 2 && n <= 50)) return null;
+    const firstWord = remainder.split(/\s+/)[1]?.toLowerCase();
+    if (!firstWord || NAME_COUNT_SIZE_WORDS.has(firstWord)) return null;
+    const noun = m[3];
+    if (singularizeUnit(noun) === noun.toLowerCase()) return null;
+    if (!labelPieceMatchesItem(noun, itemName)) return null;
+    const perPiece = 100 / n;
+    if (!(perPiece >= 2 && perPiece <= 50)) return null;
+    return { perPiece, n, noun: noun.toLowerCase() };
+}
+
+const NAME_COUNT_SIZE_WORDS = new Set([
+    'inch', 'inches', 'in', 'oz', 'ounce', 'ounces', 'layer', 'layers', 'for', 'lb', 'lbs',
+    'ml', 'g', 'pack', 'packs', 'pk', 'piece', 'pieces', 'pc', 'pcs',
+]);
+
 // Exported for tests (tier cascade + bare-query guard wire-in).
 export async function buildOffResult(
     candidate: UnifiedCandidate,
@@ -3058,6 +3104,7 @@ export async function buildOffResult(
             ?? await borrowSiblingPackageGrams(brandForBorrow);
     }
 
+    let nc: ReturnType<typeof nameCountPerPieceGrams> = null;
     if (unit && weightToGrams[unit]) {
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
@@ -3139,6 +3186,20 @@ export async function buildOffResult(
             unit,
             packageGrams: packageFallbackGrams,
             ownLabel: packageGrams != null,
+        });
+    } else if (unit && GENERIC_PIECE_WORDS.has(singularizeUnit(unit)) && Number.isInteger(qty) && qty >= 2
+        && (nc = nameCountPerPieceGrams(candidate.id, hydrated, parsed?.name || hydrated.foodName, labelUnitWord)) != null) {
+        // The record's own name carries its piece count (nameCountPerPieceGrams):
+        // pre-empts getOrCreateAmbiguousServing() on the synthetic-barcode chain class.
+        grams = qty * nc.perPiece;
+        servingDescription = `${qty} ${nc.noun} (${nc.perPiece.toFixed(1)}g each, from the record's own count of ${nc.n})`;
+        servingTier = 'name_count_derived';
+        logger.info('off.build_result.name_count_derived', {
+            foodId: candidate.id,
+            name: hydrated.foodName,
+            recordCount: nc.n,
+            perPieceGrams: nc.perPiece,
+            arm: 'piece',
         });
     } else if (unit && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
         // Count/size/unknown units ("slice", "medium", "can", "knob", "rasher"):
@@ -3314,6 +3375,24 @@ export async function buildOffResult(
                 labelUnitCount,
                 perPieceGrams: perLabelUnitGrams,
             });
+        }
+
+        // (A2) the record's own NAME count on a synthetic-barcode chain record
+        // (nameCountPerPieceGrams) - BEFORE (B), whose seed would bill wings at 34 g.
+        if (grams == null && !barePluralRequest && Number.isInteger(qty) && qty >= 2) {
+            const nc2 = nameCountPerPieceGrams(candidate.id, hydrated, itemNameForCount, labelUnitWord);
+            if (nc2) {
+                grams = qty * nc2.perPiece;
+                servingDescription = `${qty} ${nc2.noun} (${nc2.perPiece.toFixed(1)}g each, from the record's own count of ${nc2.n})`;
+                servingTier = 'name_count_derived';
+                logger.info('off.build_result.name_count_derived', {
+                    foodId: candidate.id,
+                    name: hydrated.foodName,
+                    recordCount: nc2.n,
+                    perPieceGrams: nc2.perPiece,
+                    arm: 'unitless',
+                });
+            }
         }
 
         // (B) GENERIC SEED TABLE — curated per-piece for common discrete items with

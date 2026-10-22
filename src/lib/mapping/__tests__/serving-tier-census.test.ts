@@ -201,13 +201,14 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     weight_unit: 'USER',
     fs_weight_direct: 'USER',
 
-    // ============================= OWN — 18 members ============================
+    // ============================= OWN — 19 members ============================
     // `buildOffResult()` in serving/hydration-lane.ts:
     bare_label_serving: 'OWN',
     bare_plural_serving: 'OWN',
     label_unit_match: 'OWN',
     label_serving_package_unit: 'OWN',
     label_count_derived: 'OWN',
+    name_count_derived: 'OWN',
     label_serving_default: 'OWN',
     package_count_own: 'OWN',
     package_quantity_own: 'OWN',
@@ -526,8 +527,8 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // assertion is what forced it to be classified — which is the whole
         // reason the census exists.
         // 55 -> 56 on 2026-10-18: buildOffResult() gained bare_prepared_drink_cup (S202)
-        expect(LIVE_TIERS).toHaveLength(56);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(56);
+        expect(LIVE_TIERS).toHaveLength(57); // 56 -> 57 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(57); // 56 -> 57 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
     });
 });
 
@@ -600,7 +601,7 @@ describe('the map agrees with the shipped predicates', () => {
     it('OWN and USER are unknown to all five shipped predicates', () => {
         const unclaimed = LIVE_TIERS.filter((t) =>
             EXPECTED_CLASS[t] === 'OWN' || EXPECTED_CLASS[t] === 'USER');
-        expect(unclaimed.length).toBe(20);
+        expect(unclaimed.length).toBe(21); // 20 -> 21 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
         for (const t of unclaimed) {
             expect(isBorrowedOrDefaultedTier(t)).toBe(false);
             expect(isReplayNondeterministicTier(t)).toBe(false);
