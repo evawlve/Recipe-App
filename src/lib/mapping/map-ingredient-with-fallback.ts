@@ -10,6 +10,7 @@
 
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
+import { VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS, pickVolumeUnits } from '../units/volume-density';
 import { normalizeIngredientName, rewriteRegionalDishWords } from './normalization-rules';
 import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
@@ -33,12 +34,13 @@ import {
 } from './simple-rerank';
 import type { RerankOutcome, RerankScoredCandidate } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
-import { servingAiCallForTier } from './serving-ai-tiers';
+import { servingAiCallForTier, isFloorTier } from './serving-ai-tiers';
 import { countedPieceNoun, servingLabelCountsPiece } from './count-label';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, targetKeyOfFoodId, type CacheLookupRejection, type ReadEscapeRecord } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { shouldRunCacheValidator, kickCacheValidation } from './cache-validator';
 import { logger } from '../logger';
+import { readLeadingAmountHedge } from '../parse/amount-hedge';
 import type { FatSecretServing } from './client';
 import { insertAiServing, backfillWeightServing } from './ai-backfill';
 import { aiNormalizeIngredient } from './ai-normalize';
@@ -61,13 +63,14 @@ import {
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
 import { stripHomemadeDescriptor } from './homemade-descriptor';
+import { stripLeftoverDescriptor } from './leftover-descriptor';
 import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, stripPartitiveOfResidue, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
-import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers } from './llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers, PROMPT_EXAMPLE_ECHO_REASON, isPromptExampleEcho } from './llm-output-guards';
 import { isBarePluralRequest } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 import { buildFatSecretResult } from './build-fatsecret-result';
@@ -648,6 +651,25 @@ async function preflightIngredientLine(
         const rewrittenName = rewriteRegionalDishWords(parsed.name);
         if (rewrittenName !== parsed.name) parsed = { ...parsed, name: rewrittenName };
     }
+    // C70 `leftover` descriptor, seat (b): searchQuery / confidenceGate / assessConfidence / rerank
+    // read parsed.name, so the descriptor is stripped here too, not only from baseName (seat (a),
+    // the end of preflight). baseName is the retrieval query AND the cache key; they move together.
+    if (parsed?.name) {
+        const leftoverName = stripLeftoverDescriptor(
+            parsed.name,
+            rawLine,
+            options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand,
+        );
+        if (leftoverName.stripped) {
+            logger.info('mapping.leftover_descriptor_stripped', {
+                rawLine,
+                site: 'parsed_name',
+                before: parsed.name,
+                after: leftoverName.baseName,
+            });
+            parsed = { ...parsed, name: leftoverName.baseName };
+        }
+    }
     // LANE S: strip a partitive-`of` residue off ALL three branches, so the
     // parser path and the free-text/LLM paths (normalizedForm / preProcessLine,
     // which never pass through the parser's #350 skip) converge on the same
@@ -889,6 +911,8 @@ async function preflightIngredientLine(
 
         // Calculate grams from parsed quantity using standard conversions
         const WATER_UNIT_GRAMS: Record<string, number> = {
+            // Lane B1b large-volume family (pint/quart/gallon/litre) from the owner volume-density.ts; first so every private cell below wins unchanged.
+            ...pickVolumeUnits(VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS),
             'cup': 237, 'cups': 237,
             'ml': 1, 'milliliter': 1, 'milliliters': 1,
             'l': 1000, 'liter': 1000, 'liters': 1000,
@@ -972,6 +996,23 @@ async function preflightIngredientLine(
         baseName = homemade.baseName;
     }
 
+    // C70 `leftover` descriptor, seat (a): after the homemade strip, still last, so the retrieval
+    // query and the cache key move together (and with parsed.name, seat (b), above).
+    const leftover = stripLeftoverDescriptor(
+        baseName,
+        rawLine,
+        options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand,
+    );
+    if (leftover.stripped) {
+        logger.info('mapping.leftover_descriptor_stripped', {
+            rawLine,
+            site: 'base_name',
+            before: baseName,
+            after: leftover.baseName,
+        });
+        baseName = leftover.baseName;
+    }
+
     return { done: false, parsed, baseName };
 }
 
@@ -979,7 +1020,7 @@ async function preflightIngredientLine(
 // Main Entry Point
 // ============================================================
 
-export async function mapIngredientWithFallback(
+async function mapIngredientWithFallbackCore(
     rawLine: string,
     options: MapIngredientOptions = {}
 ): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
@@ -1588,6 +1629,15 @@ export async function mapIngredientWithFallback(
 
                 // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
                 const aiHint = await aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName);
+                if (aiHint.status === 'error' && aiHint.reason === PROMPT_EXAMPLE_ECHO_REASON) {
+                    // The model gave back one of its own prompt examples: the line names no
+                    // food. Return the unresolved result BEFORE retrieval can win junk and
+                    // before the dietary, simplify and AI-nutrition fallbacks can mint it
+                    // (C70). Not retried; the finally below releases the in-flight lock.
+                    logger.info('mapping.llm_prompt_example_echo', { rawLine: trimmed, baseName });
+                    markFunnel(telemetry, 'no_match', 'prompt_example_echo');
+                    return null;
+                }
                 if (aiHint.status === 'success') {
                     // The model's output is otherwise taken on trust here. Strip
                     // any food-REPLACING token it introduced that the user never
@@ -1763,6 +1813,13 @@ export async function mapIngredientWithFallback(
                 // score identically but have vastly different calorie profiles.
                 // FIX: Use baseName instead of rawLine to hit the cache for quantity variations!
                 const cachedNormalize = await getAiNormalizeCache(baseName);
+                if (cachedNormalize && isPromptExampleEcho(baseName, cachedNormalize.normalizedName)) {
+                    // Second read seat (C70): a poisoned row replayed here bypasses
+                    // aiNormalizeIngredient(), so it gets the same unresolved return.
+                    logger.info('mapping.llm_prompt_example_echo', { rawLine: trimmed, baseName });
+                    markFunnel(telemetry, 'no_match', 'prompt_example_echo');
+                    return null;
+                }
                 if (cachedNormalize?.nutritionEstimate) {
                     aiNutritionEstimate = cachedNormalize.nutritionEstimate;
                     // Same repair as the live path: AiNormalizeCache is 86.5%
@@ -2838,6 +2895,67 @@ export async function mapIngredientWithFallback(
     }
 }
 
+/**
+ * Public entry. Wraps the core with the AMOUNT-HEDGE scale: a line that opens
+ * with `(a) (little) bit of <food>` bills HALF of the serving the pipeline
+ * already picked.
+ *
+ * Mechanism: `parseIngredientLine()` reads no quantity from the hedge (qty 1,
+ * unit null), so the bare cascade bills a full serving. The reader
+ * (`readLeadingAmountHedge()`) detects the hedge on `rawLine`; parse, identity,
+ * cache keys and the selected serving stay byte-identical, and only the billed
+ * grams and macros are multiplied AFTER selection. The scale lives at this one
+ * exit because every serving writer (cache hits, lock waiters, fast paths,
+ * hydration) returns through the core.
+ *
+ * F = 0.5 is Diego's anchor (his reopen, 2026-10-19): three user re-logs of a
+ * hedged line were exactly half of the picked serving.
+ *
+ * Declines (returns the core's OWN object, untouched): no hedge, `null`, a
+ * pending result, a FLOOR tier (the flat 100 g is a placeholder, not data, and
+ * halving it would fabricate a number that looks measured), and an ABSENT tier
+ * (untiered legacy rows bill a placeholder 100 g too). The scaled result is a
+ * NEW object (lock waiters share results); `servingTier`, `servingDescription`,
+ * `foodId`, `confidence` and `source` are unchanged.
+ *
+ * Both recursions inside the core call the core, never this export, so a
+ * hedge is scaled exactly once.
+ *
+ * This overrides the 08-17 prose-log report's clause "leave portion to the bare
+ * cascade" (section 6 item 5) for `a bit of` / `a little bit of` only: "do not
+ * build a vague-quantity gram table" still holds, since F is a fraction of the
+ * picked serving and no food carries a gram number for it.
+ *
+ * Logging note: the parse route logs the BILLED (scaled) grams to
+ * MappingEventLog, while mapping-analysis logs the SELECTED (unscaled) serving.
+ */
+export async function mapIngredientWithFallback(
+    rawLine: string,
+    options: MapIngredientOptions = {}
+): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
+    const served = await mapIngredientWithFallbackCore(rawLine, options);
+    const fraction = readLeadingAmountHedge(rawLine);
+    if (fraction == null || served == null || !('grams' in served)) return served;
+    if (served.servingTier == null || isFloorTier(served.servingTier)) {
+        logger.audit('mapping.amount_hedge_declined', { rawLine, servingTier: served.servingTier ?? null });
+        return served;
+    }
+    logger.audit('mapping.amount_hedge_scaled', {
+        rawLine,
+        servingTier: served.servingTier,
+        fraction,
+        gramsBefore: served.grams,
+    });
+    return {
+        ...served,
+        grams: served.grams * fraction,
+        kcal: served.kcal * fraction,
+        protein: served.protein * fraction,
+        carbs: served.carbs * fraction,
+        fat: served.fat * fraction,
+    };
+}
+
 // ============================================================
 // Selection-cascade producers, extracted in stage 1d. Same discipline
 // as the tail functions further below: module-private, single params
@@ -3084,7 +3202,7 @@ async function attemptDietaryPrefixFallback(params: {
     if (strippedLine !== trimmed && strippedLine.length > 2) {
         logger.info('mapping.dietary_prefix_fallback', { original: trimmed, stripped: strippedLine });
 
-        const dietaryFallbackResult = await mapIngredientWithFallback(strippedLine, {
+        const dietaryFallbackResult = await mapIngredientWithFallbackCore(strippedLine, {
             ...options,
             // Explicit, NOT covered by the spread: `options` carries the
             // caller's value, which may be undefined while the
@@ -3152,7 +3270,7 @@ async function attemptAiSimplifyFallback(params: {
             // We use a lower minConfidence to accept matches
             // IMPORTANT: Pass _skipInFlightLock to prevent deadlock if simplified name
             // normalizes to the same lock key as the original
-            const fallbackResult = await mapIngredientWithFallback(result.simplified, {
+            const fallbackResult = await mapIngredientWithFallbackCore(result.simplified, {
                 ...options,
                 aiNutritionBudget,   // see the dietary-fallback call above
                 aiHydrationBudget,   // ditto — both allowances, explicitly

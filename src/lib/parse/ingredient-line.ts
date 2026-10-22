@@ -4,6 +4,7 @@ import { extractQualifiers, extractQualifiersFromParentheses } from './qualifier
 import { extractUnitHint } from './unit-hint';
 import { expandUnitAbbreviation } from './unit-abbreviations';
 import { resolveLoosePourMeasures } from './loose-measures';
+import { resolveCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
 import { isIdentityWholePhrase } from '../mapping/normalization-rules';
@@ -238,7 +239,7 @@ function consumePartitiveOf(tokens: string[], i: number): number {
  */
 const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-  'ten', 'eleven', 'twelve', 'dozen', 'couple',
+  'ten', 'eleven', 'twelve', 'dozen', 'couple', 'few',
 ]);
 
 /**
@@ -398,15 +399,26 @@ function rewriteStackOfPancakes(mergedTokens: string[]): void {
   const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
   const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
   if (!(LEADING_ARTICLES.has(at(0)) || at(0) === 'one')) return;
+  // The diner idiom: the WHOLE line `a short stack` / `a full stack` (sized, end-anchored, no `of`) is pancakes.
+  // A bare `a stack` (no size word) stays as is: ambiguous. Must run before the qualifier strip eats `short`.
+  if (mergedTokens.length === f + 3 && at(2) === 'stack' && PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '') {
+    mergedTokens.splice(f, 3, PANCAKE_STACK_COUNTS.get(at(1))!, 'pancakes');
+    return;
+  }
   const size = PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '' ? 1 : 0;
   if (at(1 + size) !== 'stack' || at(2 + size) !== 'of') return;
   const nounAt = mergedTokens.length - 1;
   const noun = mergedTokens[nounAt]?.toLowerCase();
   const first = f + 3 + size;
   if ((noun !== 'pancakes' && noun !== 'pancake') || nounAt < first) return;
-  for (let k = first; k < nounAt; k++) {
+  // A STATED count wins over the stack default: "a stack of three buttermilk
+  // pancakes" drops the stack prefix and keeps "three" (its twin bills 3 pieces).
+  const stated = parseQuantityTokens(mergedTokens.slice(first, nounAt));
+  const modsFrom = first + (stated ? stated.consumed : 0);
+  for (let k = modsFrom; k < nounAt; k++) {
     if (!PANCAKE_STACK_MODS.has(mergedTokens[k].toLowerCase())) return;
   }
+  if (stated) { mergedTokens.splice(f, 3 + size); return; }
   mergedTokens.splice(f, 3 + size, PANCAKE_STACK_COUNTS.get(size ? at(1) : '')!);
 }
 
@@ -512,12 +524,18 @@ const APPROXIMATOR_SOURCE =
   'just\\s+over|just\\s+under|just\\s+shy\\s+of|a\\s+bit\\s+over|a\\s+bit\\s+under|a\\s+little\\s+over|a\\s+little\\s+under|' +
   'slightly\\s+over|slightly\\s+under|a\\s+tad\\s+over|a\\s+tad\\s+under|a\\s+touch\\s+over|a\\s+touch\\s+under|' +
   'upwards\\s+of|at\\s+least|at\\s+most|close\\s+to|over|under';
+// D12 (the #518/#537/#555 family: a qualifier that never changes the count is dropped): an approximator before a bare COUNT
+// (`at least a dozen wings`, `upwards of 3 beers`) parsed as qty 1 with the whole line as the name, because the count noun is no
+// measure token. The strip now also fires there, so the line parses as its twin. The exception is a CLAIM: when the word right after the
+// quantity is a nutrient, percent, price, time, size or component noun (`under 140 mg sodium soup`, `under 10 minute meal`), the number
+// describes the food and is not a count, so the line stays whole. Matched case-insensitively after trailing punctuation is trimmed.
+const COUNT_CLAIM_NOUN_RE = /^(?:calories?|cals?|kcal|kj|percent|pct|%|proof|abv|carbs?|net|protein|sugars?|fat|fib(?:er|re)|sodium|mg|mcg|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|yrs?|dollars?|bucks?|cents?|inch(?:es)?|points?|pts?|grain|layer|ingredients?|star|alarm|spice|pack|pk|ct|count)$/i;
 const ARTICLE_MEASURE_UNIT_SOURCE =
   `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)\\.?` +
   '(?:\\s+of\\b|\\s*[,(]|\\s*$)';
 const FILLER_ADJECTIVE_RE = new RegExp(
   `^(\\s*(?:(?:${APPROXIMATOR_SOURCE}|about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+)?(?:a|an)\\s+)` +
-    `(?:good|full|solid|generous|scant)\\s+(?=${ARTICLE_MEASURE_UNIT_SOURCE})`,
+    '(?:good|full|solid|generous|scant)\\s+(?=\\S)',
   'i',
 );
 const APPROXIMATOR_RE = new RegExp(`^(\\s*)(?:${APPROXIMATOR_SOURCE})\\s+(?=\\S)`, 'i');
@@ -531,7 +549,10 @@ function articleMeasureFollows(rest: string): boolean {
   return c !== null && isMeasureToken(c[1]);
 }
 function stripFillerAdjective(line: string): string {
-  return line.replace(FILLER_ADJECTIVE_RE, '$1');
+  const m = FILLER_ADJECTIVE_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  return articleMeasureFollows(`a ${rest}`) ? m[1] + rest : line;
 }
 function stripApproximatorBeforeMeasure(line: string): string {
   const m = APPROXIMATOR_RE.exec(line);
@@ -545,10 +566,32 @@ function stripApproximatorBeforeMeasure(line: string): string {
   const attached = /^[\d.,/\u00BC-\u00BE\u2150-\u215E]+([a-z]+)$/i.exec(tokens[k - 1] ?? '');
   if (attached) return isMeasureToken(attached[1]) ? m[1] + rest : line;
   if (/^(?:a|an)$/i.test(tokens[k] ?? '')) k += 1;
-  return isMeasureToken(tokens[k]) ? m[1] + rest : line;
+  if (isMeasureToken(tokens[k])) return m[1] + rest;
+  // D12: before a bare COUNT too, unless the "count" is a claim (a nutrient, percent, price, time, size or component number).
+  const next = (tokens[q.consumed] ?? '').replace(/[.,;:!?)]+$/, '');
+  if (!next) return line;
+  if (tokens.slice(0, q.consumed).some((t) => t.includes('%'))) return line;
+  return COUNT_CLAIM_NOUN_RE.test(next) ? line : m[1] + rest;
+}
+// C70 definite-frame row (the #518/#537 family: a qualifier that never changes the measure is dropped before parsing): a line-start DEFINITE
+// FRAME `(the|my|our)? (last|remaining|other|final)` -- or a bare `last` / `remaining` -- before a COUNT. `the last 2 slices of pizza`
+// parsed as qty 1 / name `the last 2 of pizza` (unitHint slice), because the frame sits at tokens[0] where parseQuantityTokens() reads
+// no quantity, and the vanished pizza then resolved to "The Last Tradition - Machacado". Dropped ONLY when the very next tokens are a
+// quantity that parseQuantityTokens() reads AND at least one more word follows it (`the last 2` has none and stays). Controls that
+// stay: `the last tradition machacado`, `the other half`, `leftover pizza`, `last night's pizza`, `the last of the pizza`. Runs FIRST
+// in stripQuantityHedges()'s chain; the other strips read the line after it. Tested in definite-frame.test.ts.
+const DEFINITE_FRAME_RE = /^(\s*)(?:(?:the|my|our)\s+(?:last|remaining|other|final)|last|remaining)\s+(?=\S)/i;
+function stripDefiniteFrameBeforeCount(line: string): string {
+  const m = DEFINITE_FRAME_RE.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  const tokens = rest.split(/\s+/).filter((t) => t.length > 0);
+  const q = parseQuantityTokens(tokens.map((t) => t.toLowerCase()));
+  if (!q || q.consumed >= tokens.length) return line;
+  return m[1] + rest;
 }
 function stripQuantityHedges(line: string): string {
-  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(line)))
+  return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(stripDefiniteFrameBeforeCount(line))))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
     .replace(/~\s*(?=\d)/g, '')
     .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
@@ -559,7 +602,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(line)));
+  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(line))));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();
