@@ -8,7 +8,7 @@
  * once or loop while the parse reads (punch #278, Lane E S48).
  *
  * SHORT_LINE_FIXTURES below is a VERBATIM COPY of the table of the same name in mobile
- * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (30 rows,
+ * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (33 rows,
  * `[name, text, short]`). The backend cannot import the mobile repo, so the two tables MUST
  * CHANGE TOGETHER: a change to either rule, or to either table, lands in both repos in the
  * same session. `short` is the mobile fixture's claim that `singleItemFromText()` returns
@@ -94,6 +94,9 @@ const SHORT_LINE_FIXTURES: [name: string, text: string, short: boolean][] = [
   ['… with a meal suffix', 'a splash of syrup on pancakes for breakfast', false],
   ['a pour into a pronoun is one food', 'a splash of milk in it', true],
   ['a pour on top is one food', 'a splash of syrup on top', true],
+  ['a topping onto a second food is two foods', 'a drizzle of honey on oatmeal', false],
+  ['a topping alone is one food', 'a drizzle of honey', true],
+  ['a pour onto a non-food object is one food', 'a sip of wine on vacation', true],
 ];
 // ---------------------------------------------------------------------------------------------
 
@@ -138,8 +141,8 @@ describe('/api/nlp/parse short-line fast path — parity with mobile SHORT_LINE_
     jest.restoreAllMocks();
   });
 
-  it('carries all 30 rows of the mobile table', () => {
-    expect(SHORT_LINE_FIXTURES).toHaveLength(30);
+  it('carries all 33 rows of the mobile table', () => {
+    expect(SHORT_LINE_FIXTURES).toHaveLength(33);
   });
 
   it.each(SHORT_LINE_FIXTURES)('%s', async (_name, text, short) => {
