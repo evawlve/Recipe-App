@@ -659,7 +659,7 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // instead, and the PR says so rather than letting a green diff imply
     // otherwise.
     '27e15daa0d31d518': 'gate-backstop',
-    // CURRENT — the shape section 9 transcribes. Same family as the 2026-08-25
+    // SUPERSEDED by 1ccbadcc7ea73404 (below), 2026-10-24. Same family as the 2026-08-25
     // 4d990223 -> 27e15daa move, and re-pinned for the same reason and on the same
     // evidence. The delta is TWO LOG-ONLY CAPTURES sitting beside the
     // `rerankSortedIds` one, and here is the receipt rather than the assurance:
@@ -684,6 +684,20 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // was UNCHANGED across this edit (8c1e518d30331976 both sides), which is the
     // independent check that the drift is the caller window and nothing else.
     '728af8b72218e566': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. Seat C6970 (s368), 2026-10-24, the
+    // zero-calorie marker waiver. The delta in the caller block is ONE argument on
+    // the Step 3c call, and section 9's transcription of Step 3c was changed to
+    // match it in the same commit (that is a decision, not a log capture, so the
+    // transcription had to move with it):
+    //
+    //   $ diff <(caller block @ origin/master 31d7b26d) <(caller block @ this branch)
+    //   -   !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name)
+    //   +   !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name, trimmed)
+    //
+    // 634 lines both sides (window 1966-2599 -> 1969-2602: three comment lines
+    // landed above it, at the Step 1a cache read). Helpers hash UNCHANGED
+    // (8c1e518d30331976 both sides). Old pin 728af8b72218e566 kept as superseded.
+    '1ccbadcc7ea73404': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -738,7 +752,11 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
 // MOVED 2026-09-11 (Lane A S47) from 27e15daa0d31d518. The transcription in section
 // 9 is UNCHANGED and did not need to change — see the receipt on the new hash in
 // KNOWN_CALLERS. Moving the pointer is what keeps announceVariantFit() honest.
-const TRANSCRIBED_CALLER = '728af8b72218e566';
+// MOVED 2026-10-24 (seat C6970 s368) from 728af8b72218e566. This time the
+// transcription in section 9 DID change, in the same commit: Step 3c now passes
+// `trimmed` to hasNullOrInvalidMacros(), exactly as the mapper does — see the
+// receipt on the new hash in KNOWN_CALLERS.
+const TRANSCRIBED_CALLER = '1ccbadcc7ea73404';
 
 interface DriftResult {
     caller: string;
@@ -1486,7 +1504,7 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
 
     // ---- caller 1541-1557: Step 3c, zero/invalid macros (all-drop restore) -
     const macroValid = filtered.filter((c: UnifiedCandidate) =>
-        !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name));
+        !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name, trimmed));
     if (macroValid.length > 0 && macroValid.length < filtered.length) filtered = macroValid;
     row.pool.afterZeroMacro = filtered.length;
 
