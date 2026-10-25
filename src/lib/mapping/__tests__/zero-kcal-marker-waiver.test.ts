@@ -19,7 +19,7 @@
  * stored FatSecretFood panels (fs_51053: all four macros 0).
  */
 import { mapIngredientWithFallback, type MappingTelemetry } from '../map-ingredient-with-fallback';
-import { hasNullOrInvalidMacros, filterCandidatesByTokens, ZERO_CAL_MARKER_RE } from '../filter-candidates';
+import { hasNullOrInvalidMacros, filterCandidatesByTokens, ZERO_CAL_MARKER_RE, candidateCoversZeroCalLine } from '../filter-candidates';
 import type { UnifiedCandidate } from '../gather-candidates';
 import { logger } from '../../logger';
 import { aiNormalizeIngredient } from '../ai-normalize';
@@ -192,6 +192,37 @@ describe('hasNullOrInvalidMacros — the marker waiver needs the line AND the na
     });
     it('the waiver is all-zero only — a caloric panel with missing macros is still rejected', () => {
         expect(hasNullOrInvalidMacros({ kcal: 314, protein: 0, carbs: 0, fat: 2.86 }, 'Diet Lentil Zero', 'diet lentil zero')).toBe(true);
+    });
+});
+
+describe('the waiver also needs the candidate NAME to cover the line (r2)', () => {
+    // Winner gate c6970-zerocal (2026-10-25): with markers alone, all-zero
+    // fs_1395249 "Propel Zero - Black Cherry" [Gatorade] was admitted for
+    // `gatorade zero glacier cherry` and outranked the right record.
+    it('rejects all-zero "Propel Zero - Black Cherry" for `gatorade zero glacier cherry` — no `glacier`', () => {
+        expect(candidateCoversZeroCalLine('propel zero - black cherry', 'gatorade zero glacier cherry')).toBe(false);
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Propel Zero - Black Cherry', 'gatorade zero glacier cherry')).toBe(true);
+    });
+    it('admits all-zero "Zero Glacier Cherry (20 oz)" for the same line', () => {
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Zero Glacier Cherry (20 oz)', 'gatorade zero glacier cherry')).toBe(false);
+    });
+    it('admits "Diet Dr. Pepper" for `diet dr pepper` — `dr.` folds to `dr`', () => {
+        expect(candidateCoversZeroCalLine('diet dr. pepper', 'diet dr pepper')).toBe(true);
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Diet Dr. Pepper', 'diet dr pepper')).toBe(false);
+    });
+    it('admits "Zero Grape (Bottle)" for `powerade zero grape bottle` — `bottle` is in the name', () => {
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Zero Grape (Bottle)', 'powerade zero grape bottle')).toBe(false);
+    });
+    it('`a can of diet coke` + all-zero "Diet Coke": not covered (`can`), but admitted anyway — the all-zero branch never runs', () => {
+        // `can` is neither a unit in STOP_WORDS nor in WAIVER_STOPWORDS, so the
+        // coverage helper says no. That does not matter here: "Diet Coke" matches
+        // no MUST_HAVE_CALORIES_PATTERNS word, so it was never rejected — base too.
+        expect(candidateCoversZeroCalLine('diet coke', 'a can of diet coke')).toBe(false);
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Diet Coke', 'a can of diet coke')).toBe(false);
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Diet Coke')).toBe(false);
+    });
+    it('drops numbers and units from the line: `2 tbsp sugar free grape jelly` is covered by "Sugar Free Grape Jelly"', () => {
+        expect(hasNullOrInvalidMacros(ALL_ZERO, 'Sugar Free Grape Jelly', '2 tbsp sugar free grape jelly')).toBe(false);
     });
 });
 
