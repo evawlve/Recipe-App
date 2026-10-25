@@ -265,7 +265,9 @@ const ABSENCE_FRAMES: ReadonlyArray<(w: string) => RegExp> = [
  * record's own NAME carries the absence phrase, so the unmasked fallback re-supplies the identical
  * 4 g: `pepsi zero sugar` -> "Pepsi Cola Real Sugar" / "Pepsi max maximum taste no sugar",
  * `no sugar added applesauce` -> "No Sugar Added Applesauce", `sugar free vanilla latte` ->
- * "Hot Latte Sugar Free Vanilla - Large". Those three are INERT by construction. The three that
+ * "Hot Latte Sugar Free Vanilla - Large". Those three are INERT by construction as measured
+ * 2026-09-07; `pepsi zero sugar` no longer is, since its masked query reaches the beverage rule
+ * (2026-10-25). The three that
  * move are the ones whose record name is clean: `sprite zero sugar` -> "Sprite Zero",
  * `zero sugar pepsi` -> "Pepsi Zero", `sugar free coke` -> "Diet Coke Caffeine Free (Can)".
  * The gate's SERVING DIFF reports exactly three GRAMS-CHANGED rows, which is the same three.
@@ -275,9 +277,11 @@ const ABSENCE_FRAMES: ReadonlyArray<(w: string) => RegExp> = [
  * different shape entirely and is untouched.
  *
  * Blanking, not deleting: the frame is replaced with spaces so every other rule still sees the
- * words around it in their original positions. Four of the six fixed lines land on the CORRECT
- * 355 g for free that way, because rule 4 was only ever pre-empting rule 17 (`sprite zero sugar`
- * still reaches the soda rule via `sprite`, `sugar free coke` via `coke`).
+ * words around it in their original positions. One of the six fixed lines landed on the CORRECT
+ * 355 g for free that way as measured 2026-09-07, and four do since the 2026-10-25 beverage-rule
+ * entry, because rule 4 was only ever pre-empting rule 17 (`sugar free coke` reaches the soda rule
+ * via `coke`; `sprite zero sugar`, `pepsi zero sugar` and `zero sugar pepsi` via the brand, since
+ * the 2026-10-25 beverage-rule entry).
  */
 export function maskAdvertisedAbsence(query: string): string {
     if (!query) return query;
@@ -398,7 +402,11 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
     }
 
     // Canned/bottled beverages: 1 can (approx 355g)
-    if (/\b(cola|coke|soda|soft drink|energy drink|sports drink|kombucha|lemonade|iced tea)\b/.test(nameStr)) {
+    // Soft-drink BRANDS that name the drink (pepsi, sprite, mountain dew, dr pepper) are members
+    // since 2026-10-25: before that, a bare 'pepsi zero sugar' masked to null and the REPLACE
+    // fallback billed the record name's 'sugar' (4 g; s378 §Q1). Re-derive:
+    // npx jest --roots=src --testPathPattern 'category-is-not-read|pepper-variety'.
+    if (/\b(cola|coke|soda|soft drink|energy drink|sports drink|kombucha|lemonade|iced tea|pepsi|sprite|mountain dew|dr\.? ?pepper)\b/.test(nameStr)) {
         return { grams: 355, description: "1 can (standard bare query serving)" };
     }
 
