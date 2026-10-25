@@ -3646,6 +3646,22 @@
       "notes": "DIGIT-BRAND QUANTITY GUARD companion to n-qty-08: an explicit count BEFORE the digit-leading brand must still be honored — '2 7up' = qty 2 -> ~710g (2 x 355ml can), band spans 2x240ml to 2x500ml packages. Guards against the over-correction failure (guard eating the real count -> ~355g) and against flat-100g under-billing (200g, below band). Hard assertion."
     },
     {
+      "id": "n-qty-10",
+      "category": "quantity_parsing",
+      "text": "2 eggs x2",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "grams": [
+        172,
+        280
+      ],
+      "notes": "TRAILING x<N> AFTER A DIGIT COUNT (resolveCountTag() leading-count branch, branch c6970/d24-trailing-x-multiplier, 2026-10-25; Diego's default 2026-10-21 item 12): '2 eggs x2' = 4 eggs -> ~200g. Before the fix the live probe (MGR, 2026-10-25T02:05Z, nosave) billed ONE item 'quantity 2, unit egg, 100 g', foodName 'Strong X2' (off_8935024159965, an energy-drink packet, 440 kcal): the tag reached parsed.name = 'x2', the short-line mapper key and search query. Band = 4 x 43-70 g/egg, the per-egg range of siblings n-qty-03 'two eggs' [88,140] and n-qty-06 'three eggs' [130,170]. Deterministic single-item path (singleItemFromText bypass, no LLM). Hard assertion."
+    },
+    {
       "id": "n-supp-16",
       "category": "branded_supplements",
       "item": {
