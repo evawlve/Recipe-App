@@ -1,0 +1,39 @@
+costco hotdog and a fountain soda	2	BAD		costco;costco
+a slice of costco pizza	1	BAD		costco
+one slice of costco pepperoni pizza	1	BAD		costco
+costco chicken bake	1	BAD		costco
+half a costco chicken bake	1	BAD		costco
+a costco hot dog and a slice of costco cheese pizza	2	BAD		costco;costco
+costcos chicken bake	1	BAD		costco
+a quarter of a costco rotisserie chicken	1	BAD	portion	costco
+half a rotisserie chicken	1	BAD	portion	-
+1/4 rotisserie chicken	1	BAD	portion	-
+a third of a sams club rotisserie chicken	1	BAD	portion	member's mark
+costco's rotisserie chicken, a quarter of it	1	BAD	portion	costco
+4 thin slices of deli turkey	1	BAD	portion	-
+a thin slice of deli ham	1	BAD	portion	-
+a kirkland muffin	1	BAD		kirkland
+2 kirkland croissants	1	BAD		kirkland
+a slice of publix sheet cake	1	BAD		publix
+a grocery store sushi roll	1	BAD	portion	-
+half a publix chicken tender sub	1	BAD		publix
+3 trader joes joe joes	1	BAD		trader joe's
+2 pieces of publix fried chicken	1	BAD		publix
+little caesars 3 slices pepperoni	1	BAD	parse	little caesars
+2 texas roadhouse rolls with cinnamon butter	1	BAD	portion	texas roadhouse
+medium fries from mcdonals	1	BAD	portion	mcdonald's
+mcdonald’s oreo mcflurry regular	1	BAD	identity	mcdonald's
+chik fil a spicy deluxe	1	BAD	identity	chick-fil-a
+medium waffle fries from chick-fil-a	1	BAD	portion	chick-fil-a
+a large frosted lemonade from chick fil a	1	BAD	portion	chick-fil-a
+half a chipolte bowl	1	BAD	portion	chipotle
+chipotle chicken burrito with white rice black beans cheese and sour cream	1	BAD	identity	chipotle
+a side of chipotle queso	1	BAD	identity	chipotle
+taco bell cheesy gordita crunch no sauce	1	BAD	identity	taco bell
+a mexican pizza from taco bell	1	BAD	identity	taco bell
+a grande caramel frappuccino with whip	1	BAD	portion	starbucks
+venti iced caramel macchiato w oat milk	1	BAD	portion	starbucks
+2 bacon gruyere egg bites starbucks	1	BAD	portion	starbucks
+panda express bigger plate orange chicken chow mein and beijing beef	3	BAD	portion	panda express;panda express;panda express
+olive garden 2 breadsticks	1	BAD	parse	olive garden
+popeys 3 pc tenders spicy	1	BAD	parse	popeyes
