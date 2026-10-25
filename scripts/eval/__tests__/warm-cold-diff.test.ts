@@ -799,9 +799,10 @@ describe('population builders account for every line they were given', () => {
         // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
         // 12 wings at the 100 g no-serving default vs at the 34 g seed.
         // 310 / 177 / 144 since 2026-10-18: n-r3-01..10 (S202 round-3 pins) — ten `text` lines; six grams bands (02-07); three kcal100 bands (04, 05, 10); two forbidName (01, 10); no total, no expectItems.
-        expect(p.lines).toHaveLength(310);
-        expect(p.lines.filter(l => l.band).length).toBe(177);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(144);
+        // 311 / 178 / 145 since 2026-10-25: n-qty-10 `2 eggs x2` (trailing x<N> after a digit count) — one `text` line, one grams band.
+        expect(p.lines).toHaveLength(311);
+        expect(p.lines.filter(l => l.band).length).toBe(178);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(145);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 
