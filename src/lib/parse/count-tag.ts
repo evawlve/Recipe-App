@@ -50,11 +50,24 @@
  * `eggs (2x)`, `red bull 2x`); a tag followed by punctuation (`tacos x3!`); an article-led line
  * (`a bagel x2`, `a short stack x2`); a leading-`x2` count (`at least x2 wings`).
  *
- * KNOWN MISS, a pre-existing class this row does not change: a LEADING QUANTITY plus a tag (`2 wings x2` -> qty 2,
- * name `wings x2`; `3 eggs x2` -> qty 3, name `x2`). Guards (a)-(c) decline it, so the parse is master's own. With
- * #572 merged, `at least 2 wings x2`, `upwards of 3 beers x2` and `at least a dozen wings x2` parse like their
- * un-hedged twins and join it (deploy-3 integration, MGR 2026-10-20T00:50Z, default A). What `N food xM` means
- * (multiplier M, or drop the tag) is a billed-gram decision for its own row, not this one.
+ * A LEADING DIGIT COUNT plus a TRAILING tag multiplies (multiplyLeadingCount(), 2026-10-25, Diego's default
+ * 2026-10-21 item 12: `2 eggs x2` = 4 eggs). Before it, guard (a) declined the line and the tag reached the name:
+ * `2 wings x2` -> qty 2, name `wings x2`; `3 eggs x2` -> qty 3, name `x2`. Live probe 2026-10-25T02:05Z (nosave, box
+ * build 4-JWjeuJzQ1eMODVc-qA1): `2 eggs x2` billed ONE item `quantity 2, unit egg, 100 g`, foodName "Strong X2"
+ * (off_8935024159965, an energy-drink packet, 440 kcal), because on the short-line path the mapper keys and searches
+ * on parsed.name = `x2`. The branch runs AHEAD of guard (a) and fires only when ALL hold: the line opens with a DIGIT
+ * integer count and a space (`^\s*\d+\s+`), the next token starts with a letter and is not a mass/volume unit
+ * (`2 cups rice x2`, `12 oz steak x2`, `2 1/2 bagels x2` and `2 7up x2` decline), TAIL_X matches with NOTHING after
+ * the tag, and N is 1-99. It rewrites the LEADING COUNT itself (`2 eggs x2` -> `4 eggs`), the representation every
+ * other branch here uses, so the wire reads `quantity 4`; `multiplier` is never touched (the route's wire takes
+ * parsed.qty, and a multiplier set this early disables unit parsing). Population (MEL "rawLine", 90 d, measured
+ * 2026-10-25 with `~* '^\s*\d+\s.*\s[x×]\s?\d{1,2}\s*$'`): 2 events, 1 line, both the probe.
+ *
+ * STILL DECLINED (the owner's parse, unchanged): a word-, hedge-, fraction- or article-led count plus a tag
+ * (`dozen eggs x2`, `couple eggs x2`, `⅓ bagel x2`, `a bagel x2`, `about 2 eggs x2`; with #572 merged,
+ * `at least 2 wings x2`, `upwards of 3 beers x2` and `at least a dozen wings x2` parse like their un-hedged twins
+ * did BEFORE this branch: deploy-3 integration, MGR 2026-10-20T00:50Z, default A); a digit count with text after the
+ * tag (`2 toast x2 w/ butter`); a fractional tag (`2 eggs x2.5`, TAIL_X's `\d{1,2}(?=\s|$)` declines it).
  */
 import { normalizeUnitToken } from './unit';
 import { parseQuantityTokens } from './quantity';
@@ -99,8 +112,28 @@ function opensWithOwnedQuantity(line: string): boolean {
   return parseQuantityTokens(tokens) !== null;
 }
 
+/** `2 eggs x2`: a DIGIT-led integer count, then a word (the food or its count noun). */
+const LEADING_INT_COUNT = /^(\s*)(\d+)\s+(?=\p{L})/u;
+
+/**
+ * `<Q> <food> x<N>` with nothing after the tag -> `<Q*N> <food>` (header: "A LEADING DIGIT COUNT plus a TRAILING
+ * tag"). Returns null when the line is not that shape, so resolveCountTag() falls through to its guards.
+ */
+function multiplyLeadingCount(line: string): string | null {
+  const c = LEADING_INT_COUNT.exec(line);
+  if (!c || massOrVolumeFollows(line.slice(c[0].length))) return null;
+  const m = TAIL_X.exec(line);
+  if (!m || m[4] !== '') return null;
+  const n = Number(m[3]);
+  if (n < 1) return null;
+  const head = m[2].replace(/^\d+\s+/, '');
+  return `${m[1]}${Number(c[2]) * n} ${head}`;
+}
+
 export function resolveCountTag(line: string): string {
   if (LEADING_GLUED_X.test(line)) return line.replace(LEADING_GLUED_X, '$1$2 ');
+  const multiplied = multiplyLeadingCount(line);
+  if (multiplied !== null) return multiplied;
   if (opensWithOwnedQuantity(line)) return line;
 
   let m = PAREN_X_NOUN.exec(line);

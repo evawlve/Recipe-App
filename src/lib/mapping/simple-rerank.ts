@@ -1322,7 +1322,15 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
 
         // Check if query effectively IS the brand or contains it clearly
         // e.g. query "egg beaters" matches brand "egg beaters"
-        const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower);
+        // The third arm folds the period out of both sides (foldBrandPunct) so
+        // brand "Dr. Pepper" is contained in the line "diet dr pepper". It is a
+        // whole-token test, padded with spaces, because a folded initialism is
+        // short ("U.S." -> "us" would otherwise match "hummus"); an empty fold
+        // (a brand that is only punctuation) never matches.
+        const foldedBrand = foldBrandPunct(brandLower);
+        const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower)
+            || (foldedBrand.length > 0
+                && (' ' + foldBrandPunct(queryLower) + ' ').includes(' ' + foldedBrand + ' '));
 
         if (queryContainsBrand) {
             // User asked for this brand - give a positive bonus (not just zero penalty).
@@ -1557,6 +1565,27 @@ function foldApostrophes(token: string): string {
 }
 
 /**
+ * The same defect as foldApostrophes(), with a period. The tokenizer keeps `.`
+ * glued inside its token, so a record branded "Dr. Pepper" yields `dr.` while
+ * the line (and the detector's brand) say `dr pepper`. Measured 2026-10-25 on
+ * the gate snapshot (DEBUG_RERANK_SCORES): for `diet dr pepper`, fs_51053
+ * "Diet Dr. Pepper" [Dr. Pepper] lost DECISIVE_BRAND_BOOST and the brand bonus
+ * to Arby's fs_127590169 "Diet Dr Pepper", which matches through its NAME
+ * token `dr` (1.445 vs 1.045). Population (box, 2026-10-25):
+ *   select count(*), count(distinct "brandName") from "FatSecretFood"
+ *   where "brandName" like '%.%';   -- 108 | 44  (OffFood: 26248 | 7075)
+ *
+ * A period is removed unless a digit sits on BOTH sides, so `dr.` -> `dr`,
+ * `a.1.` -> `a1`, and a decimal `1.5` is left alone. Admit-only in the same
+ * sense as the apostrophe fold: dropping a character can only merge token
+ * forms. Initialisms fold short ("U.S." -> `us`), which is why the
+ * computeSimpleScore() use is a whole-token test and never a bare substring.
+ */
+export function foldBrandPunct(s: string): string {
+    return s.replace(/(?<!\d)\.|\.(?!\d)/g, '');
+}
+
+/**
  * Connector words carried by brand names ("Ben & Jerry's", "Good & Gather",
  * "dietz and watson"). Dropped from BOTH sides before the adjacency test, which
  * is what makes the `&`-vs-`and` spelling irrelevant. `&` needs no entry: it is
@@ -1631,15 +1660,17 @@ function brandPhrasePresentInText(text: string, targetBrand: string): boolean {
  *
  * Comparison is apostrophe-insensitive on both sides (see foldApostrophes) so
  * "Member's Mark" / "members mark" / "Members Mark" are one brand, not three.
+ * It is period-insensitive the same way (see foldBrandPunct), so "Dr. Pepper"
+ * and "dr pepper" are one brand.
  */
 export function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
-    const target = foldApostrophes(brandTokens[0]);
+    const target = foldBrandPunct(foldApostrophes(brandTokens[0]));
     if (target.length === 0) return false;
     const candTokens = `${candidateName} ${brandName ?? ''}`.toLowerCase()
         .split(/[\s,()[\]{}]+/)
-        .map(foldApostrophes)
+        .map(t => foldBrandPunct(foldApostrophes(t)))
         .filter(Boolean);
     return candTokens.includes(target);
 }

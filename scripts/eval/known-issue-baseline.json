@@ -48,15 +48,6 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-prose-01": {
-      "foodId": "fdc_747997",
-      "foodName": "Eggs, Grade A, Large, egg white",
-      "grams": 120,
-      "kcal100": 55,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-prose-03": {
       "foodId": "fdc_169730",
       "foodName": "fresh-refrigerated spinach cooked pasta",

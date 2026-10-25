@@ -25,6 +25,14 @@ const TARGETS: Array<[string, string]> = [
   ['2x scrambled eggs', '2 scrambled eggs'],
   ['3x chocolate bar', '3 chocolate bar'],
   ['PB banana toast x1', '1 PB banana toast'],
+  // A leading DIGIT count plus a trailing tag multiplies (2026-10-25; `3 eggs x2` and `2 wings x2` were pinned
+  // as master parses before: qty 3 name `x2`, qty 2 name `wings x2`).
+  ['3 eggs x2', '6 eggs'],
+  ['2 wings x2', '4 wings'],
+  ['2 eggs x2', '4 eggs'],
+  ['1 banana x3', '3 banana'],
+  ['3 cookies x 2', '6 cookies'],
+  ['2 eggs ×2', '4 eggs'],
 ];
 
 /** Master parses (081a3aef), unchanged by the edit. */
@@ -34,7 +42,6 @@ const CONTROLS: Array<[string, unknown]> = [
   ["2 x 15 oz cans tomatoes", {"qty":30,"multiplier":1,"unit":"oz","rawUnit":"oz","name":"tomatoes","notes":null,"unitHint":null}],
   ["5x5 workout bar", {"qty":5,"multiplier":5,"unit":null,"rawUnit":null,"name":"workout bar","notes":null,"unitHint":null}],
   ["ihop 2 x 2 x 2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"ihop 2 x 2 x 2","notes":null,"unitHint":null}],
-  ["3 eggs x2", {"qty":3,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
   ["chicken x 12 oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"chicken x 12 oz","notes":null,"unitHint":null}],
   ["x2 eggs", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2 eggs","notes":null,"unitHint":null}],
   ["eggs (2)", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs 2","notes":null,"unitHint":null}],
@@ -69,17 +76,20 @@ const CONTROLS: Array<[string, unknown]> = [
   ["toast x100", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x100","notes":null,"unitHint":null}],
   ["eggs (2x)", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs 2 x","notes":null,"unitHint":null}],
   ["red bull 2x", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"red bull 2 x","notes":null,"unitHint":null}],
+  // Master parses (94279f86) beside the 2026-10-25 leading-count branch, unchanged by it.
+  ["2 eggs x2.5", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2.5","notes":null,"unitHint":null}],
+  ["strong x2 energy drink", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"strong energy drink","notes":null,"unitHint":null}],
+  ["eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"eggs","notes":null,"unitHint":null}],
+  ["x2 energy drink", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2 energy drink","notes":null,"unitHint":null}],
 ];
 
 /**
- * KNOWN MISS, pre-existing class (deploy-3 integration, 2026-10-20): a LEADING QUANTITY plus a tag. The
- * tag declines (guard a/b/c) and the parse is the owner's, so the stray `x<N>` stays in the name exactly
- * as master parses plain `2 wings x2`. With #572 (approximator before a bare count) merged, the hedge
- * lines below parse like their un-hedged twins and JOIN this class. Choosing a meaning for `N food xM`
- * (multiplier M vs dropping the tag) is a separate design row, not this one.
+ * KNOWN MISS (deploy-3 integration, 2026-10-20): a HEDGED leading quantity plus a tag. The tag declines
+ * (guard a/b/c) and the parse is the owner's, so the stray `x<N>` stays in the name. With #572 (approximator
+ * before a bare count) merged these parsed like plain `2 wings x2` did then; since 2026-10-25 a DIGIT-led
+ * count multiplies (TARGETS), and only the hedge/article-led lines below stay in this class.
  */
 const LEADING_QTY_TAG_CLASS: Array<[string, unknown]> = [
-  ["2 wings x2", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
   ["at least 2 wings x2", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
   ["upwards of 3 beers x2", {"qty":3,"multiplier":1,"unit":null,"rawUnit":null,"name":"beers x2","notes":null,"unitHint":null}],
   ["at least a dozen wings x2", {"qty":12,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
@@ -119,6 +129,16 @@ const FN_CONTROLS: string[] = [
   "xbox",
   "x2 cups",
   "a bagel x2",
+  // The leading-count branch declines: text after the tag, a mass/volume unit, a non-word after the count.
+  "2 toast x2 w/ butter",
+  "2 cups rice x2",
+  "12 oz steak x2",
+  "2 1/2 bagels x2",
+  "2 7up x2",
+  "2 eggs x0",
+  "2 eggs x2.5",
+  "2 x 200g chicken",
+  "2x200g chicken",
 ];
 
 describe('count tag reads as a leading count', () => {
@@ -126,6 +146,12 @@ describe('count tag reads as a leading count', () => {
     const t = parseIngredientLine(target);
     expect(t).not.toBeNull();
     expect(t).toEqual(parseIngredientLine(twin));
+  });
+
+  it('a leading digit count times a trailing tag: 2 eggs x2 = 4 eggs, and the tag leaves the name', () => {
+    expect(parseIngredientLine('2 eggs x2')).toMatchObject({ qty: 4, multiplier: 1, unit: 'egg', name: 'eggs' });
+    expect(resolveCountTag('2 eggs x2')).toBe('4 eggs');
+    expect(resolveCountTag('3 cookies x 2')).toBe('6 cookies');
   });
 
   it('a tag reads the count the name used to carry', () => {
