@@ -1631,6 +1631,41 @@ const MUST_HAVE_CALORIES_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * A zero-calorie MARKER word: the label (or the user) is saying the product is
+ * the diet / zero / sugar-free variant. On its own it proves nothing — "Zero
+ * Sugar Creamer" still has calories — so it never waives anything by itself.
+ * hasNullOrInvalidMacros() uses it only for the ALL-ZERO branch, and only when
+ * BOTH the user's line AND the candidate name carry one (see the header there).
+ */
+export const ZERO_CAL_MARKER_RE = /\b(diet|zero|sugar[\s-]*free|no[\s-]+sugar)\b/i;
+
+/**
+ * The marker waiver's COVERAGE condition. A marker on both sides is not enough:
+ * "Propel Zero - Black Cherry" [Gatorade] carries `zero` and was admitted for
+ * `gatorade zero glacier cherry`, where it outranked the right record (winner
+ * gate c6970-zerocal, 2026-10-25: fs_26665706 "Zero Glacier Cherry (20 oz)" ->
+ * fs_1395249). So the candidate must also COVER the line: every line token left
+ * after dropping the marker words, the detected brand's tokens, purely numeric
+ * tokens, units (STOP_WORDS) and WAIVER_STOPWORDS must appear among the
+ * candidate NAME's tokens. Tokens on both sides are lowercased and split on
+ * /[^a-z0-9]+/ — that fold is load-bearing: "Diet Dr. Pepper" must give `dr`,
+ * not `dr.`. The name only, not the brand: hasNullOrInvalidMacros() receives no
+ * brandName, and widening its four call sites would move the transcribed
+ * caller. Name-only is the stricter reading — it admits a subset.
+ */
+const WAIVER_STOPWORDS = new Set(['a', 'an', 'the', 'of', 'with', 'in', 'from', 'my', 'some', 'one']);
+const waiverTokens = (text: string): string[] => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+export function candidateCoversZeroCalLine(candidateName: string, queryLine: string): boolean {
+    const markerFree = queryLine.toLowerCase().replace(new RegExp(ZERO_CAL_MARKER_RE.source, 'gi'), ' ');
+    const brand = detectBrandInQuery(queryLine).matchedBrand;
+    const brandTokens = new Set(brand ? waiverTokens(brand) : []);
+    const nameTokens = new Set(waiverTokens(candidateName));
+    return waiverTokens(markerFree)
+        .filter(t => !/^[0-9]+$/.test(t) && !brandTokens.has(t) && !STOP_WORDS.has(t) && !WAIVER_STOPWORDS.has(t))
+        .every(t => nameTokens.has(t));
+}
+
+/**
  * Check if a food name belongs to a category that MUST have calories.
  * Foods like salt, baking soda, and seasonings legitimately have 0 kcal
  * and are NOT covered by this list.
@@ -1651,13 +1686,49 @@ function isFoodThatMustHaveCalories(candidateName?: string): boolean {
  * since we can't validate what we don't have. The data will be validated
  * later when the candidate is hydrated with full nutrition info.
  * 
+ * THE ZERO-CALORIE MARKER WAIVER (queryLine). The all-zero branch below deletes
+ * any 0/0/0/0 panel whose NAME matches MUST_HAVE_CALORIES_PATTERNS, and those
+ * lists carry `pepper`, `grape`, `cherry` and `sugar`. So the genuine 0-kcal
+ * drinks — fs_51053 "Diet Dr. Pepper", fs_1627897 "Powerade Zero Grape",
+ * fs_35448222 "Pepsi Zero Sugar", fs_1683050 "Diet Cherry Coke (Can)" — arrive
+ * from the FatSecret lane at API rank #1 for exactly those lines and are deleted
+ * before ranking, and a floor-hit sugared panel wins instead. The only waiver was
+ * isExplicitlyZeroCal, which reads the name alone. MEASURED 2026-10-22 (s366) on
+ * the box: 291 stored FatSecretFood rows carry an all-zero panel; the rule drops
+ * 94 of them; 24 of those 94 carry a marker word and ALL 24 are genuine 0-kcal
+ * drinks (Diet Dr Pepper x2, Powerade Zero x5, Pepsi Zero Sugar x3, Sprite Zero,
+ * Mountain Dew Zero, ...). The 94/24 split is the 291 names run through
+ * MUST_HAVE_CALORIES_PATTERNS and ZERO_CAL_MARKER_RE; the 291, and the 55 of them
+ * with a marker, re-derive (re-run 2026-10-24: 55 | 291) with
+ *   SELECT count(*) FILTER (WHERE name ~* '\m(diet|zero|sugar[[:space:]-]*free|no[[:space:]-]+sugar)\M'),
+ *          count(*)
+ *     FROM "FatSecretFood"
+ *    WHERE "nutrientsPer100g"::text <> '{}'
+ *      AND coalesce(("nutrientsPer100g"->>'calories')::float, -1) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'protein')::float, 0) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'carbs')::float, 0) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'fat')::float, 0) = 0;
+ * So the all-zero branch does NOT reject when the caller passes the line and
+ * ZERO_CAL_MARKER_RE matches BOTH the line and the candidate name, AND the name
+ * covers the line (candidateCoversZeroCalLine(), above). Both markers, because
+ * either alone is the corrupt shape this branch exists for: `diet pepper` must
+ * not admit an all-zero "Crushed Red Pepper", and a plain `dr pepper` must not
+ * admit an all-zero "Diet Dr. Pepper". Admit-only: this never ranks anything.
+ * A call WITHOUT the line (the FDC cache check has no name either) is unchanged.
+ * The line must reach EVERY caller that has it in scope — the token filter, the
+ * mapper's Step 3c, and both cache-validity reads — or a downstream copy of the
+ * same check re-deletes (or escapes) what the first one admitted.
+ *
  * @param nutrients - The nutrition data to check
  * @param candidateName - Optional candidate food name, used to check if
  *   the food belongs to a category that MUST have calories (for the all-zero check)
+ * @param queryLine - Optional raw user line; enables the zero-calorie marker
+ *   waiver on the all-zero check (see above)
  */
 export function hasNullOrInvalidMacros(
     nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null; fiber?: number | null } | null,
-    candidateName?: string
+    candidateName?: string,
+    queryLine?: string
 ): boolean {
     // If nutrients object doesn't exist, we can't validate - allow through
     // (will be validated after hydration when we have actual data)
@@ -1750,7 +1821,12 @@ export function hasNullOrInvalidMacros(
     const nameForCheck = (candidateName || '').toLowerCase();
     const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck) ||
         /\b(cooking\s*spray|pan\s*spray|baking\s*spray|spray\s*oil|oil\s*spray)\b/i.test(nameForCheck);
-    if (allZero && !isExplicitlyZeroCal && isFoodThatMustHaveCalories(candidateName)) {
+    // The marker waiver — see the function header. Needs the line AND the name.
+    const isMarkedZeroCalOnBothSides = queryLine != null
+        && ZERO_CAL_MARKER_RE.test(nameForCheck)
+        && ZERO_CAL_MARKER_RE.test(queryLine)
+        && candidateCoversZeroCalLine(nameForCheck, queryLine);
+    if (allZero && !isExplicitlyZeroCal && !isMarkedZeroCalOnBothSides && isFoodThatMustHaveCalories(candidateName)) {
         return true;
     }
 
@@ -3186,7 +3262,7 @@ export function filterCandidatesByTokens(
 
         // Check for NULL/INVALID macros (corrupted data)
         // e.g. Red lentils with P:0, C:0, kcal:314 - this is bad data
-        if (hasNullOrInvalidMacros(nutrientsToCheck, candidate.name)) {
+        if (hasNullOrInvalidMacros(nutrientsToCheck, candidate.name, modifierCheckSource)) {
             if (debug) logger.info('filter.candidates.null_or_invalid_macros', { candidate: candidate.name, nutrients: nutrientsToCheck });
             return false;
         }
