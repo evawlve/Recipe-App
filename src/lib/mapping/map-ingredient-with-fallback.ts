@@ -1383,7 +1383,10 @@ async function mapIngredientWithFallbackCore(
                         // fs_ check newly rejects "Stevia" (0 kcal, 50g carbs) as a
                         // macro/calorie inconsistency; with it, 0 of the 535 non-empty fs
                         // panels are false-positived.
-                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition, earlyCacheHit.foodName);
+                        // The raw line enables the zero-calorie marker waiver (see
+                        // hasNullOrInvalidMacros()): without it a cached all-zero
+                        // "Diet Dr. Pepper" for `diet dr pepper` escapes on every hit.
+                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition, earlyCacheHit.foodName, trimmed);
                         if (earlyNutritionInvalid) {
                             logger.warn('mapping.early_cache_bad_nutrition', {
                                 rawLine: trimmed,
@@ -2026,7 +2029,7 @@ async function mapIngredientWithFallbackCore(
                 // after hydration. If every candidate fails, keep the original
                 // list rather than returning nothing.
                 const macroValid = filtered.filter(c =>
-                    !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name)
+                    !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name, trimmed)
                 );
                 if (macroValid.length > 0 && macroValid.length < filtered.length) {
                     logger.info('mapping.zero_macro_filter_applied', {
@@ -3061,7 +3064,8 @@ async function lookupNormalizedCacheProducer(params: {
                 };
                 normalizedCachedKcal100 = mappedNutrients.kcal || null;
                 normalizedCachedCarbs100 = mappedNutrients.carbs || null;
-                normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients, normalizedCache.foodName);
+                // Raw line passed for the zero-calorie marker waiver — same as Step 1a.
+                normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients, normalizedCache.foodName, trimmed);
                 if (normalizedNutritionInvalid) {
                     logger.warn('mapping.normalized_cache_bad_nutrition', {
                         rawLine: trimmed,
