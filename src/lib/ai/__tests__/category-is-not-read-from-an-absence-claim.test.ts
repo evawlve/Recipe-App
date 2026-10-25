@@ -38,10 +38,15 @@ describe('#115 — the misread population stops billing a teaspoon of sugar', ()
         // Rule 4 sits above rule 17 (355 g beverages), so `coke` was unreachable. Blanking rather
         // than deleting is what lets the rest of the string still match.
         expect(grams('sugar free coke')).toBe(355);
-        // `sprite` and `pepsi` are not in the beverage rule, so those fall through to null and the
-        // serving cascade decides — measured, not assumed. See the report's grams table.
-        expect(grams('sprite zero sugar')).toBeNull();
-        expect(grams('pepsi zero sugar')).toBeNull();
+        // `sprite`, `pepsi`, `mountain dew` and `dr pepper` are in the beverage rule since
+        // 2026-10-25, so their masked lines reach it the same way `coke` does. Before that they fell
+        // through to null, and on a REPLACE tier the guard read the record name's `sugar` (4 g;
+        // s378 §Q1).
+        expect(grams('sprite zero sugar')).toBe(355);
+        expect(grams('pepsi zero sugar')).toBe(355);
+        expect(grams('zero sugar pepsi')).toBe(355);
+        expect(grams('mountain dew zero sugar')).toBe(355);
+        expect(grams('dr pepper zero sugar')).toBe(355);
     });
 
     it('the same misread in the SALT and OIL/BUTTER rules is fixed by the same predicate', () => {
@@ -131,6 +136,38 @@ describe('#115 — the record name keeps today’s read', () => {
 
     it('masking IS what would break it, which is why the fallback does not mask', () => {
         expect(grams('Sugar Free Spearmint Gum')).toBeNull();
+    });
+});
+
+describe('soft-drink brands are beverages (2026-10-25)', () => {
+    /**
+     * A soft drink named by its brand is a soft drink: pepsi, sprite, mountain dew and dr pepper
+     * are members of the 355 g beverage rule. The rule is 17th of 18 and first-match-wins, so a
+     * line an earlier rule already reads keeps its value.
+     */
+    it('a bare brand reads one can in the lexicon', () => {
+        // The lexicon value only. A real `pepsi` record with a declared 240 g serving is a CAP
+        // tier, and CAP fires only above 2 x 355 g, so that record keeps its own serving.
+        expect(rawGrams('pepsi')).toBe(355);
+        expect(rawGrams('sprite')).toBe(355);
+        expect(rawGrams('mountain dew')).toBe(355);
+        expect(rawGrams('dr pepper')).toBe(355);
+    });
+
+    it('earlier rules still win: the condiment and the spice reads are unmoved', () => {
+        expect(grams('dr pepper bbq sauce')).toBe(14);
+        expect(grams('black pepper')).toBe(2.5);
+    });
+
+    it('RESIDUAL: the record NAME still reads the sugars rule, which precedes the beverage rule', () => {
+        // Rule order is not changed, so a brand-less line (`baja blast zero sugar`) that resolves
+        // to a record named like this one still bills 4 g on a REPLACE tier.
+        expect(rawGrams('Pepsi Zero Sugar')).toBe(4);
+    });
+
+    it('RESIDUAL: a non-drink carrying a brand word now reads 355, as `coke chicken wings` does via `coke`', () => {
+        expect(rawGrams('coke chicken wings')).toBe(355);
+        expect(rawGrams('dr pepper ribs')).toBe(355);
     });
 });
 

@@ -431,6 +431,42 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
     });
 });
 
+// fs_35448222 as stored (s378 §Q3, 2026-10-25): an all-zero panel, a "100 g" panel row and a
+// default "1 bottle" serving with no grams. The bare path rejects both servings and lands on the
+// per-100g fallback, a REPLACE tier, so the guard bills the query's category. Before the
+// soft-drink brands joined the beverage rule the masked query read null and the fallback read
+// the record name's `sugar`: 4 g "1 tsp" (s378 §Q1).
+describe('repro: bare "pepsi zero sugar" (fs_35448222 shape, all-zero panel, bottle without grams)', () => {
+    const zero = { calories: 0, protein: 0, carbohydrate: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, cholesterol: 0 };
+    const pepsiZeroRow = {
+        fsId: '35448222',
+        name: 'Pepsi Zero Sugar',
+        brandName: 'Pepsi',
+        foodType: 'Brand',
+        nutrientsPer100g: { fat: 0, carbs: 0, fiber: 0, sodium: 0.008, sugars: 0, protein: 0, calories: 0 },
+        defaultServingId: '31654747',
+        fetchedAt: new Date(),
+        servings: [
+            { servingId: '0', description: '100 g', measurementDescription: 'g', grams: 100, volumeMl: null, numberOfUnits: 100, nutrients: { ...zero, sodium: 8 } },
+            { servingId: '31654747', description: '1 bottle', measurementDescription: 'serving', grams: null, volumeMl: null, numberOfUnits: 1, nutrients: { ...zero, sodium: 40 } },
+        ],
+    };
+
+    it('bills one can (355 g, 0 kcal) under bare_category_default, not a teaspoon of sugar', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(pepsiZeroRow);
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_35448222', name: 'Pepsi Zero Sugar', brandName: 'Pepsi' }),
+            parsedLine({ qty: 1, unit: null, name: 'pepsi zero sugar' }),
+            0.98,
+            'pepsi zero sugar'
+        );
+        expect(result).not.toBeNull();
+        expect(result!.servingTier).toBe('bare_category_default');
+        expect(result!.grams).toBe(355);
+        expect(result!.kcal).toBe(0);
+    });
+});
+
 describe('repro: "15 pretzels" (fs_4349 live data, eval n-serv-20 675g regression)', () => {
     it('matches the per-piece serving via the lexicon-free trailing-token fallback', async () => {
         mockFatSecretFoodFindUnique.mockResolvedValue({

@@ -38,13 +38,19 @@ function guard(queryName: string, grams: number, servingTier: string, foodName =
 
 describe('pepper lexicon: brand and chili-variety words are not the spice default', () => {
     it.each([
-        ['dr pepper'], ['diet dr pepper'], ['dr. pepper'], ['green pepper'], ['roasted red pepper'],
+        ['green pepper'], ['roasted red pepper'],
         ['sweet pepper'], ['jalapeno pepper'], ['jalapeño pepper'], ['poblano pepper'],
         ['serrano pepper'], ['anaheim pepper'], ['fresno pepper'], ['cubanelle pepper'],
         ['habanero pepper'], ['banana pepper'], ['scotch bonnet pepper'],
         ['bell pepper'], ['red bell pepper'],
     ])('%p has no spice default', (q) => {
         expect(getBareQueryDefault(q)).toBeNull();
+    });
+
+    it.each([
+        ['dr pepper'], ['diet dr pepper'], ['dr. pepper'],
+    ])('%p reads the 355 g beverage default, not the 2.5 g spice (soft-drink brands, 2026-10-25)', (q) => {
+        expect(getBareQueryDefault(q)?.grams).toBe(355);
     });
 
     it.each([
