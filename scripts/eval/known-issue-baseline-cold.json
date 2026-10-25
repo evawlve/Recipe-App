@@ -84,15 +84,6 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-prose-01": {
-      "foodId": "fs_33793",
-      "foodName": "Egg White",
-      "grams": 120,
-      "kcal100": 52,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-prose-03": {
       "foodId": "fs_39764",
       "foodName": "Fresh Pasta (Cooked)",
