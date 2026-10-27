@@ -1,0 +1,41 @@
+# 2026-10-27 repro of C68 s393 runs 1-4 BAD lines (29 CLI-BAD + 11 own-rule/over-split extras), verbatim, S92 shape. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+a cup of cooked oatmeal	1	BAD	portion	-
+a cup of cooked teff	1	BAD	identity	-
+a bowl of porridge	1	BAD	portion	-
+half a cup of cooked rolled oats	1	BAD	identity	-
+a cup of cooked split peas	1	BAD	identity	-
+a cup of cooked orzo	1	BAD	identity	-
+3 chicken enchiladas with red sauce	1	BAD	portion	-
+a torta de milanesa	1	BAD	identity	-
+two chiles rellenos	1	BAD	portion	-
+a bowl of caldo de pollo	1	BAD	identity	-
+a bowl of birria with consome	1	BAD	identity	-
+a huarache	1	BAD	identity	-
+a mangonada	1	BAD	portion	-
+two al pastor tacos	1	BAD	portion	-
+a plate of mole poblano with chicken	1	BAD	identity	-
+two pork buns	1	BAD	portion	-
+a bowl of laksa	1	BAD	portion	-
+3 gyoza	1	BAD	portion	-
+a bowl of udon	1	BAD	portion	-
+chicken tikka masala with naan	2	BAD	portion	-
+butter chicken with rice	2	BAD	portion	-
+3 pieces of tempura shrimp	1	BAD	portion	-
+a bowl of halo halo	1	BAD	identity	-
+a piece of spanakopita	1	BAD	portion	-
+a serving of shakshuka	1	BAD	portion	-
+a bowl of avgolemono	1	BAD	identity	-
+a plate of couscous with vegetables	1	BAD	identity	-
+a kibbeh	1	BAD	portion	-
+a bowl of cacio e pepe	1	BAD	identity	-
+2 cups cooked jasmine rice	1	BAD	portion	-
+a cup of grits	1	BAD	portion	-
+a bowl of cream of wheat	1	BAD	portion	-
+a cup of polenta	1	BAD	portion	-
+a cup of cooked basmati rice	1	BAD	identity	-
+a bowl of oatmeal	1	BAD	portion	-
+a quesadilla with oaxaca cheese	1	BAD	portion	-
+a sope with beans	1	BAD	portion	-
+a plate of beef and broccoli	1	BAD	portion	-
+chilaquiles with two eggs	2	BAD	portion	-
+a churro	1	BAD	portion	-
