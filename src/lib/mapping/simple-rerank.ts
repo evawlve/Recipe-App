@@ -7,7 +7,7 @@
 
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
-import { detectGrainCookingContext } from './filter-candidates';
+import { detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
@@ -2128,19 +2128,23 @@ export function simpleRerank(
     // ("white rice" → "rice"), so check the RAW line — "1 cup white rice" must
     // not partition up "cooked wild rice" over a cooked white-rice record.
     const grainSoftCooked = !!detectGrainCookingContext(rawLine || query, query).softCooked;
+    // Explicit-cooked twin (C6970 s396, 2026-10-27): "1 cup cooked oats" gets the same
+    // preference as "1 cup oats" — see isExplicitCookedGrainVolumeLine(). Parity inside
+    // simpleRerank() only; the mapper's softCooked reads are unchanged.
+    const grainCookedPreference = grainSoftCooked || isExplicitCookedGrainVolumeLine(rawLine || query, query);
     const GRAIN_VARIETY_TOKENS = ['white', 'brown', 'wild', 'jasmine', 'basmati', 'black', 'red', 'glutinous', 'sticky'];
     const rawLower = (rawLine || query).toLowerCase();
-    const queryVarieties = grainSoftCooked
+    const queryVarieties = grainCookedPreference
         ? GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(rawLower))
         : [];
     // Raw-line food tokens for the within-partition tiebreak ("white rice
     // cooked" covers 2 of {white, rice}; "cream of rice cooked" covers 1).
     const GRAIN_LINE_NOISE = new Set(['cup', 'cups', 'bowl', 'bowls', 'serving', 'servings', 'one', 'two', 'three', 'and', 'with', 'the']);
-    const rawFoodTokens = grainSoftCooked
+    const rawFoodTokens = grainCookedPreference
         ? rawLower.split(/[^a-z]+/).filter(t => t.length > 2 && !GRAIN_LINE_NOISE.has(t))
         : [];
     const isCookedGrainCandidate = (c: RerankCandidate): boolean => {
-        if (!grainSoftCooked) return false;
+        if (!grainCookedPreference) return false;
         // Nutrition window: cooked grains run ~97-170 kcal with carbs >= ~20;
         // dry grains ~330-380. The carbs floor keeps low-kcal NON-grain rows
         // (rice milk at 47 kcal / 9g carbs) out of the partition.
@@ -2403,7 +2407,7 @@ export function simpleRerank(
         // partition, prefer candidates covering more raw-line food tokens
         // ("white rice cooked" over "cream of rice cooked" for "white rice"),
         // then fall through to score order.
-        if (grainSoftCooked) {
+        if (grainCookedPreference) {
             const aCooked = a.grainCookedBoost > 0 ? 1 : 0;
             const bCooked = b.grainCookedBoost > 0 ? 1 : 0;
             if (aCooked !== bCooked) return bCooked - aCooked;
@@ -2587,7 +2591,11 @@ export function simpleRerank(
     // "rice" vs "white medium-grain cooked unenriched rice") — floor its
     // confidence so the deliberate cooked preference isn't discarded by the
     // minimum-confidence rejection below and re-replaced with the dry top1.
-    if (grainSoftCooked && top.grainCookedBoost > 0) {
+    // Since 2026-10-27 this also covers explicit-cooked grain volume lines
+    // (grainCookedPreference): `1 cup cooked oats` with the dry 389 kcal estimate read
+    // 0.596 and declined; it now reads 0.771 here. Re-derive:
+    // src/lib/mapping/__tests__/explicit-cooked-grain-floor.test.ts.
+    if (grainCookedPreference && top.grainCookedBoost > 0) {
         confidence = Math.max(confidence, 0.75);
         reason = 'cooked_grain_preference';
     }
