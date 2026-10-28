@@ -466,6 +466,39 @@ export function isWrongCookingStateForGrain(rawLine: string, normalizedName: str
 
     return false;
 }
+
+/**
+ * The EXPLICIT-cooked twin of the soft-cooked branch in detectGrainCookingContext()
+ * (C6970 s396, 2026-10-27). True for a line that function reads as explicit-cooked
+ * (preferCooked, NOT softCooked) whose head noun (last token of the normalized name)
+ * is a VOLUME_COOKED_GRAINS grain, logged by an eaten-portion volume unit, with no dry
+ * signal on either string — "1 cup cooked oats", "a bowl of cooked rice". simpleRerank()
+ * gives such a line the cooked-grain boost / partition / 0.75 floor the soft twin
+ * ("1 cup oats") already gets. Before this, writing "cooked" got the line LESS
+ * protection: a dry 389 kcal estimate sank every cooked candidate to a 0.596 decline
+ * (golden n-cook-06). The explicit path already hard-rejects candidates without a
+ * cooking word upstream (isWrongCookingStateForGrain), so the preference only reorders
+ * cooked-looking records among themselves.
+ *
+ * Deliberately a NEW symbol: detectGrainCookingContext() and the four tables it reads
+ * are one-hop-guarded (scripts/eval/one-hop-guard.sh) because gather-candidates.ts
+ * imports the function; this one is read only by simple-rerank.ts. COOKING_KEYWORDS is
+ * matched by SUBSTRING, so steamed/fried/baked lines count, and "uncooked" sets
+ * preferCooked — only GRAIN_DRY_SIGNAL_RE ("uncooked") keeps "a cup of uncooked rice"
+ * false. Re-derive: src/lib/mapping/__tests__/cooked-grain-preference.test.ts.
+ */
+export function isExplicitCookedGrainVolumeLine(rawLine: string, normalizedName: string): boolean {
+    const context = detectGrainCookingContext(rawLine, normalizedName);
+    if (!context.preferCooked || context.softCooked) return false;
+    const lower = rawLine.toLowerCase();
+    const normLower = normalizedName.toLowerCase();
+    const nameTokens = normLower.split(/\s+/).filter(Boolean);
+    const headNoun = nameTokens[nameTokens.length - 1] ?? '';
+    return VOLUME_COOKED_GRAINS.includes(headNoun)
+        && COOKED_VOLUME_UNIT_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(normLower);
+}
 // ============================================================
 
 // Product categories that are typically NOT raw ingredients
