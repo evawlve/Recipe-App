@@ -1,0 +1,23 @@
+# 2026-10-31 post-deploy-10 re-read (C68 s414): 5 cooked-grain + 12 deli BAD lines verbatim from 10-30 files, 5 controls (incl. rolled oats). line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+a cup of cooked basmati rice	1	BAD		-
+a cup of cooked orzo	1	BAD		-
+a cup of cooked teff	1	BAD		-
+a cup of cooked split peas	1	BAD		-
+a bowl of porridge	1	BAD		-
+a cup of navy bean soup	1	BAD		-
+a cup of broccoli cheddar soup	1	BAD		-
+a hot brown	1	BAD		-
+half a sandwich and a cup of soup	2	BAD		-
+a chef salad	1	BAD		-
+a waldorf salad	1	BAD		-
+a three bean salad	1	BAD		-
+a spinach salad with bacon	1	BAD		-
+a cup of macaroni salad	1	BAD		-
+a muffuletta	1	BAD		-
+a bowl of french onion soup	1	BAD		-
+a bowl of clam chowder	1	BAD		-
+a slice of rye bread	1	OK		-
+a cup of chicken broth	1	OK		-
+a banana	1	OK		-
+a hard boiled egg	1	OK		-
+half a cup of cooked rolled oats	1	OK		-
