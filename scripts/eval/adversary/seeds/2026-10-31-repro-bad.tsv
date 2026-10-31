@@ -1,0 +1,41 @@
+# 2026-10-31 repro of C68 s414 runs 2-4 BAD lines (CLI flag U own rule, incl. flagged controls and bowl candidates), verbatim, S92 shape. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+a fun size candy bar	1	BAD		-
+a scoop of vanilla ice cream	1	BAD		-
+a fruit leather	1	BAD		-
+a macaron	1	BAD		-
+a scoop of frozen yogurt	1	BAD		-
+a bowl of rice pudding	1	BAD		-
+a bowl of fruit cocktail	1	BAD		-
+a grilled salmon fillet	1	BAD		-
+a piece of fried cod	1	BAD		-
+fish and chips	1	BAD		-
+a shrimp cocktail	1	BAD		-
+a lobster tail	1	BAD		-
+six grilled shrimp	1	BAD		-
+a fish taco	1	BAD		-
+a bowl of steamed mussels	1	BAD		-
+a poke bowl	1	BAD		-
+a smoked salmon bagel	1	BAD		-
+a crab leg cluster	1	BAD		-
+an oyster po boy	1	BAD		-
+a can of pink salmon	1	BAD		-
+a lemon wedge	1	BAD		-
+an orange	1	BAD		-
+a rack of baby back ribs	1	BAD		-
+half a rack of ribs	1	BAD		-
+a brisket plate	1	BAD		-
+a smoked turkey leg	1	BAD		-
+a piece of fried chicken	1	BAD		-
+two pieces of fried chicken	1	BAD		-
+a scoop of baked beans	1	BAD		-
+a scoop of coleslaw	1	BAD		-
+a bowl of collard greens	1	BAD		-
+a side of black eyed peas	1	BAD		-
+a fried catfish plate	1	BAD		-
+a burnt ends plate	1	BAD		-
+a side of potato salad	1	BAD		-
+a bowl of brunswick stew	1	BAD		-
+a bowl of grits with butter	1	BAD		-
+a bbq pork plate	1	BAD		-
+a dinner roll	1	BAD		-
+a side of green beans	1	BAD		-
