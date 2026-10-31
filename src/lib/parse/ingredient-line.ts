@@ -1,5 +1,5 @@
 import { parseQuantityTokens } from './quantity';
-import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE } from './unit';
+import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE, SPANISH_UNIT_TOKENS } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { expandUnitAbbreviation } from './unit-abbreviations';
@@ -197,7 +197,11 @@ function leadingHedgePrecedesQuantity(mergedTokens: string[]): boolean {
 // copy-drift shape as POSSIBLE_UNIT_HINTS above.
 function consumePartitiveOf(tokens: string[], i: number): number {
   if (i >= tokens.length) return i;
-  if (tokens[i].toLowerCase() !== 'of') return i;
+  // C6970 D29: `de`/`del` is the Spanish `of`, but ONLY directly after a Spanish unit word
+  // (SPANISH_UNIT_TOKENS): `1 can del monte corn` and `2 oz de cecco spaghetti` keep their brand.
+  const t = tokens[i].toLowerCase();
+  const es = (t === 'de' || t === 'del') && i > 0 && SPANISH_UNIT_TOKENS.has(tokens[i - 1].toLowerCase());
+  if (t !== 'of' && !es) return i;
   if (i + 1 >= tokens.length) return i;   // "2 slices of" — nothing follows
   return i + 1;
 }
