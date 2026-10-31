@@ -275,6 +275,55 @@ const POUR_EXTRA_RE = /\bhalf[\s-]*(?:and|&|n'?|'n'?)[\s-]*half\b|\b(?:heavy|whi
 const POUR_EXTRA_EXCLUDE_RE = /\b(?:powder(?:ed)?|ice cream|whipped|float|cheese|pie|cake|cookies?|bars?|glazed?|wings?|ribs?|pulled|pork|chicken|ham|gumm(?:y|ies)|candy|biscuits?|pizza|flavou?r(?:ed)?|bundt)\b/i;
 
 /**
+ * SOUPS AND STEWS — the fourth slice of "foods that pour" (2026-10-31, D29).
+ * `LIQUID_RE` names no soup token, so every soup line WITHOUT a declared label
+ * volume billed a cup at the dry-solid 0.5 g/ml = 120 g, where a label that
+ * declares its volume reads 240-250 (split pea 250, tomato 244, miso 240,
+ * lobster bisque 248, italian wedding 244).
+ *
+ * THE MEASUREMENT (60-day MappingEventLog on the box, 2026-10-31; re-derive):
+ *   select "rawLine","servingTier",grams,"foodName","noCache" from "MappingEventLog"
+ *   where "createdAt" >= now() - interval '60 days'
+ *   and "rawLine" ~* 'soup|chowder|bisque|stew|gumbo|caldo|minestrone'
+ *   and "rawLine" ~* 'cup' order by "createdAt" desc;
+ * `a cup of soup` x7, `a cup of broccoli cheddar soup`, `cup of french onion
+ * soup`, `a cup of caldo de res` x2 and `a cup of navy bean soup` all read 120
+ * g (tiers volume_unit and fs_volume_density).
+ *
+ * WHY A FOURTH SLICE, NOT NEW TOKENS IN LIQUID_RE. Same blast-radius argument as
+ * BEVERAGE_RE / POUR_EXTRA_RE: checked LAST, so only `solid` -> `beverage` can
+ * move and NO NUMBER moves. Soup joins the `beverage` class, which bills the
+ * liquid numbers cell for cell; the soup and drink populations are therefore no
+ * longer separately countable by class (re-count by name if needed). No density
+ * is changed for rice / grain / legume / dairy (the "Do not fix this back" notes).
+ *
+ * WHY WORD-BOUNDED AND WHY `chili` IS ABSENT. `chili` is a flavour word (1,886
+ * OFF names, about half not a dish: sweet chili chips, chili lime candy, chili
+ * dog), the D3 trap BEVERAGE_RE names. `noodle` is deliberately NOT excluded:
+ * chicken noodle soup is the commonest soup there is. `ramen`, `cup noodles`
+ * and `cup-a-soup` are excluded (dry / instant). Substrings were refuted:
+ * `mix` hits mixed, `base` hits based, `cube` hits cubed.
+ *
+ * THE CENSUS (2026-10-31; base vs this change, names classified by
+ * `resolveVolumeGrams()`):
+ *   - coverage corpus `scripts/eval/coverage-corpus-2026-08-08.tsv` col 3:
+ *     53 move, ALL solid -> beverage, 0 false;
+ *   - distinct 60-day MEL `foodName`: 46 move, 0 false by name (Osem `Consomme`,
+ *     a powder at 250 kcal/100 g, is false by PANEL only);
+ *   - record side (this module classifies the MATCHED RECORD's name): OffFood
+ *     6,154 and FatSecretFood 440 distinct soup-token names move; the
+ *     false-marker grep over them leaves only soup/stew names that also say
+ *     chili (88), 2 `stew meat`, 1 `popcorn`.
+ *
+ * KNOWN LIMITATION: the class reads the NAME, not the panel. 28% of soup-named
+ * OFF records carry > 200 kcal/100 g (dry cup-soups, flakes, per-bowl panels,
+ * unlabelled condensed SKUs) and their bill doubles with the grams. The cure is
+ * label volume, not this slice.
+ */
+const SOUP_RE = /\b(?:soup[es]?|chowders?|bisques?|gumbo|minestrone|consomm[eé]|gazpacho|borscht|caldo|pho|stews?)\b/i;
+const SOUP_EXCLUDE_RE = /\b(?:mix(?:es)?|powder(?:ed)?|bouillon|cubes?|packets?|instant|dry|dried|dehydrated|ramen|cup noodles?|cup[- ]?a[- ]?soup|cup soups?|seasonings?|base|concentrate|flakes|crisps?|chips|crackers|flavou?r(?:ed|s)?|starter|kits?|dumplings?|m[eé]lange|bread bowl|sandwich(?:es)?|burritos?|stew (?:meat|beef)|for stew|stewing)\b/i;
+
+/**
  * Dense pastes and spreads, ~1 g/ml rather than the dry-goods default.
  * Verbatim from the OFF path — this is the list that made `2 tbsp peanut
  * butter` bill ~32 g instead of 15 g.
@@ -325,7 +374,7 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     // be a `solid`. That ordering is the whole blast-radius argument for B1b —
     // see BEVERAGE_RE. `Port Wine Cheese Spread` is the case it protects: it
     // carries a beverage token and is a spread.
-    const isBeverage = !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)));
+    const isBeverage = !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)) || (SOUP_RE.test(name) && !SOUP_EXCLUDE_RE.test(name)));
     /** Pours at ~1 g/ml, by either vocabulary. */
     const isPourable = isLiquid || isBeverage;
 
