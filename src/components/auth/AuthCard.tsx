@@ -5,7 +5,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,10 @@ export default function AuthCard({
 }: AuthCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/recipes";
+  const pathname = usePathname();
+  // Default to the page the card is mounted on: /recipes is gone with the parked web app,
+  // and the only live mount (/account/delete) wants the sign-in to land back on itself.
+  const redirectTo = searchParams.get("redirectTo") || pathname || "/";
   const [serverError, setServerError] = useState<string>(initialError || "");
   const [infoMessage, setInfoMessage] = useState<string>(initialMessage || "");
   const [submitting, setSubmitting] = useState(false);

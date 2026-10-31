@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 
 // Fully static privacy policy. Required by Apple's HealthKit rules ("You must
 // also provide a privacy policy for any app that uses the HealthKit framework")
@@ -11,7 +12,7 @@ export const dynamic = 'force-static';
 // Diego's decision — do not change without his say-so.
 const PRIVACY_CONTACT = 'team.mealspire@gmail.com';
 
-const LAST_UPDATED = '7 September 2026';
+const LAST_UPDATED = '4 October 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Kinda Healthy',
@@ -20,7 +21,8 @@ export const metadata: Metadata = {
 };
 
 type Block =
-  | { kind: 'p'; lead?: string; text: string }
+  // `text` is a ReactNode so a paragraph can carry an inline link (the deletion page).
+  | { kind: 'p'; lead?: string; text: ReactNode }
   | { kind: 'ul'; items: { lead?: string; text: string }[] };
 
 type Section = { heading: string; blocks: Block[] };
@@ -158,7 +160,18 @@ const SECTIONS: Section[] = [
     blocks: [
       {
         kind: 'p',
-        text: `Your account data and food log are kept for as long as your account exists. To delete your account and everything stored with it, write to ${PRIVACY_CONTACT} and we will delete it. You can remove health access at any time using the steps above, which takes effect immediately and independently of anything else.`,
+        text: (
+          <>
+            Your account data and food log are kept for as long as your account exists. You can
+            delete your account yourself, at any time, from the{' '}
+            <a href="/account/delete" className="underline decoration-2 underline-offset-4">
+              account deletion page
+            </a>
+            . To delete your account and everything stored with it, write to {PRIVACY_CONTACT} and
+            we will delete it. You can remove health access at any time using the steps above, which
+            takes effect immediately and independently of anything else.
+          </>
+        ),
       },
     ],
   },
