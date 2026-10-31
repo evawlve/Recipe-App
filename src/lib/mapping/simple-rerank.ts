@@ -8,6 +8,7 @@
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
 import { detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
+import { DRY_GRAIN_PANEL_MIN_KCAL_PER_100G } from './estimate-state-guard';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
@@ -2153,6 +2154,11 @@ export function simpleRerank(
                 && c.nutrition.kcal > 60 && c.nutrition.kcal <= 250
                 && c.nutrition.carbs >= 12);
         if (!looksCooked) return false;
+        // Dry-panel veto (C6970 s410): a record NAMED cooked whose per-100 g panel is dry is not a
+        // cooked record. Mechanism: OFF off_20720155 "Basmati rice (cooked)" is labelled per 100 g RAW
+        // (369 kcal) and won `a cup of cooked basmati rice` over cooked basmati records at 121-153 kcal.
+        // Re-derive: cooked-name-dry-panel-veto.test.ts. A missing panel (or per100g false) is not dry.
+        if (c.nutrition?.per100g === true && c.nutrition.kcal >= DRY_GRAIN_PANEL_MIN_KCAL_PER_100G) return false;
         if (queryVarieties.length > 0) {
             const nameLower = c.name.toLowerCase();
             const candVarieties = GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(nameLower));
