@@ -67,6 +67,7 @@ import { stripLeftoverDescriptor } from './leftover-descriptor';
 import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
+import { dryEstimateOnCookedGrainLine } from './estimate-state-guard';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, stripPartitiveOfResidue, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
@@ -1824,7 +1825,23 @@ async function mapIngredientWithFallbackCore(
                     return null;
                 }
                 if (cachedNormalize?.nutritionEstimate) {
-                    aiNutritionEstimate = cachedNormalize.nutritionEstimate;
+                    // A cooked-grain line must not adopt the dry-panel estimate the
+                    // cache key's `cooked` drop hands it (estimate-state-guard.ts).
+                    if (dryEstimateOnCookedGrainLine(detectGrainCookingContext(trimmed, normalizedName), trimmed, normalizedName, cachedNormalize.nutritionEstimate)) {
+                        logger.info('normalize_gate.cached_dry_estimate_skipped', {
+                            baseName,
+                            estimate: cachedNormalize.nutritionEstimate.caloriesPer100g,
+                            rowCookingModifier: cachedNormalize.cookingModifier ?? null,
+                        });
+                    } else {
+                        aiNutritionEstimate = cachedNormalize.nutritionEstimate;
+                        logger.debug('normalize_gate.cached_nutrition_estimate', {
+                            baseName,
+                            estimate: aiNutritionEstimate.caloriesPer100g,
+                            confidence: aiNutritionEstimate.confidence,
+                        });
+                    }
+                    // canonicalBase is replayed either way: identity is state-independent, only the panel is not.
                     // Same repair as the live path: AiNormalizeCache is 86.5%
                     // v1 rows written before this guard existed, so the polluted
                     // canonicalBase is replayed from here too.
@@ -1834,11 +1851,6 @@ async function mapIngredientWithFallbackCore(
                               cachedNormalize.canonicalBase,
                           ).cleaned
                         : cachedNormalize.canonicalBase;
-                    logger.debug('normalize_gate.cached_nutrition_estimate', {
-                        baseName,
-                        estimate: aiNutritionEstimate.caloriesPer100g,
-                        confidence: aiNutritionEstimate.confidence,
-                    });
                 }
                 // Also restore isBranded from cached normalize result. Same
                 // resolution as the live path: this replays a STORED model
