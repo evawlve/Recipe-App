@@ -2068,16 +2068,16 @@
       "verified": "2026-09-21"
     },
     {
-      "id": "recent-magic-logs-flag-ships-false",
-      "claim": "The recent-magic-logs feature flag ships OFF — RECENT_MAGIC_LOGS_ENABLED is declared false in src/stores/recent-magic-logs-store.ts",
+      "id": "recent-magic-logs-flag-ships-on",
+      "claim": "The recent-magic-logs feature flag ships ON since mobile #369 (OTA #49, 2026-10-27) — RECENT_MAGIC_LOGS_ENABLED is declared true in src/stores/recent-magic-logs-store.ts",
       "ownerDoc": "mobile:sync-docs/magic_log_ux_animation_spec.md",
       "where": "mobile",
-      "command": "grep -c 'RECENT_MAGIC_LOGS_ENABLED = false' src/stores/recent-magic-logs-store.ts",
+      "command": "grep -c 'RECENT_MAGIC_LOGS_ENABLED = true' src/stores/recent-magic-logs-store.ts",
       "expect": {
         "kind": "count",
         "value": "1"
       },
-      "verified": "2026-09-21"
+      "verified": "2026-10-30"
     }
   ]
 }
