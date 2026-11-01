@@ -1,0 +1,30 @@
+# 2026-11-01 Spanish repro of s429 run-1 BAD lines (18 BAD), 7 observation lines (3 KNOWN losses + integral + 3), 4 controls (C68 s429). line	foods	expect	axis	expectBrand
+un café con leche	1	BAD		-
+una torta de jamón	1	BAD		-
+medio pan de elote	1	BAD		-
+una medida de proteína ascent de vainilla	1	BAD		ascent
+pollo y arroz	2	BAD		-
+pan con mantequilla	1	BAD		-
+cafe con leche	1	BAD		-
+huevos con jamon	1	BAD		-
+una orden de enchiladas rojas	1	BAD		-
+frijoles	1	BAD		-
+una taza de arroz con pollo	1	BAD		-
+dos tamales de pollo	1	BAD		-
+una manzana y un platano	2	BAD		-
+un pozole rojo con dos tostadas	2	BAD		-
+un champurrado	1	BAD		-
+dos tortillas de harina	1	BAD		-
+un frappuccino de caramelo grande de starbucks	1	BAD		-
+dos huevos	1	BAD		-
+un vaso de leche con chocolate	1			-
+una dona glaseada de krispy kreme	1			-
+una concha	1			-
+tres rebanadas de pan integral	1			-
+un pan dulce	1			-
+una taza de avena	1			-
+mitad de una orden de arroz frito	1			-
+un vaso de leche	1	OK		-
+2 cucharadas de crema de cacahuate	1	OK		-
+two large eggs	1	OK		-
+pico de gallo	1	OK		-
