@@ -45,6 +45,26 @@ export const COUNT_NOUN_UNITS = new Set(Object.keys(COUNT_NOUN_SINGULAR));
 export const HEDGEABLE_UNIT_SOURCE = 'g|gr|gms?|grams?|oz|ounces?|lbs?|pounds?|kgs?|kilos?|ml|cups?|tbsp|tsp';
 const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)$`);
 
+/**
+ * C6970 D29 -- Spanish unit words, and the tokens after which ingredient-line.ts's consumePartitiveOf() also
+ * skips a `de`/`del` connector. Punch #170 layer 1.
+ *
+ * MEASURED 2026-10-13 (organic, S418 report 5 class A): `2 cucharadas de cream de cacahuate` read the unit
+ * word as part of the food name and resolved to off_00073123 at 1,176 g / 6,915 kcal (label serving 588 g x 2).
+ *
+ * REACH: digit-led lines only (1 of 20 distinct organic Spanish-unit lines); numeral-led lines
+ * (`una taza de arroz`) are unchanged by construction. EXCLUDED on purpose: the numerals `un/una/dos/media`
+ * (the part of backend #422 that regressed and HELD it), `pieza(s)`, and `vaso` (`glass` is not a unit).
+ * `gramo(s)`, `gr`, `grs`, `kilogramo(s)` are already mass units; they are listed here only so `100 gramos de
+ * pollo` also drops its `de`. `g` is deliberately NOT in the set (not Spanish): `100 g de pollo` is unchanged.
+ */
+export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
+  'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 'taza', 'tazas', 'mililitro', 'mililitros',
+  'rebanada', 'rebanadas', 'lata', 'latas', 'botella', 'botellas',
+  'puñado', 'puñados', 'punado', 'punados',
+  'gramo', 'gramos', 'gr', 'grs', 'kilogramo', 'kilogramos',
+]);
+
 export function normalizeUnitToken(tok: string): NormalizedUnit {
   const token = tok.toLowerCase().trim().replace(HEDGED_UNIT_RE, '$1');
 
@@ -77,7 +97,12 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'litre': 'l', 'litres': 'l', 'millilitre': 'ml', 'millilitres': 'ml',
     'pint': 'pint', 'pints': 'pint',
     'quart': 'quart', 'quarts': 'quart',
-    'gallon': 'gallon', 'gallons': 'gallon'
+    'gallon': 'gallon', 'gallons': 'gallon',
+    // C6970 D29: Spanish unit words (see SPANISH_UNIT_TOKENS). Exact tokens only.
+    'cucharada': 'tbsp', 'cucharadas': 'tbsp',
+    'cucharadita': 'tsp', 'cucharaditas': 'tsp',
+    'taza': 'cup', 'tazas': 'cup',
+    'mililitro': 'ml', 'mililitros': 'ml'
   };
 
   if (volumeUnits[token]) {
@@ -136,6 +161,11 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'handful': 'handful', 'handfuls': 'handful',
     'bowl': 'bowl', 'bowls': 'bowl',
     'plate': 'plate', 'plates': 'plate',
+    // C6970 D29: Spanish count units. NOT `vaso` (no `glass` unit), NOT `pieza` (out of scope).
+    'rebanada': 'slice', 'rebanadas': 'slice',
+    'lata': 'can', 'latas': 'can',
+    'botella': 'bottle', 'botellas': 'bottle',
+    'puñado': 'handful', 'puñados': 'handful', 'punado': 'handful', 'punados': 'handful',
   };
 
   if (countUnits[token]) {
