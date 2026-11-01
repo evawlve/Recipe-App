@@ -50,6 +50,7 @@ import { queueForDeferredHydration, proactiveProduceBackfill } from './deferred-
 import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-generator';
 import { classifyUnit } from './unit-type';
 import { shouldNormalizeLlm } from './normalize-gate';
+import { isSpanishLine } from './spanish-detect';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
 import { extractPrepModifier } from './preemptive-backfill';
@@ -1623,8 +1624,12 @@ async function mapIngredientWithFallbackCore(
             quickGatherName = normalizedName;
             const modConstraints = extractModifierConstraints(trimmed);
             const gateDecision = shouldNormalizeLlm(trimmed, quickCandidates, modConstraints);
+            // C6970 D30: a Spanish line always reaches the normalize call (a high-scoring Spanish OFF
+            // hit would skip it and keep a Spanish key). Read from the RAW trimmed line: the parser has
+            // already stripped the Spanish unit words from baseName. English lines: false, unchanged.
+            const spanishLine = isSpanishLine(trimmed);
 
-            if (gateDecision.shouldCallLlm) {
+            if (gateDecision.shouldCallLlm || spanishLine) {
                 logger.info('normalize_gate.calling_llm', {
                     rawLine: trimmed,
                     reason: gateDecision.reason,
@@ -1632,7 +1637,9 @@ async function mapIngredientWithFallbackCore(
                 });
 
                 // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
-                const aiHint = await aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName);
+                const aiHint = await (spanishLine
+                    ? aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName, { spanish: true })
+                    : aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName));
                 if (aiHint.status === 'error' && aiHint.reason === PROMPT_EXAMPLE_ECHO_REASON) {
                     // The model gave back one of its own prompt examples: the line names no
                     // food. Return the unresolved result BEFORE retrieval can win junk and

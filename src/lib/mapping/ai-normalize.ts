@@ -119,7 +119,7 @@ export const RESPONSE_SCHEMA = {
   strict: true,
 };
 
-const SYSTEM_PROMPT = [
+export const SYSTEM_PROMPT = [
   'You normalize ingredient strings for recipe mapping.',
   'Return JSON with: canonical name (no quantity/units), canonical_base (base ingredient for caching), prep/size phrases, synonyms, cooking modifier (if any), and nutrition estimate.',
   '',
@@ -219,12 +219,35 @@ const SYSTEM_PROMPT = [
   'Do not invent foods; stay close to the ingredient meaning. If truly unclear, set error.',
 ].join('\n');
 
+/**
+ * Spanish-only clause (C6970 D30, punch #170 layer 2). Sent ONLY when the caller passes
+ * `opts.spanish` (isSpanishLine() true), appended to SYSTEM_PROMPT; an English request is
+ * byte-identical to before. Goal: a Spanish line gets the English food name as
+ * `normalized_name`, so its FoodMapping key joins the curated English universe (`huevos` -> `eggs`
+ * -> the `egg` key). The examples here are deliberately NOT in PROMPT_EXAMPLE_IDENTITIES
+ * (llm-output-guards.ts): the echo guard would refuse a genuine `dos huevos` -> `eggs`.
+ */
+export const SPANISH_CLAUSE = [
+  '',
+  'SPANISH INPUT: If the input food name is in Spanish, `normalized_name` and `canonical_base` MUST be the common English name of that food (huevos → eggs, leche → milk, arroz → rice, frijoles → beans, pollo → chicken).',
+  '- Keep a dish name that has no English name as written (bolillo, pozole, mole, concha, pan dulce, torta, nieve, tres leches). Never translate a brand.',
+  '- Translate nutrition and state modifiers too: sin azúcar → sugar free, descremada → skim, deslactosada → lactose free, sin grasa → fat free, light → light, integral → whole wheat, cocido → cooked.',
+  '- medio/media means half (a quantity, never "medium"); un/una/dos are quantities, never part of the name.',
+].join('\n');
+
+/** AiNormalizeCache key sub-space for Spanish lines, so a Spanish and an English line never share an entry (same device as `SIMPLIFY:`). */
+export const SPANISH_CACHE_NAMESPACE = 'ES:';
+
 export async function aiNormalizeIngredient(
   rawLine: string,
-  cleanedInput?: string
+  cleanedInput?: string,
+  opts?: { spanish?: boolean }
 ): Promise<AiNormalizeResult> {
+  // Spanish lines use their own cache namespace and prompt; English lines are unchanged.
+  const cacheOpts = opts?.spanish ? { namespace: SPANISH_CACHE_NAMESPACE } : undefined;
+  const systemPrompt = opts?.spanish ? `${SYSTEM_PROMPT}\n${SPANISH_CLAUSE}` : SYSTEM_PROMPT;
   // Check persistent database cache first
-  const cached = await getAiNormalizeCache(rawLine);
+  const cached = await (cacheOpts ? getAiNormalizeCache(rawLine, cacheOpts) : getAiNormalizeCache(rawLine));
   if (cached) {
     // A poisoned row written before the guard existed: refuse it on replay too.
     if (isPromptExampleEcho(rawLine, cached.normalizedName)) {
@@ -254,7 +277,7 @@ export async function aiNormalizeIngredient(
   try {
     const result = await withNormalizeDeadline((signal) => callStructuredLlm({
       schema: RESPONSE_SCHEMA,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt,
       userPrompt,
       purpose: 'normalize',
       signal,
@@ -328,7 +351,7 @@ export async function aiNormalizeIngredient(
       isMultiIngredient: normalizeResult.isMultiIngredient,
       splitIngredients: normalizeResult.splitIngredients,
       nutritionEstimate: normalizeResult.nutritionEstimate,
-    });
+    }, ...(cacheOpts ? [cacheOpts] : []));
 
     return normalizeResult;
   } catch (err) {
