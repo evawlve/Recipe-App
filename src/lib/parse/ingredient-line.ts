@@ -299,6 +299,20 @@ function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
   return next.kind === 'mass' || next.kind === 'volume' || next.kind === 'count';
 }
 
+// C6970 D30: a leading Spanish numeral directly before a Spanish unit word becomes its digit, IN PLACE, so
+// `dos tazas de leche` reads exactly as `2 tazas de leche`. Gated on SPANISH_UNIT_TOKENS: noun-led lines
+// (`dos huevos`), `tres leches`, un/una/uno and `pieza` are not touched. NOT `siete` (a single-token brand;
+// detectBrandInQuery() reads the pre-rewrite line, so parity would break on brandLed).
+const SPANISH_NUMERAL_DIGITS: Record<string, string> = {
+  dos: '2', tres: '3', cuatro: '4', cinco: '5', seis: '6', ocho: '8', nueve: '9', diez: '10',
+  media: '0.5', medio: '0.5',
+};
+function rewriteSpanishNumeral(mergedTokens: string[]): void {
+  if (mergedTokens.length < 2) return;
+  const d = SPANISH_NUMERAL_DIGITS[mergedTokens[0].toLowerCase()];
+  if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase())) mergedTokens[0] = d;
+}
+
 // A spoken fraction of a measure: "half a cup of rice", "a half cup of egg
 // whites", "one half cup of milk", "maybe half a cup of rice". parseQuantityTokens()
 // reads `half` through its wordFractions map, and then the stray article (or the
@@ -823,6 +837,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
+  rewriteSpanishNumeral(mergedTokens);
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
   if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
