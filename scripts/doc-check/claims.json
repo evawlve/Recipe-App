@@ -1375,15 +1375,15 @@
     },
     {
       "id": "test-provider-keys-are-fake-and-fetch-mocked",
-      "claim": "Exactly two test files assign a provider credential into process.env, and BOTH replace global.fetch with a mock -- so neither is an escape hatch around jest.setup.no-llm.js. They are structured-client-usage-capture.test.ts and structured-client-telemetry-cannot-fail-the-call.test.ts; both exercise makeRequest() itself, which sits below the point where an empty provider chain short-circuits, so stubbing callStructuredLlm would stub away the code under test. The gate's blackhole base URLs are left in place as defence in depth. The command reads '<files assigning a key>@<of those, how many do NOT mock global.fetch>'; the right number must stay 0. Reads 0@0 on master @ 136d0e5 -- this claim is about this branch's test files, not a repo-wide invariant. Added because jest.setup.no-llm.js carried a re-derive command claiming NO test file names a provider key, which was already false on master (no-live-llm-egress.test.ts matched it); measured 2026-08-04.",
+      "claim": "Exactly three test files assign a provider credential into process.env, and ALL replace global.fetch with a mock -- so none is an escape hatch around jest.setup.no-llm.js. They are structured-client-usage-capture.test.ts, structured-client-telemetry-cannot-fail-the-call.test.ts and (since 2026-11-02, the Anthropic leg) structured-client-anthropic-leg.test.ts, which also sets a fake ANTHROPIC_API_KEY; all exercise makeRequest() itself, which sits below the point where an empty provider chain short-circuits, so stubbing callStructuredLlm would stub away the code under test. The gate's blackhole base URLs are left in place as defence in depth. The command reads '<files assigning a key>@<of those, how many do NOT mock global.fetch>'; the right number must stay 0. Reads 0@0 on master @ 136d0e5 -- this claim is about this branch's test files, not a repo-wide invariant. Added because jest.setup.no-llm.js carried a re-derive command claiming NO test file names a provider key, which was already false on master (no-live-llm-egress.test.ts matched it); measured 2026-08-04.",
       "ownerDoc": "backend:jest.setup.no-llm.js",
       "where": "backend",
-      "command": "echo \"$(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = ' --include='*.test.ts' src scripts | wc -l | tr -d ' ')@$(for f in $(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = ' --include='*.test.ts' src scripts); do grep -q 'global.fetch = ' \"$f\" || echo x; done | wc -l | tr -d ' ')\"",
+      "command": "echo \"$(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = \\|process.env.ANTHROPIC_API_KEY = ' --include='*.test.ts' src scripts | wc -l | tr -d ' ')@$(for f in $(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = \\|process.env.ANTHROPIC_API_KEY = ' --include='*.test.ts' src scripts); do grep -q 'global.fetch = ' \"$f\" || echo x; done | wc -l | tr -d ' ')\"",
       "expect": {
         "kind": "matches",
-        "value": "^2@0$"
+        "value": "^3@0$"
       },
-      "verified": "2026-08-04"
+      "verified": "2026-11-02"
     },
     {
       "id": "structured-llm-produce-purpose-has-no-call-site",
