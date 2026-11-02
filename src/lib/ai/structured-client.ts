@@ -3,7 +3,7 @@
  * 
  * Unified client for all structured JSON LLM calls with:
  * - Provider fallback chain: Anthropic (optional head leg, dormant until ANTHROPIC_API_KEY is set;
- *   not on 'nutrition' / 'cache_validate') → OpenRouter (cheap) → OpenAI (reliable)
+ *   not on 'nutrition' / 'cache_validate', and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes) → OpenRouter (cheap) → OpenAI (reliable)
  * - AbortController timeout
  * - Retry with exponential backoff
  * - Per-purpose concurrency limiters
@@ -21,6 +21,7 @@ import {
     ANTHROPIC_API_KEY,
     ANTHROPIC_API_BASE_URL,
     ANTHROPIC_CHEAP_MODEL,
+    ANTHROPIC_PURPOSES,
     CHEAP_AI_MODEL_PRIMARY,
     CHEAP_AI_MODEL_FALLBACK,
     STRUCTURED_LLM_TIMEOUT_MS,
@@ -220,7 +221,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
  * - 'parse' purpose: Ollama ONLY (no cloud fallback) - for simple structural extraction
  * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
  * - Anthropic (Messages API) heads the cloud chain ONLY when ANTHROPIC_API_KEY is set and the
- *   purpose is neither 'nutrition' nor 'cache_validate'; an empty key leaves every chain unchanged
+ *   purpose is neither 'nutrition' nor 'cache_validate'; an empty key leaves every chain unchanged, and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes
  * - forceProvider: Overrides purpose-based routing to use a single specific provider
  */
 export function getProviderChain(
@@ -306,9 +307,10 @@ export function getProviderChain(
     const useCapableModel = purpose === 'nutrition';
 
     // Anthropic head leg (dormant while ANTHROPIC_API_KEY is empty). Not on 'nutrition' (capable
-    // tier) and never reached for 'cache_validate' (returned above). A drained balance 400s and
+    // tier) and never reached for 'cache_validate' (returned above). When ANTHROPIC_PURPOSES is non-empty, only for
+    // the listed purposes. A drained balance 400s and
     // the chain falls through to OpenRouter.
-    if (ANTHROPIC_API_KEY && !useCapableModel) {
+    if (ANTHROPIC_API_KEY && !useCapableModel && (ANTHROPIC_PURPOSES.length === 0 || ANTHROPIC_PURPOSES.includes(purpose))) {
         chain.push({
             name: 'anthropic',
             baseUrl: ANTHROPIC_API_BASE_URL,

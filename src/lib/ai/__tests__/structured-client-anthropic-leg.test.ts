@@ -19,14 +19,17 @@ type Usage = typeof import('../llm-usage-metrics');
 
 const BLACKHOLE = 'http://127.0.0.1:1/jest-no-llm-gate';
 
-function loadWith(keys: { anthropic: string; openrouter: string }): {
+function loadWith(keys: { anthropic: string; openrouter: string; purposes?: string | null }): {
     sc: Client;
     usage: Usage;
     maxRetries: number;
 } {
     const priorA = process.env.ANTHROPIC_API_KEY;
     const priorO = process.env.OPENROUTER_API_KEY;
+    const priorP = process.env.ANTHROPIC_PURPOSES;
     process.env.ANTHROPIC_API_KEY = keys.anthropic;
+    if (keys.purposes === null) delete process.env.ANTHROPIC_PURPOSES;
+    else process.env.ANTHROPIC_PURPOSES = keys.purposes ?? '';
     process.env.OPENROUTER_API_KEY = keys.openrouter;
     let out!: { sc: Client; usage: Usage; maxRetries: number };
     try {
@@ -41,12 +44,14 @@ function loadWith(keys: { anthropic: string; openrouter: string }): {
     } finally {
         process.env.ANTHROPIC_API_KEY = priorA ?? '';
         process.env.OPENROUTER_API_KEY = priorO ?? '';
+        if (priorP === undefined) delete process.env.ANTHROPIC_PURPOSES;
+        else process.env.ANTHROPIC_PURPOSES = priorP;
     }
     return out;
 }
 
-const armed = loadWith({ anthropic: 'sk-ant-jest-fake', openrouter: 'jest-fake-key-never-dialled' });
-const dormant = loadWith({ anthropic: '', openrouter: 'jest-fake-key-never-dialled' });
+const armed = loadWith({ anthropic: 'sk-ant-jest-fake', openrouter: 'jest-fake-key-never-dialled', purposes: '' });
+const dormant = loadWith({ anthropic: '', openrouter: 'jest-fake-key-never-dialled', purposes: '' });
 
 const INNER_SCHEMA = {
     type: 'object',
@@ -133,6 +138,46 @@ describe('(a) chain shape', () => {
         }
         // A forced anthropic with an empty key falls through to purpose routing, like the other forces.
         expect(dormant.sc.getProviderChain('ambiguous', 'anthropic')).toEqual(dormant.sc.getProviderChain('ambiguous'));
+    });
+});
+
+describe('(a2) ANTHROPIC_PURPOSES allowlist', () => {
+    const CHEAP = ['normalize', 'serving', 'ambiguous', 'produce', 'parse', 'simplify'] as const;
+    const names = (c: { getProviderChain: Client['getProviderChain'] }, p: (typeof CHEAP)[number]) =>
+        c.getProviderChain(p).map((x) => x.name);
+
+    it('a listed set heads only those purposes; the rest and the capable tier stay on today\'s chains', () => {
+        const listed = loadWith({
+            anthropic: 'sk-ant-jest-fake',
+            openrouter: 'jest-fake-key-never-dialled',
+            purposes: 'normalize,serving,parse,nutrition,cache_validate',
+        });
+        expect(listed.sc.getProviderChain('normalize')[0]).toMatchObject({ name: 'anthropic' });
+        expect(listed.sc.getProviderChain('parse')[0]).toMatchObject({ name: 'anthropic' });
+        expect(names(listed.sc, 'ambiguous')).not.toContain('anthropic');
+        expect(listed.sc.getProviderChain('ambiguous')).toEqual(dormant.sc.getProviderChain('ambiguous'));
+        for (const purpose of ['nutrition', 'cache_validate'] as const) {
+            expect(listed.sc.getProviderChain(purpose)).toEqual(dormant.sc.getProviderChain(purpose));
+        }
+    });
+
+    it('entries are trimmed, so spaces around names still match', () => {
+        const spaced = loadWith({
+            anthropic: 'sk-ant-jest-fake',
+            openrouter: 'jest-fake-key-never-dialled',
+            purposes: ' ambiguous , parse ',
+        });
+        expect(spaced.sc.getProviderChain('ambiguous')[0]).toMatchObject({ name: 'anthropic' });
+        expect(names(spaced.sc, 'normalize')).not.toContain('anthropic');
+    });
+
+    it('empty and unset both mean every cheap purpose heads with anthropic', () => {
+        for (const purposes of ['', null]) {
+            const all = loadWith({ anthropic: 'sk-ant-jest-fake', openrouter: 'jest-fake-key-never-dialled', purposes });
+            for (const purpose of CHEAP) {
+                expect(all.sc.getProviderChain(purpose)[0]).toMatchObject({ name: 'anthropic' });
+            }
+        }
     });
 });
 

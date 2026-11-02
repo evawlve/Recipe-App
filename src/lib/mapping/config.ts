@@ -95,6 +95,7 @@ export const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL ?? 'https://o
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
 export const ANTHROPIC_API_BASE_URL = process.env.ANTHROPIC_API_BASE_URL ?? 'https://api.anthropic.com/v1';
 export const ANTHROPIC_CHEAP_MODEL = process.env.ANTHROPIC_CHEAP_MODEL ?? 'claude-haiku-5-5';
+export const ANTHROPIC_PURPOSES = (process.env.ANTHROPIC_PURPOSES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 export const CHEAP_AI_MODEL_PRIMARY = process.env.CHEAP_AI_MODEL_PRIMARY ?? 'openai/gpt-4o-mini';
 export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'google/gemini-2.5-flash';
 export const STRUCTURED_LLM_TIMEOUT_MS = Number.parseInt(process.env.STRUCTURED_LLM_TIMEOUT_MS ?? '15000', 10);
