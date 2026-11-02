@@ -2,7 +2,8 @@
  * Structured LLM Client
  * 
  * Unified client for all structured JSON LLM calls with:
- * - Provider fallback chain: OpenRouter (cheap) → OpenAI (reliable)
+ * - Provider fallback chain: Anthropic (optional head leg, dormant until ANTHROPIC_API_KEY is set;
+ *   not on 'nutrition' / 'cache_validate') → OpenRouter (cheap) → OpenAI (reliable)
  * - AbortController timeout
  * - Retry with exponential backoff
  * - Per-purpose concurrency limiters
@@ -17,6 +18,9 @@ import {
     OPENAI_API_BASE_URL,
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_API_BASE_URL,
+    ANTHROPIC_CHEAP_MODEL,
     CHEAP_AI_MODEL_PRIMARY,
     CHEAP_AI_MODEL_FALLBACK,
     STRUCTURED_LLM_TIMEOUT_MS,
@@ -49,7 +53,7 @@ import {
 // `StructuredLlmPurpose` from 'structured-client' keeps compiling unchanged, and so
 // `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` below keeps its exhaustiveness check.
 export type { StructuredLlmPurpose };
-export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
+export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai' | 'anthropic';
 
 export interface StructuredLlmOptions {
     /** JSON schema for response_format */
@@ -215,6 +219,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
  * Provider routing strategy:
  * - 'parse' purpose: Ollama ONLY (no cloud fallback) - for simple structural extraction
  * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
+ * - Anthropic (Messages API) heads the cloud chain ONLY when ANTHROPIC_API_KEY is set and the
+ *   purpose is neither 'nutrition' nor 'cache_validate'; an empty key leaves every chain unchanged
  * - forceProvider: Overrides purpose-based routing to use a single specific provider
  */
 export function getProviderChain(
@@ -247,6 +253,14 @@ export function getProviderChain(
                 model: CHEAP_AI_MODEL_FALLBACK,
             },
         ];
+    }
+    if (forceProvider === 'anthropic' && ANTHROPIC_API_KEY) {
+        return [{
+            name: 'anthropic',
+            baseUrl: ANTHROPIC_API_BASE_URL,
+            apiKey: ANTHROPIC_API_KEY,
+            model: ANTHROPIC_CHEAP_MODEL,
+        }];
     }
     if (forceProvider === 'openai' && OPENAI_API_KEY) {
         return [{
@@ -290,6 +304,18 @@ export function getProviderChain(
 
     // 2. Cloud providers (OpenRouter -> OpenAI fallback)
     const useCapableModel = purpose === 'nutrition';
+
+    // Anthropic head leg (dormant while ANTHROPIC_API_KEY is empty). Not on 'nutrition' (capable
+    // tier) and never reached for 'cache_validate' (returned above). A drained balance 400s and
+    // the chain falls through to OpenRouter.
+    if (ANTHROPIC_API_KEY && !useCapableModel) {
+        chain.push({
+            name: 'anthropic',
+            baseUrl: ANTHROPIC_API_BASE_URL,
+            apiKey: ANTHROPIC_API_KEY,
+            model: ANTHROPIC_CHEAP_MODEL,
+        });
+    }
 
     // OpenRouter primary (cheap cloud)
     if (OPENROUTER_API_KEY) {
@@ -470,6 +496,106 @@ async function makeRequest(
     };
 
     try {
+        // Anthropic Messages API transport. Raw `fetch`, not `@anthropic-ai/sdk`: the SDK is not
+        // installed, and package-lock.json and node_modules are in .stignore on both ends, so a
+        // dependency would add an un-synced install step to the deploy recipe.
+        // Counted through the same countResponse()/countFailure() closures as the OpenAI-shaped
+        // path (no `cost` field: Anthropic returns none, the Console cost page owns dollars).
+        if (provider.name === 'anthropic') {
+            const aResponse = await fetch(`${provider.baseUrl}/messages`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'x-api-key': provider.apiKey,
+                    'anthropic-version': '2026-10-21',
+                },
+                body: JSON.stringify({
+                    model: provider.model,
+                    // On Haiku 5.5 thinking counts toward max_tokens, so a caller's cap sized for an
+                    // OpenAI answer (ai-segmenter passes 600 on `parse`) is a FLOOR here, never a
+                    // cap: a max_tokens stop is billed and then billed again on the next leg.
+                    max_tokens: Math.max(maxTokens ?? 0, 2048),
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userPrompt }],
+                    // No temperature/top_p/top_k (400 on this API version), no response_format.
+                    // `name`/`strict` belong to the OpenAI wrapper and are never forwarded.
+                    output_config: {
+                        effort: 'low',
+                        format: {
+                            type: 'json_schema',
+                            schema: (schema as { schema?: object }).schema ?? schema,
+                        },
+                    },
+                }),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!aResponse.ok) {
+                // Never produced a 2xx body, so not billed. 429/5xx retry; a 400 (e.g. a drained
+                // credit balance) falls to the next leg.
+                countFailure();
+                const errorBody = await aResponse.text();
+                return {
+                    success: false,
+                    error: `HTTP ${aResponse.status}: ${errorBody}`,
+                    status: aResponse.status,
+                };
+            }
+
+            type AnthropicPayload = {
+                content?: Array<{ type?: string; text?: string }>;
+                stop_reason?: string;
+                usage?: { input_tokens?: number; output_tokens?: number };
+            };
+            let aPayload: AnthropicPayload | null = null;
+            let aEnvelopeError: Error | null = null;
+            try {
+                aPayload = (await aResponse.json()) as AnthropicPayload;
+            } catch (err) {
+                aPayload = null;
+                aEnvelopeError = err as Error;
+            }
+
+            // A 2xx is in hand: billed whatever happens below, so count BEFORE any content guard.
+            const aIn = aPayload?.usage?.input_tokens ?? 0;
+            const aOut = aPayload?.usage?.output_tokens ?? 0;
+            countResponse(
+                aPayload?.usage
+                    ? { prompt_tokens: aIn, completion_tokens: aOut, total_tokens: aIn + aOut }
+                    : undefined,
+                aEnvelopeError !== null
+            );
+
+            if (aEnvelopeError !== null) {
+                return {
+                    success: false,
+                    error:
+                        aEnvelopeError.name === 'AbortError'
+                            ? `Request timeout (${timeout}ms)`
+                            : `Unparseable response envelope from LLM provider: ${aEnvelopeError.message}`,
+                };
+            }
+
+            const stopReason = aPayload?.stop_reason;
+            if (stopReason === 'refusal' || stopReason === 'max_tokens') {
+                return { success: false, error: `anthropic stop_reason=${stopReason}`, raw: aPayload };
+            }
+
+            // Haiku 5.5 thinks by default: `thinking` blocks may precede the text block.
+            const text = aPayload?.content?.find((b) => b?.type === 'text')?.text;
+            if (!text) {
+                return { success: false, error: 'Empty response from LLM', raw: aPayload };
+            }
+
+            const aParsed = JSON.parse(text) as Record<string, unknown>;
+            if (typeof aParsed.error === 'string' && aParsed.error.length > 0) {
+                return { success: false, error: aParsed.error, raw: aParsed };
+            }
+            return { success: true, content: aParsed, raw: aParsed };
+        }
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${provider.apiKey}`,
@@ -636,7 +762,7 @@ export async function callStructuredLlm(
         if (providerChain.length === 0) {
             return {
                 status: 'error',
-                error: 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
+                error: 'No API keys configured (need ANTHROPIC_API_KEY, OPENROUTER_API_KEY or OPENAI_API_KEY)',
                 provider: 'openai',
                 model: 'none',
                 durationMs: Date.now() - startTime,
