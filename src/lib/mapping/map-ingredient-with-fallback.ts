@@ -1270,8 +1270,11 @@ async function mapIngredientWithFallbackCore(
             let cachedKcal100: number | null = null;
             let cachedCarbs100: number | null = null;
 
-            if (!earlyCoreTokenMismatch) {
+            // A trusted human row clears core_token_mismatch at read time, so it must also
+            // get its panel (buildFdcResult() returns null without one -> hydration_failed).
+            if (!earlyCoreTokenMismatch || isTrustedHumanRow(earlyCacheHit.validatedBy)) {
                 const { prisma } = await import('../db');
+                if (earlyCoreTokenMismatch) logger.debug('mapping.trusted_row_panel_loaded', { site: 'early', foodId: earlyCacheHit.foodId });
                 if (earlyCacheHit.foodId.startsWith('fdc_')) {
                     const fdcId = parseInt(earlyCacheHit.foodId.replace('fdc_', ''), 10);
                     const cachedFdc = await prisma.fdcFood.findUnique({
@@ -3038,8 +3041,10 @@ async function lookupNormalizedCacheProducer(params: {
         let normalizedCachedCarbs100: number | null = null;
         // fdc_ only: the loaded panel rides on the winner so the hydrator can bill it.
         let normalizedFdcNutrition: UnifiedCandidate['nutrition'] | null = null;
-        if (!normalizedCoreTokenMismatch) {
+        // Same as Step 1a: a trusted human row needs its panel even when the core token mismatches.
+        if (!normalizedCoreTokenMismatch || isTrustedHumanRow(normalizedCache.validatedBy)) {
             const { prisma } = await import('../db');
+            if (normalizedCoreTokenMismatch) logger.debug('mapping.trusted_row_panel_loaded', { site: 'normalized', foodId: normalizedCache.foodId });
             let nutrients: any = null;
             if (normalizedCache.foodId.startsWith('fdc_')) {
                 const fdcId = parseInt(normalizedCache.foodId.replace('fdc_', ''), 10);
