@@ -1280,13 +1280,7 @@ async function mapIngredientWithFallbackCore(
                     });
                     if (cachedFdc?.nutrientsPer100g) {
                         const rawFdc: any = cachedFdc.nutrientsPer100g;
-                        loadedFdcNutrition = {
-                            kcal: rawFdc.calories ?? rawFdc.energy ?? rawFdc.kcal ?? 0,
-                            protein: rawFdc.protein ?? 0,
-                            carbs: rawFdc.carbohydrate ?? rawFdc.carbs ?? 0,
-                            fat: rawFdc.fat ?? 0,
-                            per100g: true,
-                        };
+                        loadedFdcNutrition = fdcPanelToNutrition(rawFdc);
                         cachedKcal100 = loadedFdcNutrition.kcal || null;
                         cachedCarbs100 = loadedFdcNutrition.carbs || null;
                         earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
@@ -2987,6 +2981,17 @@ export async function mapIngredientWithFallback(
 // orchestrator state directly.
 // ============================================================
 
+/** Maps an fdc_ `nutrientsPer100g` JSON panel to the candidate `nutrition` shape (per 100 g). */
+export function fdcPanelToNutrition(raw: any): NonNullable<UnifiedCandidate['nutrition']> {
+    return {
+        kcal: raw.calories ?? raw.energy ?? raw.kcal ?? 0,
+        protein: raw.protein ?? 0,
+        carbs: raw.carbohydrate ?? raw.carbs ?? 0,
+        fat: raw.fat ?? 0,
+        per100g: true,
+    };
+}
+
 async function lookupNormalizedCacheProducer(params: {
     normalizedName: string;
     preBrandNormalizedName: string | undefined;
@@ -3031,6 +3036,8 @@ async function lookupNormalizedCacheProducer(params: {
         let normalizedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
         let normalizedCachedKcal100: number | null = null;
         let normalizedCachedCarbs100: number | null = null;
+        // fdc_ only: the loaded panel rides on the winner so the hydrator can bill it.
+        let normalizedFdcNutrition: UnifiedCandidate['nutrition'] | null = null;
         if (!normalizedCoreTokenMismatch) {
             const { prisma } = await import('../db');
             let nutrients: any = null;
@@ -3041,6 +3048,7 @@ async function lookupNormalizedCacheProducer(params: {
                     select: { nutrientsPer100g: true }
                 });
                 nutrients = fdc?.nutrientsPer100g;
+                if (nutrients) normalizedFdcNutrition = fdcPanelToNutrition(nutrients);
             } else if (normalizedCache.foodId.startsWith('off_')) {
                 const barcode = normalizedCache.foodId.replace('off_', '');
                 const off = await prisma.offFood.findUnique({
@@ -3194,7 +3202,13 @@ async function lookupNormalizedCacheProducer(params: {
                 score: normalizedCache.confidence,
                 foodType: 'generic', // Assumption
                 rawData: {},
+                // Without a panel buildFdcResult() returns null and Step 5b
+                // re-searches, undoing a human re-point (s430, row 8).
+                ...(normalizedFdcNutrition ? { nutrition: normalizedFdcNutrition } : {}),
             };
+            if (normalizedFdcNutrition) {
+                logger.debug('mapping.normalized_cache_fdc_panel_attached', { foodId: normalizedCache.foodId });
+            }
             const confidence = normalizedCache.confidence;
             const selectionReason = 'normalized_cache_hit';
             if (telemetry) telemetry.cacheHit = 'normalized';
