@@ -19,7 +19,13 @@ type Usage = typeof import('../llm-usage-metrics');
 
 const BLACKHOLE = 'http://127.0.0.1:1/jest-no-llm-gate';
 
-function loadWith(keys: { anthropic: string; openrouter: string; purposes?: string | null }): {
+function loadWith(keys: {
+    anthropic: string;
+    openrouter: string;
+    purposes?: string | null;
+    validatorProvider?: string;
+    validatorModel?: string;
+}): {
     sc: Client;
     usage: Usage;
     maxRetries: number;
@@ -27,6 +33,12 @@ function loadWith(keys: { anthropic: string; openrouter: string; purposes?: stri
     const priorA = process.env.ANTHROPIC_API_KEY;
     const priorO = process.env.OPENROUTER_API_KEY;
     const priorP = process.env.ANTHROPIC_PURPOSES;
+    const priorVP = process.env.VALIDATOR_AI_PROVIDER;
+    const priorVM = process.env.VALIDATOR_AI_MODEL;
+    if (keys.validatorProvider === undefined) delete process.env.VALIDATOR_AI_PROVIDER;
+    else process.env.VALIDATOR_AI_PROVIDER = keys.validatorProvider;
+    if (keys.validatorModel === undefined) delete process.env.VALIDATOR_AI_MODEL;
+    else process.env.VALIDATOR_AI_MODEL = keys.validatorModel;
     process.env.ANTHROPIC_API_KEY = keys.anthropic;
     if (keys.purposes === null) delete process.env.ANTHROPIC_PURPOSES;
     else process.env.ANTHROPIC_PURPOSES = keys.purposes ?? '';
@@ -46,6 +58,10 @@ function loadWith(keys: { anthropic: string; openrouter: string; purposes?: stri
         process.env.OPENROUTER_API_KEY = priorO ?? '';
         if (priorP === undefined) delete process.env.ANTHROPIC_PURPOSES;
         else process.env.ANTHROPIC_PURPOSES = priorP;
+        if (priorVP === undefined) delete process.env.VALIDATOR_AI_PROVIDER;
+        else process.env.VALIDATOR_AI_PROVIDER = priorVP;
+        if (priorVM === undefined) delete process.env.VALIDATOR_AI_MODEL;
+        else process.env.VALIDATOR_AI_MODEL = priorVM;
     }
     return out;
 }
@@ -178,6 +194,43 @@ describe('(a2) ANTHROPIC_PURPOSES allowlist', () => {
                 expect(all.sc.getProviderChain(purpose)[0]).toMatchObject({ name: 'anthropic' });
             }
         }
+    });
+});
+
+describe('(f) validator provider', () => {
+    const KEYS = { anthropic: 'sk-ant-jest-fake', openrouter: 'jest-fake-key-never-dialled' };
+    const ALL = ['normalize', 'serving', 'ambiguous', 'produce', 'parse', 'simplify'] as const;
+
+    it('(i) anthropic provider + key + model gives a single anthropic entry carrying VALIDATOR_AI_MODEL', () => {
+        const v = loadWith({ ...KEYS, validatorProvider: 'anthropic', validatorModel: 'claude-sonnet-5' });
+        expect(v.sc.getProviderChain('cache_validate')).toEqual([
+            { name: 'anthropic', baseUrl: BLACKHOLE, apiKey: 'sk-ant-jest-fake', model: 'claude-sonnet-5' },
+        ]);
+    });
+
+    it('(ii) anthropic provider with an empty anthropic key fails closed, no openrouter fallback', () => {
+        const v = loadWith({ ...KEYS, anthropic: '', validatorProvider: 'anthropic', validatorModel: 'claude-sonnet-5' });
+        expect(v.sc.getProviderChain('cache_validate')).toEqual([]);
+    });
+
+    it('(iii) anthropic provider with an empty model fails closed', () => {
+        const v = loadWith({ ...KEYS, validatorProvider: 'anthropic', validatorModel: '' });
+        expect(v.sc.getProviderChain('cache_validate')).toEqual([]);
+    });
+
+    it('(iv) the provider switch leaves every other purpose chain untouched', () => {
+        const v = loadWith({ ...KEYS, validatorProvider: 'anthropic', validatorModel: 'claude-sonnet-5' });
+        for (const purpose of ALL) {
+            expect(v.sc.getProviderChain(purpose)).toEqual(armed.sc.getProviderChain(purpose));
+        }
+        expect(v.sc.getProviderChain('nutrition')).toEqual(armed.sc.getProviderChain('nutrition'));
+    });
+
+    it('(v) openrouter provider keeps today\'s single openrouter entry', () => {
+        const v = loadWith({ ...KEYS, validatorProvider: 'openrouter', validatorModel: 'anthropic/claude-sonnet-5' });
+        const chain = v.sc.getProviderChain('cache_validate');
+        expect(chain).toHaveLength(1);
+        expect(chain[0]).toMatchObject({ name: 'openrouter', model: 'anthropic/claude-sonnet-5' });
     });
 });
 
