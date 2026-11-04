@@ -119,6 +119,10 @@ export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/m
 // The exact slug is an enable-time box-.env value, not code.
 export const CACHE_VALIDATOR_ENABLED = getFlag('CACHE_VALIDATOR_ENABLED', false);
 export const VALIDATOR_AI_MODEL = process.env.VALIDATOR_AI_MODEL ?? '';
+// Which transport bills the validator. 'anthropic' = the Messages API on the Max-plan credit; it needs
+// ANTHROPIC_API_KEY and a Messages-API model id (e.g. claude-sonnet-5) in VALIDATOR_AI_MODEL.
+// Anything else = OpenRouter, today's single-entry chain.
+export const VALIDATOR_AI_PROVIDER: 'openrouter' | 'anthropic' = process.env.VALIDATOR_AI_PROVIDER === 'anthropic' ? 'anthropic' : 'openrouter';
 
 // ---------------------------------------------------------------------------
 // mapping-analysis candidate depth (2026-08-12)

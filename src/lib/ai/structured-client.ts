@@ -3,7 +3,8 @@
  * 
  * Unified client for all structured JSON LLM calls with:
  * - Provider fallback chain: Anthropic (optional head leg, dormant until ANTHROPIC_API_KEY is set;
- *   not on 'nutrition' / 'cache_validate', and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes) → OpenRouter (cheap) → OpenAI (reliable)
+ *   never on 'nutrition' / 'cache_validate', and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes) → OpenRouter (cheap) → OpenAI (reliable)
+ *   ('cache_validate' is its own single-entry chain: OpenRouter, or the Anthropic Messages API when VALIDATOR_AI_PROVIDER=anthropic)
  * - AbortController timeout
  * - Retry with exponential backoff
  * - Per-purpose concurrency limiters
@@ -32,6 +33,7 @@ import {
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
     VALIDATOR_AI_MODEL,
+    VALIDATOR_AI_PROVIDER,
 } from '../mapping/config';
 // Type-only: this module has no use for the STRUCTURED_LLM_PURPOSES array value (the union is
 // DERIVED from it, so `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` is already
@@ -219,9 +221,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
  * 
  * Provider routing strategy:
  * - 'parse' purpose: Ollama ONLY (no cloud fallback) - for simple structural extraction
+ * - 'cache_validate': a single-entry chain, no fallback: OpenRouter, or the Anthropic Messages API
+ *   when VALIDATOR_AI_PROVIDER=anthropic
  * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
  * - Anthropic (Messages API) heads the cloud chain ONLY when ANTHROPIC_API_KEY is set and the
- *   purpose is neither 'nutrition' nor 'cache_validate'; an empty key leaves every chain unchanged, and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes
+ *   purpose is neither 'nutrition' nor 'cache_validate' (the head leg never covers those two); an empty key leaves every chain unchanged, and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes
  * - forceProvider: Overrides purpose-based routing to use a single specific provider
  */
 export function getProviderChain(
@@ -284,7 +288,10 @@ export function getProviderChain(
     }
 
     // cache_validate runs on the capable tier ONLY — a single-entry chain
-    // with NO cheap fallback legs and no OpenAI leg. The 2026-08-10 audit
+    // with NO cheap fallback legs and no OpenAI leg. The one entry is OpenRouter,
+    // or the Anthropic Messages API when VALIDATOR_AI_PROVIDER=anthropic (model
+    // stays VALIDATOR_AI_MODEL: the verdict guard compares against it). The
+    // Anthropic head leg below never covers this purpose. The 2026-08-10 audit
     // measured the gpt-4o-mini class FAILING the retention bar for this task,
     // so a failed capable call must surface as status:'error' (→ no verdict
     // row, the module's fail-closed path), never as a silently-cheap verdict:
@@ -293,6 +300,16 @@ export function getProviderChain(
     // error (the shouldRunCacheValidator gate makes that unreachable from the
     // hook; this covers direct script callers).
     if (purpose === 'cache_validate') {
+        if (VALIDATOR_AI_PROVIDER === 'anthropic') {
+            return VALIDATOR_AI_MODEL !== '' && ANTHROPIC_API_KEY
+                ? [{
+                    name: 'anthropic',
+                    baseUrl: ANTHROPIC_API_BASE_URL,
+                    apiKey: ANTHROPIC_API_KEY,
+                    model: VALIDATOR_AI_MODEL,
+                }]
+                : [];
+        }
         return VALIDATOR_AI_MODEL !== '' && OPENROUTER_API_KEY
             ? [{
                 name: 'openrouter',
@@ -307,7 +324,7 @@ export function getProviderChain(
     const useCapableModel = purpose === 'nutrition';
 
     // Anthropic head leg (dormant while ANTHROPIC_API_KEY is empty). Not on 'nutrition' (capable
-    // tier) and never reached for 'cache_validate' (returned above). When ANTHROPIC_PURPOSES is non-empty, only for
+    // tier) and never reached for 'cache_validate' (returned above; it is a single-entry chain on OpenRouter or, with VALIDATOR_AI_PROVIDER=anthropic, on the Messages API). When ANTHROPIC_PURPOSES is non-empty, only for
     // the listed purposes. A drained balance 400s and
     // the chain falls through to OpenRouter.
     if (ANTHROPIC_API_KEY && !useCapableModel && (ANTHROPIC_PURPOSES.length === 0 || ANTHROPIC_PURPOSES.includes(purpose))) {
