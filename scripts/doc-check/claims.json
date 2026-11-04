@@ -1721,7 +1721,7 @@
     },
     {
       "id": "known-issue-pins-equal-flags",
-      "claim": "known-issue-baseline.json pins exactly the knownIssue-flagged golden-set cases (pins == flags). The baseline decayed silently once (20 pins vs 21 flags, found 2026-08-19) because drift is non-gating; this claim makes the next drift report itself. Reconciled 2026-08-20 (plan 8 PR-B). 12 -> 13 flags 2026-10-07: n-mq-42 flagged and pinned in both baselines.",
+      "claim": "known-issue-baseline.json pins exactly the knownIssue-flagged golden-set cases (pins == flags). The baseline decayed silently once (20 pins vs 21 flags, found 2026-08-19) because drift is non-gating; this claim makes the next drift report itself. Reconciled 2026-08-20 (plan 8 PR-B). 12 -> 13 flags 2026-10-07: n-mq-42 flagged and pinned in both baselines. 13 -> 12 flags 2026-10-26 (#609 promoted n-prose-01); 12 -> 26 flags 2026-11-03: the s424/s429 nominations n-s424-01..06 and n-s429-01..08 pinned knownIssue and recorded in both baselines by a filtered --write-baseline run per arm (MGR s438).",
       "command": "python3 -c \"import json;g=json.load(open('scripts/eval/golden-set.json'));k=json.load(open('scripts/eval/known-issue-baseline.json'));f=sorted(c['id'] for s in ('search','nlp') for c in g[s] if c.get('knownIssue'));p=sorted(k['cases']);print(0 if f==p else 1)\"",
       "expect": {
         "kind": "count",
@@ -1729,11 +1729,11 @@
       },
       "where": "backend",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-20_ultracode-execution-plan-8.md",
-      "verified": "2026-10-07"
+      "verified": "2026-11-03"
     },
     {
       "id": "known-issue-cold-pins-equal-flags",
-      "claim": "known-issue-baseline-cold.json pins exactly the knownIssue-flagged golden-set cases (pins == flags) — the COLD twin of known-issue-pins-equal-flags. The cold file drifted unguarded to 17 pins against 15 flags (n-cook-06/n-mq-27/n-mq-34/n-mq-47 still pinned after #363 un-flagged them; n-mq-48/n-prose-04 flagged but never cold-pinned; found 2026-09-02) because the warm claim reads only the warm file and mergeBaseline() in scripts/eval/assertions.ts never prunes, so un-flagging a case must prune BOTH files by hand. Reconciled 2026-09-02 (session 36, rider R1: n-brand-06/n-mq-39/n-mq-40 promoted, 15 -> 12 flags). 12 -> 13 flags 2026-10-07: n-mq-42 flagged and pinned in both baselines.",
+      "claim": "known-issue-baseline-cold.json pins exactly the knownIssue-flagged golden-set cases (pins == flags) — the COLD twin of known-issue-pins-equal-flags. The cold file drifted unguarded to 17 pins against 15 flags (n-cook-06/n-mq-27/n-mq-34/n-mq-47 still pinned after #363 un-flagged them; n-mq-48/n-prose-04 flagged but never cold-pinned; found 2026-09-02) because the warm claim reads only the warm file and mergeBaseline() in scripts/eval/assertions.ts never prunes, so un-flagging a case must prune BOTH files by hand. Reconciled 2026-09-02 (session 36, rider R1: n-brand-06/n-mq-39/n-mq-40 promoted, 15 -> 12 flags). 12 -> 13 flags 2026-10-07: n-mq-42 flagged and pinned in both baselines. 13 -> 12 flags 2026-10-26 (#609 promoted n-prose-01); 12 -> 26 flags 2026-11-03: n-s424-01..06 and n-s429-01..08 pinned and cold-recorded (MGR s438).",
       "command": "python3 -c \"import json;g=json.load(open('scripts/eval/golden-set.json'));k=json.load(open('scripts/eval/known-issue-baseline-cold.json'));f=sorted(c['id'] for s in ('search','nlp') for c in g[s] if c.get('knownIssue'));p=sorted(k['cases']);print(0 if f==p else 1)\"",
       "expect": {
         "kind": "count",
@@ -1741,7 +1741,7 @@
       },
       "where": "backend",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
-      "verified": "2026-10-07"
+      "verified": "2026-11-03"
     },
     {
       "id": "supabase-keepalive-timer-armed-on-box",

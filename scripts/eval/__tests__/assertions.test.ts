@@ -1,4 +1,4 @@
-import { textOf, matchesAlt, isAbstention, numberDrifted, describeDrift, allRequestsRefused } from '../assertions';
+import { textOf, matchesAlt, isAbstention, numberDrifted, describeDrift, allRequestsRefused, scoreNlpCase } from '../assertions';
 
 /**
  * The exact wire shape the no-pick branch returns
@@ -100,6 +100,30 @@ describe('forbidName', () => {
         // Symmetry matters: the echoed query text must not count as a forbidden match.
         const items = [abstentionFor('qdoba tequila lime chicken burrito')];
         expect(items.find(it => !isAbstention(it) && matchesAlt(textOf(it), forbid))).toBeUndefined();
+    });
+});
+
+describe('maxItems — a composite billed WITH its own components is a double-bill', () => {
+    // n-s424-05: "a bento box with rice chicken and broccoli" came back as the Bento Box
+    // AND rice, chicken, broccoli — four items for three. expectItems is a floor only,
+    // so without maxItems that line scored PASS on every name/band it declared.
+    const spec = { expectItems: 1, maxItems: 3, expectName: [['bento'], ['rice']] };
+    const bento = pick('Bento Box', null);
+    const rice = pick('White Rice', null);
+    const chicken = pick('Chicken', null);
+    const broccoli = pick('Broccoli', null);
+
+    it('fails the four-item double-bill', () => {
+        expect(scoreNlpCase(spec, [bento, rice, chicken, broccoli])).toEqual(['expected <=3 items, got 4']);
+    });
+
+    it('passes the composite alone and the three components alone', () => {
+        expect(scoreNlpCase(spec, [bento])).toEqual([]);
+        expect(scoreNlpCase(spec, [rice, chicken, broccoli])).toEqual([]);
+    });
+
+    it('is inert when the case does not declare it', () => {
+        expect(scoreNlpCase({ expectItems: 1, expectName: [['bento']] }, [bento, rice, chicken, broccoli])).toEqual([]);
     });
 });
 

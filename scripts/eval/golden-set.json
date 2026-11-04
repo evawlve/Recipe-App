@@ -8093,6 +8093,301 @@
         ]
       },
       "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 506: a synonym rewrite renamed every lasagna line `lasagna noodles` before retrieval (50 g of dry pasta, 360 kcal/100 g). → prepared Lasagna 167 kcal/100 g. REQUIRES Diego's scp + restart of the box rules file before it can pass."
+    },
+    {
+      "id": "n-s424-01",
+      "category": "nomination_s424",
+      "text": "a slice of prime rib",
+      "expectName": [
+        [
+          "prime rib"
+        ],
+        [
+          "rib roast"
+        ],
+        [
+          "ribeye"
+        ]
+      ],
+      "grams": [
+        85,
+        350
+      ],
+      "notes": "NOMINATION s424 (class A: a dinner-slice noun billed at a deli/label weight). Measured 4/4 reads 2026-10-31 on deploy 10/11: Prime Rib fs_475002 21 g / 56 kcal (fs_label_count). Truth: a carved slice of prime rib is 85-350 g. Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s424-02",
+      "category": "nomination_s424",
+      "text": "a slice of cornbread dressing",
+      "expectName": [
+        [
+          "dressing"
+        ],
+        [
+          "stuffing"
+        ]
+      ],
+      "grams": [
+        60,
+        200
+      ],
+      "macros": {
+        "kcal100": [
+          120,
+          260
+        ]
+      },
+      "notes": "NOMINATION s424 (class C: the dish noun lands on a dry panel). Measured 4/4 reads 2026-10-31: Cornbread dressing off_0780982994008 at 429 kcal/100 g (a dry-mix panel), grams 65/80/60/85 (count_unit_ai). Truth: prepared cornbread dressing is ~150-220 kcal/100 g and a slice/serving is 60-200 g. Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s424-03",
+      "category": "nomination_s424",
+      "text": "a sweet potato casserole serving",
+      "expectName": [
+        [
+          "sweet potato casserole"
+        ],
+        [
+          "casserole"
+        ]
+      ],
+      "forbidName": [
+        [
+          "leaves"
+        ]
+      ],
+      "grams": [
+        100,
+        300
+      ],
+      "notes": "NOMINATION s424 (class C: the dish noun is dropped for a raw FDC record). Measured 4/4 reads 2026-10-31: raw sweet potato LEAVES fdc_169303, 100/85/85/75 g (fdc_size_estimate). Truth: a casserole record, one serving 100-300 g. Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s424-04",
+      "category": "nomination_s424",
+      "text": "a serving of jackfruit carnitas",
+      "expectName": [
+        [
+          "jackfruit",
+          "carnitas"
+        ],
+        [
+          "jackfruit",
+          "pulled"
+        ],
+        [
+          "jackfruit",
+          "bbq"
+        ],
+        [
+          "jackfruit",
+          "taco"
+        ],
+        [
+          "jackfruit",
+          "seasoned"
+        ]
+      ],
+      "grams": [
+        80,
+        220
+      ],
+      "notes": "NOMINATION s424 (class C: the seasoned dish noun is dropped). Measured 4/4 reads 2026-10-31: plain Jackfruit off_0761934034058 at the flat 100 g (flat_100g_default). Truth: a prepared jackfruit carnitas / pulled / bbq product, one serving 80-220 g. Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s424-05",
+      "category": "nomination_s424",
+      "text": "a bento box with rice chicken and broccoli",
+      "expectItems": 1,
+      "maxItems": 3,
+      "expectName": [
+        [
+          "bento"
+        ],
+        [
+          "rice"
+        ]
+      ],
+      "notes": "NOMINATION s424 (class D, new: a composite record PLUS its own components). Measured 2026-10-31: FOUR items for three — Bento Box off_0669556030895 466 g plus White Rice 158 g, Chicken 113 g, Broccoli 100 g (~837 g, ~844 kcal). Truth: either the one composite or the three components, never both — maxItems 3 is the assertion (added with this pin). Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s424-06",
+      "category": "nomination_s424",
+      "text": "a mug of hot cocoa",
+      "expectName": [
+        [
+          "cocoa"
+        ],
+        [
+          "hot chocolate"
+        ]
+      ],
+      "grams": [
+        200,
+        320
+      ],
+      "total": {
+        "calories": [
+          100,
+          320
+        ]
+      },
+      "notes": "NOMINATION s424 (class B: a container noun on the 100 g unresolved floor). Measured 4/4 reads 2026-10-31: Hot cocoa off_0737697019939 100 g at 360 kcal/100 g (a dry-mix density; count_unresolved_floor) = 360 kcal. Truth: a prepared mug is 200-320 g and 100-320 kcal. Owner: sync-docs/reports/2026-10-31_s424-parser-loop-holiday-slices-and-mugs-bill-a-label-weight-plant-based-lines-read-plant-records-and-the-bento-double-bills.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-01",
+      "category": "nomination_s429",
+      "text": "dos huevos",
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "huevo"
+        ]
+      ],
+      "grams": [
+        90,
+        130
+      ],
+      "total": {
+        "calories": [
+          120,
+          200
+        ]
+      },
+      "notes": "NOMINATION s429 (class 1/5: numeral-without-unit lost in the normalized key). Measured 3/3 reads 2026-11-01 on deploy 12: Egg off_4099100296150 50 g = ONE egg (bare_plural_serving; nf \"eggs\"); the control \"two large eggs\" bills 100 g on the same record. Truth: two large eggs, 90-130 g, 120-200 kcal. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-02",
+      "category": "nomination_s429",
+      "text": "dos tortillas de harina",
+      "expectName": [
+        [
+          "tortilla"
+        ]
+      ],
+      "grams": [
+        70,
+        130
+      ],
+      "notes": "NOMINATION s429 (class 1/5: numeral lost; \"harina\" dropped). Measured 3/3 reads 2026-11-01: Tortilla off_0044946084090 47 g = one tortilla (bare_label_serving; nf \"tortillas\"). Truth: two flour tortillas, 70-130 g. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-03",
+      "category": "nomination_s429",
+      "text": "dos tamales de pollo",
+      "expectName": [
+        [
+          "tamal"
+        ]
+      ],
+      "grams": [
+        160,
+        280
+      ],
+      "notes": "NOMINATION s429 (class 1/5: numeral lost). Measured 3/3 reads 2026-11-01: Tamales De Pollo fs_32829601 57 g = one tamale (fs_label_count; nf \"tamales de pollo\"). Truth: two chicken tamales, 160-280 g. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-04",
+      "category": "nomination_s429",
+      "text": "una medida de proteína ascent de vainilla",
+      "expectName": [
+        [
+          "ascent"
+        ]
+      ],
+      "grams": [
+        28,
+        40
+      ],
+      "notes": "NOMINATION s429 (class 1: the brand is lost in the normalized key — nf \"vanilla protein\"). Measured 3/3 reads 2026-11-01: Vanilla Protein off_0834450000156 335 g (the whole tub; bare_label_serving), other brand. Pre-deploy-12 read fs_59230807 Plant Protein 41 g. Truth: an Ascent record, one scoop 28-40 g. TWO ARMS DISAGREE on deploy 15 (measured 2026-11-03, elvl8mDB83vUPOnTc_4dv): WARM fails on the cached FoodMapping row (off_0834450000156, 335 g); COLD passes 1/1 on fs_23121100 'Native Fuel Whey Protein Powder Vanilla Bean' [Ascent] 31 g — so the defect is the cache row, not retrieval. A promotion needs the warm arm (memory promote-a-pin-on-the-arm-that-gates-it); an eviction of that FoodMapping key is a protocol item for consolidation. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-05",
+      "category": "nomination_s429",
+      "text": "pollo y arroz",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "chicken"
+        ],
+        [
+          "pollo"
+        ]
+      ],
+      "notes": "NOMINATION s429 (class 6: VANISHED-ITEM — \"arroz\" lost; nf \"pollo\"). Measured 3/3 reads 2026-11-01: ONE item, Pollo off_2272940004648 100 g (bare_label_serving). Truth: two items, chicken and rice. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-06",
+      "category": "nomination_s429",
+      "text": "una manzana y un platano",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "apple"
+        ],
+        [
+          "manzana"
+        ]
+      ],
+      "notes": "NOMINATION s429 (class 6: VANISHED-ITEM — \"platano\" lost; nf \"apple\"). Measured 3/3 reads 2026-11-01: ONE item, Apple off_2000000110994 180 g (bare_label_serving). Truth: two items, an apple and a banana. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-07",
+      "category": "nomination_s429",
+      "text": "un vaso de agua",
+      "expectName": [
+        [
+          "water"
+        ],
+        [
+          "agua"
+        ]
+      ],
+      "grams": [
+        200,
+        300
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          5
+        ]
+      },
+      "notes": "NOMINATION s429 (class 9c, new WATER-PRODUCT: the bare path picks a product named \"Agua\"). Measured 2026-11-01 (run 4; detector-false, no translation): off_7802215501838 \"Agua\" 33 g / 137 kcal = 414 kcal/100 g (bare_label_serving). Truth: a glass of water, 200-300 g, 0 kcal. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s429-08",
+      "category": "nomination_s429",
+      "text": "1 taza de crema",
+      "expectName": [
+        [
+          "cream"
+        ],
+        [
+          "crema"
+        ]
+      ],
+      "grams": [
+        200,
+        260
+      ],
+      "notes": "NOMINATION s429 (class 9a ENGLISH-NAME GAP: the translate step lands on an English-named record the LIQUID/PASTE regexes do not pour for \"cream\"). Measured 2026-11-01 (run 4): Cream off_40894355 120 g for a cup (volume_unit; nf \"cream\"); the code-switched twin \"1 cup crema\" reads Spanish-head Crema 240 g. Truth: one cup of cream/crema, 200-260 g. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
+      "knownIssue": true
     }
   ]
 }
