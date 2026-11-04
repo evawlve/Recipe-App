@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-08-18T08:51:36.335Z",
+  "writtenAt": "2026-11-03T17:14:47.113Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -108,7 +108,133 @@
       "foodId": "off_0074175016838",
       "foodName": "Texas Toast",
       "grams": 40,
-      "kcal100": 400.0,
+      "kcal100": 400,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-01": {
+      "foodId": "fs_475002",
+      "foodName": "Prime Rib",
+      "grams": 21,
+      "kcal100": 266,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-02": {
+      "foodId": "off_0780982994008",
+      "foodName": "Cornbread dressing, cornbread",
+      "grams": 57,
+      "kcal100": 429,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-03": {
+      "foodId": "fdc_169303",
+      "foodName": "raw sweet potato leaves",
+      "grams": 100,
+      "kcal100": 42,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-04": {
+      "foodId": "fs_35841",
+      "foodName": "Jackfruit",
+      "grams": 165,
+      "kcal100": 94,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-05": {
+      "foodId": "off_0669556030895",
+      "foodName": "Bento Box",
+      "grams": 466,
+      "kcal100": 107,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 4
+    },
+    "n-s424-06": {
+      "foodId": "off_0810049442675",
+      "foodName": "Hot Cocoa",
+      "grams": 100,
+      "kcal100": 320,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-01": {
+      "foodId": "fs_3092",
+      "foodName": "Egg",
+      "grams": 50,
+      "kcal100": 147,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-02": {
+      "foodId": "fs_3740",
+      "foodName": "Tortilla",
+      "grams": 38,
+      "kcal100": 265,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-03": {
+      "foodId": "fs_32829601",
+      "foodName": "Tamales De Pollo",
+      "grams": 57,
+      "kcal100": 202,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-04": {
+      "foodId": "fs_23121100",
+      "foodName": "Native Fuel Whey Protein Powder Vanilla Bean",
+      "grams": 31,
+      "kcal100": 387,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-05": {
+      "foodId": "off_2272940004648",
+      "foodName": "Pollo",
+      "grams": 100,
+      "kcal100": 98,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-06": {
+      "foodId": "fs_35718",
+      "foodName": "Apples",
+      "grams": 138,
+      "kcal100": 52,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-07": {
+      "foodId": "off_7802215501838",
+      "foodName": "Agua",
+      "grams": 33,
+      "kcal100": 414,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-08": {
+      "foodId": "off_40894355",
+      "foodName": "Cream",
+      "grams": 120,
+      "kcal100": 344,
       "abstained": false,
       "errored": false,
       "itemCount": 1
