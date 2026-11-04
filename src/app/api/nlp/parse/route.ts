@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
       resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
       isPer100gInconsistentWithBilled,
     } = await import('@/lib/nlp/resolve-payload');
+    const { applyComponentSubtraction } = await import('@/lib/nlp/component-subtraction');
     const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
 
@@ -355,6 +356,9 @@ export async function POST(req: NextRequest) {
       // SegmentationCache, false = AI segmentation ran, null = this request
       // never reached AI segmentation (item-form input / single-item fast path).
       let segCacheHit: boolean | null = null;
+      // The removal clause the solo fast path stripped (`without the egg`), or null. s447a: read by
+      // `buildParsedItem()` to subtract a carried generic component from the billed head.
+      let soloRemovedClause: string | null = null;
       // Which split ran, for the stream's `segments` frame (`ParseStreamSegmenter`).
       let segmenter: ParseStreamSegmenter = 'items';
 
@@ -383,6 +387,7 @@ export async function POST(req: NextRequest) {
         const solo = stripSoloRemoval(items[0].rawText);
         if (solo) {
           items = [{ ...items[0], rawText: solo.head }];
+          soloRemovedClause = solo.clause;
           // audit: the stripped head keys the cache and MappingEventLog, so this line is the only record of the clause.
           logger.audit('nlp_parse.solo_removal', { head: solo.head, clause: solo.clause });
         }
@@ -777,6 +782,24 @@ export async function POST(req: NextRequest) {
               ? (details.source as StandardSource)
               : 'ai_estimated';
 
+        // s447a: solo-path removal clause -> subtract ONE fixed portion of a CARRIED generic component.
+        // Absent unless the dish carries it; `foodName`, `foodId`, `grams` are untouched.
+        let sub: Extract<ReturnType<typeof applyComponentSubtraction>, { adjustments: unknown }> | null = null;
+        if (soloRemovedClause) {
+          const r = applyComponentSubtraction({
+            nutrition, grams: mapped.grams, foodName: mapped.foodName, standardSource,
+            head: rawText, clause: soloRemovedClause, parsed,
+          });
+          sub = 'adjustments' in r ? r : null;
+          logger.audit('nlp_parse.solo_subtraction', {
+            head: rawText,
+            clause: soloRemovedClause,
+            subtracted: sub ? sub.adjustments.map(a => a.component) : [],
+            partSkips: sub?.partSkips ?? [],
+            skipped: 'skipped' in r ? r.skipped : null,
+          });
+        }
+
         const portionProvenance = portionProvenanceForTier(mapped.servingTier);
 
         return {
@@ -792,8 +815,9 @@ export async function POST(req: NextRequest) {
           quantity: qty,
           unit,
           grams: mapped.grams,
-          nutrition,
-          nutritionPer100g,
+          nutrition: sub ? sub.nutrition : nutrition,
+          nutritionPer100g: sub ? sub.nutritionPer100g : nutritionPer100g,
+          ...(sub ? { adjustments: sub.adjustments } : {}),
           servingOptions: details.servingOptions,
           // TRUE when `grams` above is a placeholder, not a weight — so `nutritionPer100g`
           // is that placeholder read back rather than a density, and every gram- or
