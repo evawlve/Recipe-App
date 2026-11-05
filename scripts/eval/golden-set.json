@@ -8388,6 +8388,75 @@
       ],
       "notes": "NOMINATION s429 (class 9a ENGLISH-NAME GAP: the translate step lands on an English-named record the LIQUID/PASTE regexes do not pour for \"cream\"). Measured 2026-11-01 (run 4): Cream off_40894355 120 g for a cup (volume_unit; nf \"cream\"); the code-switched twin \"1 cup crema\" reads Spanish-head Crema 240 g. Truth: one cup of cream/crema, 200-260 g. Owner: sync-docs/reports/2026-11-01_s429-parser-loop-spanish-postdeploy12.md (mobile). Pinned knownIssue by MGR s438 on 2026-11-03 (deploy 15, elvl8mDB83vUPOnTc_4dv); bands assert TRUTH (reasoning from USDA / label servings, not measured); promotion is Diego's call and needs the arm that gates it.",
       "knownIssue": true
+    },
+    {
+      "id": "n-s445-02",
+      "category": "removal_s445",
+      "text": "wendy's baconator no mayo",
+      "expectName": [
+        [
+          "baconator"
+        ]
+      ],
+      "forbidName": [
+        [
+          "chicken"
+        ]
+      ],
+      "total": {
+        "calories": [
+          625,
+          1295
+        ]
+      },
+      "notes": "s445a (2026-11-04): a `no <part>` clause leaves ADMISSION (parseRemovalClause in src/lib/mapping/removal-clause.ts). Base winner expected: fs_71231634 Baconator; label ~960 kcal, band +-35%. Before: the removed part was the K2 head noun and every record not naming it was hard-rejected. Owner: sync-docs/reports/2026-11-04_s445a-the-removed-component-leaves-admission.md (mobile).",
+      "knownIssue": false
+    },
+    {
+      "id": "n-s445-03",
+      "category": "removal_s445",
+      "text": "taco bell cheesy gordita crunch no sauce",
+      "expectName": [
+        [
+          "gordita"
+        ]
+      ],
+      "forbidName": [
+        [
+          "sauce"
+        ]
+      ],
+      "total": {
+        "calories": [
+          325,
+          675
+        ]
+      },
+      "notes": "s445a (2026-11-04): a `no <part>` clause leaves ADMISSION (parseRemovalClause in src/lib/mapping/removal-clause.ts). Base winner expected: fs_494534 / off_60658674830895147473002 Cheesy Gordita Crunch; label ~500 kcal, band +-35%. Before: the removed part was the K2 head noun and every record not naming it was hard-rejected. Owner: sync-docs/reports/2026-11-04_s445a-the-removed-component-leaves-admission.md (mobile).",
+      "knownIssue": false
+    },
+    {
+      "id": "n-s445-04",
+      "category": "removal_s445",
+      "text": "mcdonalds mcdouble no cheese",
+      "expectName": [
+        [
+          "mcdouble"
+        ]
+      ],
+      "forbidName": [
+        [
+          "american cheese"
+        ]
+      ],
+      "total": {
+        "calories": [
+          260,
+          540
+        ]
+      },
+      "notes": "s445a (2026-11-04): a `no <part>` clause leaves ADMISSION (parseRemovalClause in src/lib/mapping/removal-clause.ts). Base winner expected: fs_97921 McDouble; label ~400 kcal, band +-35%. Before: the removed part was the K2 head noun and every record not naming it was hard-rejected. Owner: sync-docs/reports/2026-11-04_s445a-the-removed-component-leaves-admission.md (mobile).",
+      "knownIssue": false
     }
   ]
 }

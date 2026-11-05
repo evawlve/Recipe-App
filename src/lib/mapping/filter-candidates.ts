@@ -10,6 +10,7 @@ import { logger } from '../logger';
 // Import direction is safe: brand-detector imports only brand-lexicon.json and
 // digit-brands.ts, neither of which reaches back here, so this adds no cycle.
 import { detectBrandInQuery } from './brand-detector';
+import { parseRemovalClause } from './removal-clause';
 
 // ============================================================
 // Types
@@ -1273,7 +1274,12 @@ export function hasCoreTokenMismatch(
     cachedBrandName?: string | null
 ): boolean {
     const queryLower = normalizedQuery.toLowerCase().trim();
-    const queryTokens = queryLower.split(/\s+/).filter(Boolean);
+    let queryTokens = queryLower.split(/\s+/).filter(Boolean);
+    // s445a: derive core tokens from the query's HEAD (a removed part is not required of the cached food). No rawLine here. A
+    // token-SORTED cache key (validated-mapping-helpers passes one) has no clause order, so it is never parsed.
+    if (queryTokens.join(' ') !== [...queryTokens].sort().join(' ')) {
+        queryTokens = parseRemovalClause(queryLower).head.split(/\s+/).filter(Boolean);
+    }
     const foodLower = [cachedFoodName, cachedBrandName].filter(Boolean).join(' ').toLowerCase();
 
     // Find core tokens in the query
@@ -2831,6 +2837,10 @@ export function filterCandidatesByTokens(
     options: FilterOptions = {}
 ): FilterResult {
     const { debug = false, rawLine, relaxed = false } = options;
+
+    // s445a: a trailing `no|without|minus <part>` clause is a removal, not a food to require. Admission reads the HEAD only
+    // (must-have, K2 head noun, coverage, mismatch checks); rawLine-based checks below keep the full line.
+    normalizedName = parseRemovalClause(normalizedName, rawLine).head;
 
     // Use rawLine for modifier detection if available, otherwise fall back to normalizedName
     const modifierCheckSource = rawLine || normalizedName;
