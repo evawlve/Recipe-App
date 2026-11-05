@@ -3,7 +3,8 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseRemovalClause } from '../removal-clause';
+import { demoteRemovedParts, parseRemovalClause } from '../removal-clause';
+import { buildRerankPool, laneMode } from '../rerank-pool';
 import { filterCandidatesByTokens, hasCoreTokenMismatch } from '../filter-candidates';
 
 const FIRES: Array<[string, string, string[]]> = [
@@ -134,6 +135,96 @@ describe('consumers', () => {
   });
   it('F3: a token-SORTED cache key is never parsed (unchanged)', () => {
     expect(hasCoreTokenMismatch('burger cheese king no whopper', 'Whopper', 'Burger King')).toBe(true);
+  });
+});
+
+// s448a: records that NAME the removed part yield their window slots to their lane-mates (cold path only).
+// Fixture: the 13 admitted candidates of `burger king whopper no cheese`, in admitted order (s445-fc3b snapshot, s448 M17 replay).
+const WHOPPER_ADMITTED: any[] = [{"id":"off_9664486401398594432","source":"openfoodfacts","name":"Burger King, Whopper Sandwich","semanticSimilarity":null},{"id":"off_242686422271752995","source":"openfoodfacts","name":"Burger King, Whopper Jr Sandwich","semanticSimilarity":null},{"id":"off_19289483496155943752","source":"openfoodfacts","name":"Burger King, Double Whopper Sandwich","semanticSimilarity":null},{"id":"off_866324187157056986","source":"openfoodfacts","name":"Burger King, BBQ Bacon Whopper Sandwich","semanticSimilarity":null},{"id":"off_0098000005538","source":"openfoodfacts","name":"Whopper Barbecue Bacon - Burger King","semanticSimilarity":null},{"id":"fs_72269469","source":"fatsecret","name":"Whopper with Cheese","semanticSimilarity":null},{"id":"fs_72269470","source":"fatsecret","name":"Whopper with Bacon & Cheese","semanticSimilarity":null},{"id":"fs_72269482","source":"fatsecret","name":"Triple Whopper with Cheese","semanticSimilarity":null},{"id":"fs_72269476","source":"fatsecret","name":"Double Whopper with Cheese","semanticSimilarity":null},{"id":"fs_72269494","source":"fatsecret","name":"Whopper Jr. with Cheese","semanticSimilarity":null},{"id":"fs_68444864","source":"fatsecret","name":"Whopper","semanticSimilarity":null},{"id":"fs_72269484","source":"fatsecret","name":"Triple Whopper with Bacon & Cheese","semanticSimilarity":null},{"id":"fs_72269495","source":"fatsecret","name":"Whopper Jr. with Bacon & Cheese","semanticSimilarity":null}];
+
+describe('demoteRemovedParts', () => {
+  const ids = (l: any[]) => l.map(c => c.id);
+  const mk = (name: string, source = 'fatsecret', semanticSimilarity: number | null = null) => ({ id: name, name, source, semanticSimilarity });
+
+  it('(1) removed: [] returns the same reference; so does an empty list', () => {
+    expect(demoteRemovedParts(WHOPPER_ADMITTED, [])).toBe(WHOPPER_ADMITTED);
+    const empty: any[] = [];
+    expect(demoteRemovedParts(empty, ['cheese'])).toBe(empty);
+  });
+
+  it('(2) whopper: the plain Whopper enters the 10-record window and the last cheese variant leaves it', () => {
+    const before = ids(buildRerankPool(WHOPPER_ADMITTED));
+    const after = ids(buildRerankPool(demoteRemovedParts(WHOPPER_ADMITTED, ['cheese'], 'burger king whopper')));
+    expect(before).toContain('fs_72269494');
+    expect(before).not.toContain('fs_68444864');
+    expect(after).toContain('fs_68444864');
+    expect(after).not.toContain('fs_72269494');
+  });
+
+  it('(3) an fdc record naming the part keeps its index', () => {
+    const l = [mk('Cheese Pizza', 'fdc'), mk('Cheese Burger'), mk('Plain Burger'), mk('Burger')];
+    const out = demoteRemovedParts(l, ['cheese']);
+    expect(out[0]).toBe(l[0]);
+    expect(ids(out)).toEqual(['Cheese Pizza', 'Plain Burger', 'Burger', 'Cheese Burger']);
+  });
+
+  it('(4) `w/ No Cheese` does not name cheese', () => {
+    const l = [mk('Deluxe Sandwich w/ No Cheese'), mk('Deluxe Sandwich')];
+    expect(demoteRemovedParts(l, ['cheese'])).toBe(l);
+  });
+
+  it('(5) slot property: every lane keeps its index set and multiset', () => {
+    const out = demoteRemovedParts(WHOPPER_ADMITTED, ['cheese'], 'burger king whopper');
+    expect(out).not.toBe(WHOPPER_ADMITTED);
+    const lanes = (l: any[]) => {
+      const m = new Map<string, { at: number[]; ids: string[] }>();
+      l.forEach((c, i) => {
+        const k = `${c.source}|${laneMode(c)}`;
+        const e = m.get(k) ?? { at: [], ids: [] };
+        e.at.push(i);
+        e.ids.push(c.id);
+        m.set(k, e);
+      });
+      return m;
+    };
+    const a = lanes(WHOPPER_ADMITTED);
+    const b = lanes(out);
+    expect(Array.from(b.keys()).sort()).toEqual(Array.from(a.keys()).sort());
+    for (const [k, e] of a) {
+      expect(b.get(k)!.at).toEqual(e.at);
+      expect(b.get(k)!.ids.slice().sort()).toEqual(e.ids.slice().sort());
+    }
+  });
+
+  it('(6/F10) a non-removal query hands back what demoteRemovedParts(x, []) would: filtered in candidate order, same reference on re-demotion', () => {
+    const r = filterCandidatesByTokens(CANDS, 'burger king whopper', { rawLine: 'burger king whopper' });
+    expect(demoteRemovedParts(r.filtered, [])).toBe(r.filtered);
+    const order = CANDS.map(c => c.id);
+    const got = r.filtered.map(c => c.id);
+    expect(got).toEqual(order.filter(i => got.includes(i)));
+  });
+
+  it('F1: plural form sets meet in both directions', () => {
+    expect(ids(demoteRemovedParts([mk('Burger with Pickle'), mk('Plain Burger')], ['pickles']))).toEqual(['Plain Burger', 'Burger with Pickle']);
+    expect(ids(demoteRemovedParts([mk('Pasta with Sauces'), mk('Plain Pasta')], ['sauce']))).toEqual(['Plain Pasta', 'Pasta with Sauces']);
+    expect(ids(demoteRemovedParts([mk('Mixed Cheeses'), mk('Plain Melt')], ['cheese']))).toEqual(['Plain Melt', 'Mixed Cheeses']);
+  });
+
+  it('F2: a removed token that names the head is ignored', () => {
+    const l = ['Big Mac', 'McDouble', 'Quarter Pounder', 'Big Mac Meal', 'Big Mac Sauce'].map(n => mk(n));
+    // Only `Big Mac Sauce` (already last) is demoted; every "Big Mac" record keeps its place.
+    expect(ids(demoteRemovedParts(l, ['mac', 'sauce'], 'mcdonalds big mac'))).toEqual(ids(l));
+    expect(demoteRemovedParts(l.slice(0, 4), ['mac'], 'mcdonalds big mac')).toEqual(l.slice(0, 4));
+    const sauceMid = ['Big Mac', 'Big Mac Sauce', 'McDouble'].map(n => mk(n));
+    expect(ids(demoteRemovedParts(sauceMid, ['mac', 'sauce'], 'mcdonalds big mac'))).toEqual(['Big Mac', 'McDouble', 'Big Mac Sauce']);
+    expect(demoteRemovedParts(sauceMid, ['mac'], 'mcdonalds big mac')).toBe(sauceMid);
+  });
+
+  it('F3: `instead of X`, `no X`, `X free` are not mentions', () => {
+    const a = [mk('Cheeseburger with Onion (Mustard & Ketchup Instead of Spread)'), mk('Cheeseburger with Spread')];
+    expect(ids(demoteRemovedParts(a, ['spread']))).toEqual([a[0].id, a[1].id]);
+    const b = [mk('Cheese Free Pizza'), mk('Cheese Pizza'), mk('Plain Pizza')];
+    expect(ids(demoteRemovedParts(b, ['cheese']))).toEqual(['Cheese Free Pizza', 'Plain Pizza', 'Cheese Pizza']);
   });
 });
 

@@ -10,7 +10,7 @@ import { logger } from '../logger';
 // Import direction is safe: brand-detector imports only brand-lexicon.json and
 // digit-brands.ts, neither of which reaches back here, so this adds no cycle.
 import { detectBrandInQuery } from './brand-detector';
-import { parseRemovalClause } from './removal-clause';
+import { demoteRemovedParts, parseRemovalClause } from './removal-clause';
 
 // ============================================================
 // Types
@@ -2840,7 +2840,8 @@ export function filterCandidatesByTokens(
 
     // s445a: a trailing `no|without|minus <part>` clause is a removal, not a food to require. Admission reads the HEAD only
     // (must-have, K2 head noun, coverage, mismatch checks); rawLine-based checks below keep the full line.
-    normalizedName = parseRemovalClause(normalizedName, rawLine).head;
+    const removal = parseRemovalClause(normalizedName, rawLine);
+    normalizedName = removal.head;
 
     // Use rawLine for modifier detection if available, otherwise fall back to normalizedName
     const modifierCheckSource = rawLine || normalizedName;
@@ -2963,7 +2964,8 @@ export function filterCandidatesByTokens(
 
     if (mustHaveTokens.length === 0) {
         // No tokens to filter by - keep all
-        return { filtered: candidates, removedCount: 0 };
+        // s448a: window composition only (records naming the removed part yield slots to their lane-mates).
+        return { filtered: demoteRemovedParts(candidates, removal.removed, removal.head), removedCount: 0 };
     }
 
     // Filter candidates. Named so the S3 fallback below can run the SAME predicate a second time
@@ -3501,7 +3503,8 @@ export function filterCandidatesByTokens(
     }
 
     return {
-        filtered,
+        // s448a: window composition only; owner is the s448a report (mobile sync-docs/reports).
+        filtered: demoteRemovedParts(filtered, removal.removed, removal.head),
         removedCount,
         reason: removedCount > 0 ? 'removed_by_must_have_tokens' : undefined,
     };
