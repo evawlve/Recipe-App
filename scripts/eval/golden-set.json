@@ -8241,6 +8241,84 @@
       "knownIssue": true
     },
     {
+      "id": "n-s448-02",
+      "category": "nomination_s448",
+      "text": "a hamburger without the cheese",
+      "expectName": [
+        [
+          "hamburger"
+        ],
+        [
+          "burger"
+        ]
+      ],
+      "forbidName": [
+        [
+          "ground beef"
+        ],
+        [
+          "lean"
+        ],
+        [
+          "patties"
+        ],
+        [
+          "patty"
+        ]
+      ],
+      "notes": "NOMINATION s448 (s447b live probe 2026-11-04 on the #641 branch: 85% Lean Ground Beef off_0850064951257 112 g / 240 kcal, subtraction skipped no_carrier). The solo path strips the clause, so the mapper sees `a hamburger` - the defect is the bare dish noun, not the removal: cold replay on 5a2631be 2026-11-05 reads off_0850064951257 for both `a hamburger without the cheese` (0.98) and `a hamburger` (0.95). Truth: a hamburger SANDWICH record (bun + patty), never raw ground beef. Pinned knownIssue by MGR s448 on 2026-11-05 (deploy 17, gD3qNSXhd3AIPWenJVaVO); identity-only (no band): the wrong record bills inside any plausible calorie band, so forbidName carries the assertion; promotion is Diego's call and needs the arm that gates it. Owner: sync-docs/reports/2026-11-05_s448-the-whopper-window-row-is-cut-and-the-nightly-is-ahead.md (mobile); evidence /Users/diego/dev/snapshots/s448/pin/.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s448-03",
+      "category": "nomination_s448",
+      "text": "hamburger",
+      "expectName": [
+        [
+          "hamburger"
+        ],
+        [
+          "burger"
+        ]
+      ],
+      "forbidName": [
+        [
+          "ground beef"
+        ],
+        [
+          "lean"
+        ],
+        [
+          "patties"
+        ],
+        [
+          "patty"
+        ]
+      ],
+      "notes": "NOMINATION s448 (the root of n-s448-02). Cold replay on 5a2631be 2026-11-05: Ground Beef (85% Lean / 15% Fat) fs_40401 (0.74); the live cache served `hamburger` as off_0863441000035 `85% Lean 15% Fat Beef 1/3 lb Burger Patties` (MappingEventLog, early hit, 2026-07-26). Truth: a hamburger sandwich record. `mcdonalds hamburger` is already pinned passing by n-n1-01; the GENERIC noun is not. Pinned knownIssue by MGR s448 on 2026-11-05 (deploy 17, gD3qNSXhd3AIPWenJVaVO); identity-only (no band): the wrong record bills inside any plausible calorie band, so forbidName carries the assertion; promotion is Diego's call and needs the arm that gates it. Owner: sync-docs/reports/2026-11-05_s448-the-whopper-window-row-is-cut-and-the-nightly-is-ahead.md (mobile); evidence /Users/diego/dev/snapshots/s448/pin/.",
+      "knownIssue": true
+    },
+    {
+      "id": "n-s448-04",
+      "category": "nomination_s448",
+      "text": "a latte without sugar",
+      "expectName": [
+        [
+          "latte"
+        ]
+      ],
+      "forbidName": [
+        [
+          "apricot"
+        ],
+        [
+          "dried"
+        ]
+      ],
+      "notes": "NOMINATION s448 (s447b live probe 2026-11-04: fdc_173942 `dried sulfured stewed without added sugar apricots` 4 g / 3.4 kcal). SOLO_ABSENCE keeps `without sugar` on the line, so the mapper scores the whole line and an FDC `without added sugar` record wins on the clause words; cold replay on 5a2631be 2026-11-05 reads the same id (scored_by_confidence, 0.78, 5 admitted) while `a latte` alone reads off_8445290043108 Latte (0.98). Truth: a latte record. Pinned knownIssue by MGR s448 on 2026-11-05 (deploy 17, gD3qNSXhd3AIPWenJVaVO); identity-only (no band): the wrong record bills inside any plausible calorie band, so forbidName carries the assertion; promotion is Diego's call and needs the arm that gates it. Owner: sync-docs/reports/2026-11-05_s448-the-whopper-window-row-is-cut-and-the-nightly-is-ahead.md (mobile); evidence /Users/diego/dev/snapshots/s448/pin/.",
+      "knownIssue": true
+    },
+    {
       "id": "n-s429-01",
       "category": "nomination_s429",
       "text": "dos huevos",

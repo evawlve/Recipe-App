@@ -803,9 +803,10 @@ describe('population builders account for every line they were given', () => {
         // 325 / 189 / 159 since 2026-11-03: n-s424-01..06 + n-s429-01..08 (the s424/s429 nominations, all knownIssue, MGR s438) — fourteen `text` lines; eleven grams bands; two total bands (s424-06, s429-01); three expectItems (s424-05 with the new maxItems, s429-05, s429-06); one forbidName (s424-03); three kcal100 bands (s424-02, s429-07 and none else).
         // 328 / 189 / 162 since 2026-11-04: n-s445-02..04 (s445a) — three `text` lines, three total bands, three forbidName.
         // 329 / 163 since 2026-11-05: n-s448-01 (s448a) — one `text` line.
-        expect(p.lines).toHaveLength(329);
+        // 332 / 189 / 166 since 2026-11-05: n-s448-02..04 (MGR s448 nominations, all knownIssue) — three `text` lines, no band, three forbidName; merged over n-s448-01.
+        expect(p.lines).toHaveLength(332);
         expect(p.lines.filter(l => l.band).length).toBe(189);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(163);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(166);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 

@@ -547,10 +547,11 @@ describe('parseGoldenSet', () => {
         // 325 since 2026-11-03: n-s424-01..06 + n-s429-01..08 (knownIssue pins, MGR s438), every one with expectName.
         // 328 since 2026-11-04: n-s445-02..04 (s445a removal-clause pins) — three `text` lines, three total bands, three forbidName, three expectName.
         // 329 since 2026-11-05: n-s448-01 (s448a).
-        expect(all.length).toBe(329);
+        // 332 since 2026-11-05: n-s448-02..04 (MGR s448 knownIssue nominations) — three `text` lines, three forbidName, three expectName, no band.
+        expect(all.length).toBe(332);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(329); // 329 since 2026-11-05: n-s448-01 (s448a)
+        expect(n(c => c.expectName.length > 0)).toBe(332); // 329 since 2026-11-05: n-s448-01 (s448a); 332 with n-s448-02..04
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
         // 171 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two of six new cases
         // where identity held on both arms and only the count moved.
@@ -627,7 +628,8 @@ describe('parseGoldenSet', () => {
         // 13 since 2026-11-03: n-s424-03 forbids the raw-leaves record (MGR s438).
         // 16 since 2026-11-04: n-s445-02..04 forbid the wrong-base record (s445a).
         // 17 since 2026-11-05: n-s448-01 forbids cheese (s448a).
-        expect(n(c => !!c.forbidName)).toBe(17);
+        // 20 since 2026-11-05: n-s448-02..04 forbid ground beef / the dried-fruit record (MGR s448).
+        expect(n(c => !!c.forbidName)).toBe(20);
         expect(n(c => c.expectAbstain === true)).toBe(0);
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
@@ -649,7 +651,8 @@ describe('parseGoldenSet', () => {
         // discriminator, and on n-p2-01 the serving residue is still wrong post-fix.
         // 48 since 2026-10-18: n-r3-01, 08, 09 carry no grams/total/macros band (derived from the seat deltas: 10 cases - union of grams 02-07 and macros 04, 05, 10).
         // 51 since 2026-11-03: n-s424-05 (maxItems), n-s429-05, n-s429-06 (expectItems) carry no band (MGR s438).
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(51);
+        // 54 since 2026-11-05: n-s448-02..04 are identity-only (forbidName), no band (MGR s448).
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(54);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
@@ -677,7 +680,8 @@ describe('parseGoldenSet', () => {
         // 166 / 159 since 2026-11-03: the fourteen s424/s429 pins are all `text` lines (MGR s438).
         // 166 / 162 since 2026-11-04: n-s445-02..04 are `text` lines (s445a).
         // 166 / 163 since 2026-11-05: n-s448-01 is a `text` line (s448a).
-        expect([item.length, text.length]).toEqual([166, 163]);
+        // 166 / 166 since 2026-11-05: n-s448-02..04 are `text` lines (MGR s448).
+        expect([item.length, text.length]).toEqual([166, 166]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -955,14 +959,15 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // 325 / 189 / 67 since 2026-11-03: n-s424-01..06 + n-s429-01..08 — eleven grams bands, two total bands, three expectItems.
         // 328 / 63 since 2026-11-04: n-s445-02..04 (s445a) — three total bands.
         // 329 / 64 since 2026-11-05: n-s448-01 (s448a) — one total band.
-        expect(cov.cases).toBe(329);
+        // 332 / 64 since 2026-11-05: n-s448-02..04 (MGR s448) — no band.
+        expect(cov.cases).toBe(332);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 189, blind: 189 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 64, blind: 64 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 67, blind: 67 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(329); // 329 since 2026-11-05: n-s448-01 (s448a)
+        expect(en.asserted).toBe(332); // 329 since 2026-11-05: n-s448-01 (s448a); 332 with n-s448-02..04
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...
