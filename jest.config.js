@@ -37,7 +37,11 @@ module.exports = {
       testMatch: ['<rootDir>/src/components/**/*.test.tsx'],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', { 
-          tsconfig: '<rootDir>/tsconfig.json',
+          // tsconfig.json has "jsx": "preserve" (what Next wants), so pointing
+          // ts-jest at it makes every .tsx test emit raw JSX and fail with
+          // SyntaxError: Unexpected token '<'. The inline override still loads
+          // tsconfig.json (paths, strictness) and only changes the JSX emit.
+          tsconfig: { jsx: 'react-jsx' },
           useESM: false,
           isolatedModules: true
         }],
