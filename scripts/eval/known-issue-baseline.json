@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-11-03T17:13:51.574Z",
+  "writtenAt": "2026-11-05T17:26:09.255Z",
   "cases": {
     "n-brand-05": {
       "foodId": "off_0639001461536",
@@ -233,6 +233,33 @@
       "foodName": "Cream",
       "grams": 120,
       "kcal100": 344,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-02": {
+      "foodId": "off_0850064951257",
+      "foodName": "85% Lean Ground Beef",
+      "grams": 112,
+      "kcal100": 214.2857208251953,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-03": {
+      "foodId": "off_0863441000035",
+      "foodName": "85% Lean 15% Fat Beef 1/3 lb Burger Patties",
+      "grams": 151,
+      "kcal100": 199,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-04": {
+      "foodId": "fdc_173942",
+      "foodName": "dried sulfured stewed without added sugar apricots",
+      "grams": 4,
+      "kcal100": 85,
       "abstained": false,
       "errored": false,
       "itemCount": 1
