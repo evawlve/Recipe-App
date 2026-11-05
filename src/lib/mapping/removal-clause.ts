@@ -11,6 +11,7 @@
  * pin reads both files as text and asserts they are identical. Pure: no env, no memo, never throws.
  */
 import { detectBrandInQuery } from './brand-detector';
+import { laneMode } from './rerank-pool';
 
 export interface RemovalClause {
   head: string;
@@ -94,4 +95,71 @@ export function parseRemovalClause(name: string, rawLine?: string): RemovalClaus
   if (brand && brand.toLowerCase().split(/\s+/).some(w => NEG.has(w))) return noop;
 
   return { head, removed: parts.flat() };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// s448a: window composition on a removal line. Owner: sync-docs/reports/2026-11-05_s448a-the-removed-part-yields-its-window-slot.md
+// (mobile repo). RANKING IS NOT TOUCHED by the reorder's intent, but score ties break in list order (stable sorts downstream).
+// ---------------------------------------------------------------------------------------------------------------------
+
+const NAME_NEGATORS = new Set(['no', 'without', 'minus', 'hold', 'sans']);
+// Plural/-e forms: `pickles` -> pickle, pickl; `sauce` -> sauc; compared as SETS so pickle/pickles and sauce/sauces meet.
+const forms = (w: string): string[] => [w, w.replace(/s$/, ''), w.replace(/es$/, '')];
+const words = (s: string): string[] => s.toLowerCase().match(/[a-z]+/g) ?? [];
+
+/** True when `name` carries one of `targets` (a form set) as an affirmative mention, not `no X`, `instead of X`, `X free`. */
+function namesPart(name: string, targets: Set<string>): boolean {
+  const t = words(name);
+  for (let i = 0; i < t.length; i++) {
+    if (!forms(t[i]).some(f => targets.has(f))) continue;
+    if (i >= 1 && NAME_NEGATORS.has(t[i - 1])) continue;
+    if (i >= 2 && t[i - 2] === 'instead' && t[i - 1] === 'of') continue;
+    if (i + 1 < t.length && (t[i + 1] === 'free' || t[i + 1] === 'less')) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * On a removal line (`burger king whopper no cheese`) a record that NAMES the removed part sits behind its plain lane-mate
+ * only in the user's mind: the window (`buildRerankPool()`, 10 slots, round-robin by source x laneMode, gather order) fills
+ * with `W/Cheese` variants and the plain Whopper is never scored. Within each lane (source x laneMode) this moves the
+ * non-naming records ahead of the naming ones (stable), then writes the lane back into the SAME slot positions it occupied,
+ * so per-lane membership, per-source counts and every lane's set of positions are unchanged. `fdc` records keep their exact
+ * positions (rerank-pool invariant 4). Removed tokens that also name the HEAD (`big mac no mac sauce`) are ignored; with
+ * nothing left, or `removed` empty, or an empty list, `list` itself is returned (reference-equal). Pure.
+ */
+export function demoteRemovedParts<T extends { name: string; source?: string | null; semanticSimilarity?: number | null }>(
+  list: T[],
+  removed: readonly string[],
+  head: string = '',
+): T[] {
+  if (removed.length === 0 || list.length === 0) return list;
+  const headForms = new Set(words(head).flatMap(forms));
+  const live = removed.filter(r => !forms(r.toLowerCase()).some(f => headForms.has(f)));
+  if (live.length === 0) return list;
+  const targets = new Set(live.flatMap(r => forms(r.toLowerCase())));
+
+  const lanes = new Map<string, number[]>();
+  list.forEach((c, i) => {
+    if (c.source === 'fdc') return;
+    const key = `${c.source ?? ''}\u0000${laneMode(c)}`;
+    const slots = lanes.get(key);
+    if (slots) slots.push(i);
+    else lanes.set(key, [i]);
+  });
+
+  const out = list.slice();
+  let moved = false;
+  for (const slots of lanes.values()) {
+    const items = slots.map(i => list[i]);
+    const naming = items.map(c => namesPart(c.name, targets));
+    if (!naming.some(Boolean) || naming.every(Boolean)) continue;
+    const reordered = [...items.filter((_, k) => !naming[k]), ...items.filter((_, k) => naming[k])];
+    slots.forEach((slot, k) => {
+      if (out[slot] !== reordered[k]) moved = true;
+      out[slot] = reordered[k];
+    });
+  }
+  return moved ? out : list;
 }

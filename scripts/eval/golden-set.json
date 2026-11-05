@@ -8535,6 +8535,29 @@
       },
       "notes": "s445a (2026-11-04): a `no <part>` clause leaves ADMISSION (parseRemovalClause in src/lib/mapping/removal-clause.ts). Base winner expected: fs_97921 McDouble; label ~400 kcal, band +-35%. Before: the removed part was the K2 head noun and every record not naming it was hard-rejected. Owner: sync-docs/reports/2026-11-04_s445a-the-removed-component-leaves-admission.md (mobile).",
       "knownIssue": false
+    },
+    {
+      "id": "n-s448-01",
+      "category": "removal_s448",
+      "text": "burger king whopper no cheese",
+      "expectName": [
+        [
+          "whopper"
+        ]
+      ],
+      "forbidName": [
+        [
+          "cheese"
+        ]
+      ],
+      "total": {
+        "calories": [
+          435,
+          905
+        ]
+      },
+      "notes": "s448a (2026-11-05): on a `no <part>` line the records that NAME the removed part yield their rerank-window slots to their lane-mates (demoteRemovedParts in src/lib/mapping/removal-clause.ts, consumed in filterCandidatesByTokens). Base winner was fs_72269469 Whopper with Cheese (the plain Whopper fs_68444864 sat 6th in its lane and was never scored); expected winner fs_68444864 Whopper; label ~670 kcal, band +-35%. Cold path only. Owner: sync-docs/reports/2026-11-05_s448a-the-removed-part-yields-its-window-slot.md (mobile).",
+      "knownIssue": false
     }
   ]
 }
