@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-11-03T17:14:47.113Z",
+  "writtenAt": "2026-11-05T16:58:41.730Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -235,6 +235,33 @@
       "foodName": "Cream",
       "grams": 120,
       "kcal100": 344,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-02": {
+      "foodId": "off_0850064951257",
+      "foodName": "85% Lean Ground Beef",
+      "grams": 112,
+      "kcal100": 214.2857208251953,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-03": {
+      "foodId": "fs_40401",
+      "foodName": "Ground Beef (85% Lean / 15% Fat)",
+      "grams": 28,
+      "kcal100": 215,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-04": {
+      "foodId": "fdc_173942",
+      "foodName": "dried sulfured stewed without added sugar apricots",
+      "grams": 4,
+      "kcal100": 85,
       "abstained": false,
       "errored": false,
       "itemCount": 1
