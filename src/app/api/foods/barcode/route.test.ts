@@ -258,7 +258,8 @@ describe('/api/foods/barcode FatSecret branch', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
 
-    expect(getOffProductByBarcode).toHaveBeenCalledWith('021130126026');
+    // The fixture row is in the local mirror, so the live API is never asked.
+    expect(getOffProductByBarcode).not.toHaveBeenCalled();
     expect(body.id).toBe('off_021130126026');
     expect(body.source).toBe('openfoodfacts');
     expect(body.name).toBe('Greek Nonfat Yogurt (Strawberry)');

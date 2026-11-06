@@ -140,8 +140,8 @@ describe('/api/foods/barcode nosave=1', () => {
     expect(body.nutritionPer100g.kcal100).toBeGreaterThan(0);
     expect(offUpsert).not.toHaveBeenCalled();
 
-    // hydrateOffCandidate returns cache-first, BEFORE the guard, so nothing consults the
-    // policy on this path. That is the normal reading here and not the fail-open — see the
+    // The local OffFood read answers this scan and hydrateOffCandidate is never called, so
+    // nothing consults the policy on this path. That is the normal reading here and not the fail-open — see the
     // withReceipt() header in route.ts for the falsifier that does work.
     expect(receiptOf(res).consulted).toBe(0);
   });
