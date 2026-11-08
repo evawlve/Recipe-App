@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { toClientSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
+import { logger } from '@/lib/logger';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import {
   runWithWritePolicy,
@@ -96,8 +97,19 @@ export async function GET(req: NextRequest) {
       // distinct fact from "nobody has this barcode" and from the nosave refusal below.
       let offPanelUnusable = false;
 
-      // 1. Try FatSecret first
-      const fsResult = await lookupFatSecretBarcode(trimmedCode);
+      // 1. Try FatSecret first. FatSecretError subclasses already return null inside
+      // lookupFatSecretBarcode; a timeout / network / non-JSON failure throws, and must fall
+      // through to the local OffFood row and OFF live rather than 500.
+      let fsResult: Awaited<ReturnType<typeof lookupFatSecretBarcode>> = null;
+      try {
+        fsResult = await lookupFatSecretBarcode(trimmedCode);
+      } catch (err) {
+        logger.warn('fatsecret.barcode.leg_failed', {
+          barcode: trimmedCode,
+          name: (err as Error)?.name,
+          message: (err as Error)?.message,
+        });
+      }
       if (fsResult && fsResult.foodId) {
         // The `fs_` prefix is load-bearing. resolveFoodDetails dispatches PURELY on the id
         // prefix (`fdc_` / `off_` / `fs_`) and falls through to an AiGeneratedFood lookup
