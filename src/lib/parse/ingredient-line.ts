@@ -608,6 +608,25 @@ function stripDefiniteFrameBeforeCount(line: string): string {
   if (!q || q.consumed >= tokens.length) return line;
   return m[1] + rest;
 }
+// s453 (BUILD-CLOCK R2; known since s179): a CLOCK TIME is a timestamp, never a count and never part of the food. `11am snack:
+// string cheese` reaches this function alone via the parse route's fast path; the tokenizer split `11am` into `11` + `am`, so it
+// parsed as qty 11 / name `am snack: string cheese` (11 string cheeses). `6:30 oatmeal` read 6 (the quantity reader stops at the
+// colon) and `2 eggs at 7am` kept the count but named the food `at 7 am`. A time is an hour 1-12 glued to (or one space before)
+// am/pm/a.m./p.m., with optional `:mm`, or a bare `h:mm` / `hh:mm` (two-digit minutes, so `1:1 ratio` stays), plus a leading
+// `at`/`around`/`about`/`by`/`@`. It is removed so the line parses EXACTLY as its time-free twin. A line that is ONLY a time
+// (`2pm`) is left as it was: removing it would leave no food. `am`/`pm` must end the token (`2 amaretti`, `3 pmole` stay).
+// Runs before every other strip. Tested in clock-time-is-not-a-quantity.test.ts.
+const CLOCK_TIME_RE =
+  /(?:\b(?:at|around|about|by)\s+|@\s*)?(?<![\w.:/])(?:(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s?[ap]\.?m\.?|(?:[01]?\d|2[0-3]):[0-5]\d)(?![a-z0-9:])/gi;
+function stripClockTime(line: string): string {
+  const stripped = line.replace(CLOCK_TIME_RE, ' ');
+  if (stripped === line) return line;
+  const out = stripped
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s:,;–—-]+|[\s:,;–—-]+$/g, '');
+  return /[a-z]/i.test(out) ? out : line;
+}
+
 function stripQuantityHedges(line: string): string {
   return stripHedgeBeforeArticleMeasure(stripApproximatorBeforeMeasure(stripFillerAdjective(stripDefiniteFrameBeforeCount(line))))
     .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
@@ -620,7 +639,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(line))));
+  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line)))));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();
