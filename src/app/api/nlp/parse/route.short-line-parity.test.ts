@@ -3,12 +3,12 @@
  *
  * `singleItemFromText()` in ./route.ts decides whether a line skips the segmenter (≤ 60 chars
  * after trim, a trailing `for|at|as <meal>` suffix stripped, none of `,;\n+&` or the words
- * `and|with|plus|con|y`, ≤ 6 words). The mobile client mirrors that rule as `isShortLine()` in
+ * `and|with|plus|con|y` outside a kept dish name (src/lib/nlp/kept-dish-names.ts), ≤ 6 words). The mobile client mirrors that rule as `isShortLine()` in
  * `src/lib/magic-flow-timing.ts` (KindaHealthyMobile) to decide whether the ADD TO chips wave
  * once or loop while the parse reads (punch #278, Lane E S48).
  *
  * SHORT_LINE_FIXTURES below is a VERBATIM COPY of the table of the same name in mobile
- * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (37 rows,
+ * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (42 rows,
  * `[name, text, short]`). The backend cannot import the mobile repo, so the two tables MUST
  * CHANGE TOGETHER: a change to either rule, or to either table, lands in both repos in the
  * same session. `short` is the mobile fixture's claim that `singleItemFromText()` returns
@@ -99,8 +99,13 @@ const SHORT_LINE_FIXTURES: [name: string, text: string, short: boolean][] = [
   ['a pour onto a non-food object is one food', 'a sip of wine on vacation', true],
   ['spanish y joins two foods', 'pollo y arroz', false],
   ['spanish con joins two foods', 'arroz con frijoles', false],
-  ['english menu con also routes', 'chili con carne', false],
+  ['a kept english menu con is one food', 'chili con carne', true],
   ['con inside a word is not a joiner', 'conch fritters', true],
+  ['a kept dish name with con is one food', 'arroz con pollo', true],
+  ['a kept dish with a quantity is one food', 'una taza de arroz con pollo', true],
+  ['an accented kept dish is one food', 'un café con leche', true],
+  ['a kept dish plus a second food still routes', 'arroz con pollo y frijoles', false],
+  ['a kept dish over six words still routes', 'una taza grande de arroz con pollo', false],
 ];
 // ---------------------------------------------------------------------------------------------
 
@@ -145,8 +150,8 @@ describe('/api/nlp/parse short-line fast path — parity with mobile SHORT_LINE_
     jest.restoreAllMocks();
   });
 
-  it('carries all 37 rows of the mobile table', () => {
-    expect(SHORT_LINE_FIXTURES).toHaveLength(37);
+  it('carries all 42 rows of the mobile table', () => {
+    expect(SHORT_LINE_FIXTURES).toHaveLength(42);
   });
 
   it.each(SHORT_LINE_FIXTURES)('%s', async (_name, text, short) => {

@@ -24,6 +24,7 @@ import {
 } from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import { isPourOntoSecondFood, restoreLeadingPour } from '@/lib/parse/loose-measures';
+import { maskKeptDishNames } from '@/lib/nlp/kept-dish-names';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
   MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
@@ -63,7 +64,7 @@ function singleItemFromText(text: string): ParsedInputItem | null {
     rawText = trimmed.slice(0, mealMatch.index).trim();
   }
 
-  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(rawText)) return null;
+  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(maskKeptDishNames(rawText))) return null;
   // S202 (cloud-35 F9): `a splash of syrup on pancakes` is two foods — let the segmenter split it.
   if (isPourOntoSecondFood(rawText)) return null;
   if (rawText.split(/\s+/).length > 6) return null;

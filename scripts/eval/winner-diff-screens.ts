@@ -30,6 +30,7 @@
 import { matchesAlt, textOf } from './assertions';
 // Relative, not '@/': loose-measures.ts has no imports, so this file stays I/O-free.
 import { isPourOntoSecondFood } from '../../src/lib/parse/loose-measures';
+import { maskKeptDishNames } from '../../src/lib/nlp/kept-dish-names';
 
 // ============================================================
 // 1. Wire types — shared with winner-diff.ts, kept here so tests need no runner
@@ -1052,7 +1053,7 @@ export function isDeterministicSingleItemText(text: string): boolean {
     let rawText = trimmed;
     const mealMatch = trimmed.match(MEAL_SUFFIX_RE);
     if (mealMatch) rawText = trimmed.slice(0, mealMatch.index).trim();
-    if (rawText.length === 0 || MULTI_ITEM_SIGNALS_RE.test(rawText)) return false;
+    if (rawText.length === 0 || MULTI_ITEM_SIGNALS_RE.test(maskKeptDishNames(rawText))) return false;
     if (isPourOntoSecondFood(rawText)) return false;
     if (rawText.split(/\s+/).length > 6) return false;
     return true;
