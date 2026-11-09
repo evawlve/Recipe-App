@@ -1019,7 +1019,7 @@ export interface GoldenCase {
 }
 
 const MEAL_SUFFIX_RE = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
-const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus|con|y)\b/i;
 
 /**
  * Byte-for-byte mirror of `singleItemFromText()` in src/app/api/nlp/parse/route.ts,

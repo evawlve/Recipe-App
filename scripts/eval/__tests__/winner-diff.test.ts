@@ -730,6 +730,7 @@ describe('isDeterministicSingleItemText (mirror of route.ts singleItemFromText)'
         expect(isDeterministicSingleItemText('2 7up')).toBe(true);
         expect(isDeterministicSingleItemText('three slices of bacon')).toBe(true);
         expect(isDeterministicSingleItemText('chicken breast for lunch')).toBe(true);  // meal suffix stripped
+        for (const t of ['conch fritters', 'huevos rancheros', 'yogurt', 'mayo']) expect(isDeterministicSingleItemText(t)).toBe(true); // con/y inside a word
     });
 
     it('rejects everything the route hands to the LLM segmenter', () => {
@@ -739,6 +740,9 @@ describe('isDeterministicSingleItemText (mirror of route.ts singleItemFromText)'
         expect(isDeterministicSingleItemText('x'.repeat(61))).toBe(false);       // > 60 chars
         expect(isDeterministicSingleItemText('   ')).toBe(false);
         expect(isDeterministicSingleItemText('for lunch')).toBe(false);          // nothing left after the suffix
+        expect(isDeterministicSingleItemText('pollo y arroz')).toBe(false);      // Spanish "y"
+        expect(isDeterministicSingleItemText('arroz con frijoles')).toBe(false); // Spanish "con"
+        expect(isDeterministicSingleItemText('chili con carne')).toBe(false);    // English menu "con"
     });
 
     it('agrees with the corpus: every item-shaped case is single-item by construction', () => {
@@ -2512,7 +2516,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     }
 
     /** Re-pin ONLY after reconciling isDeterministicSingleItemText with the route. */
-    const PINNED_ROUTE_RULE_HASH = '4e7069e734967f65';
+    const PINNED_ROUTE_RULE_HASH = '1425e85dbd90397d';
 
     it('has not drifted from the transcription in winner-diff-screens.ts', () => {
         const actual = createHash('sha256').update(routeRuleSource()).digest('hex').slice(0, 16);
@@ -2528,7 +2532,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     it('carries the two separator rules the mirror restates verbatim', () => {
         const src = routeRuleSource();
         expect(src).toContain('/\\s*(?:for|at|as)\\s+(breakfast|lunch|dinner|snacks?)\\s*\\.?\\s*$/i');
-        expect(src).toContain('/[,;\\n+&]|\\b(?:and|with|plus)\\b/i');
+        expect(src).toContain('/[,;\\n+&]|\\b(?:and|with|plus|con|y)\\b/i');
         expect(src).toContain('trimmed.length > 60');
         expect(src).toContain("rawText.split(/\\s+/).length > 6");
     });
@@ -2542,7 +2546,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     it('agrees with the mirror on the boundary cases the route decides', () => {
         const src = routeRuleSource();
         const mealRe = new RegExp(/\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/, 'i');
-        const multiRe = new RegExp(/[,;\n+&]|\b(?:and|with|plus)\b/, 'i');
+        const multiRe = new RegExp(/[,;\n+&]|\b(?:and|with|plus|con|y)\b/, 'i');
         // guard: the literals above are only a faithful stand-in while they are the
         // ones the route actually ships, which the previous case has just asserted.
         expect(src).toContain(mealRe.source);
@@ -2563,6 +2567,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
             '2 eggs and toast', 'coffee, bagel', 'a b c d e f g', 'x'.repeat(61),
             '   ', 'for lunch', 'toast with peanut butter', 'burger + fries',
             'noodles and company buttered noodles', 'grilled chicken at dinner',
+            'pollo y arroz', 'arroz con frijoles', 'chili con carne', 'conch fritters',
         ]) {
             expect({ t, mirror: isDeterministicSingleItemText(t) })
                 .toEqual({ t, mirror: routeSaysSingleItem(t) });

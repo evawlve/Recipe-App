@@ -42,7 +42,7 @@ type ParsedInputItem = {
 };
 
 const MEAL_SUFFIX = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
-const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus|con|y)\b/i;
 
 /**
  * Short text with no list separators describes exactly one food item; the
