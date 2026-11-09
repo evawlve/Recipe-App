@@ -11,7 +11,7 @@
  *   - `<head> x<N> [rest]` (standalone token)       -> `<N> <head> [rest]`  (`toast x2 w/ butter` -> `2 toast w/ butter`)
  * N is 1-2 digits and >= 1; `x`, `X` and `×` all match.
  *
- * It runs as the INNERMOST step of parseIngredientLine()'s first statement, so every strip after it
+ * It runs right after stripClockTime() (s453), the INNERMOST step of parseIngredientLine()'s first statement, so every strip after it
  * (hedge, approximator, definite frame, package multiplier, loose pour) sees an already-normal line.
  * That is safe only because the guards below decline every line those strips own.
  *

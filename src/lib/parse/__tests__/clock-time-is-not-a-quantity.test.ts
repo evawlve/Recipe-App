@@ -78,3 +78,51 @@ describe('controls are unchanged', () => {
     expect(shape(line)).toEqual({ qty, multiplier: 1, unit, name });
   });
 });
+
+// s453 refute r1 (independent lens on PR #648). Members: a time followed by `:` / a dash, a two-word prefix, a time range,
+// a leading-zero time. Every "master:" is ea8c01b2's own output, measured 2026-11-08.
+const refuteMembers: Array<[string, string]> = [
+  ['7am: 2 eggs', '2 eggs'], // master: qty 7, name "2 eggs"
+  ['11am: string cheese', 'string cheese'], // master: qty 11 (the s179 defect in its commonest diary form)
+  ['7:30am: oatmeal', 'oatmeal'], // master: qty 7
+  ['6:00 AM: 2 eggs', '2 eggs'], // master: qty 6, name "AM: 2 eggs"
+  ['7 a.m.: eggs', 'eggs'], // master: qty 7, name "a.m.: eggs"
+  ['2 slices pizza at around 9pm', '2 slices pizza'], // master: name "pizza at around 9 pm"
+  ['7am – 2 eggs', '2 eggs'], // master: qty 7, name "am – 2 eggs"
+  ['07:30 2 eggs', '2 eggs'], // master: qty 7
+  ['11am-1pm snacks', 'snacks'], // master: qty 6
+  ['00:30 snack', 'snack'], // master: qty 0
+  ['7pm 鸡蛋', '鸡蛋'], // master: qty 7, name "pm 鸡蛋" (the letter check is Unicode)
+];
+
+describe('refute r1: more clock-time shapes parse as their time-free twin', () => {
+  it.each(refuteMembers)('%s parses as %s', (withTime, without) => {
+    expect(shape(withTime)).toEqual(shape(without));
+  });
+});
+
+// CONTROLS that must equal master: the ARCO brand am/pm, ratios, a triple colon, number-led names, a prefix with no time.
+// Several of master's outputs here are themselves wrong (`7-eleven hot dog` qty 7, `24 hour fitness shake` qty 24) - out of
+// scope; they are pinned only as UNCHANGED by the clock-time strip, never as correct.
+const refuteControls: Array<[string, ReturnType<typeof shape>]> = [
+  ['2 am/pm hot dogs', { qty: 2, multiplier: 1, unit: null, name: 'am/pm hot dogs' }],
+  ['2 AM/PM burritos', { qty: 2, multiplier: 1, unit: null, name: 'AM/PM burritos' }],
+  ['2 am-pm taquitos', { qty: 2, multiplier: 1, unit: null, name: 'am-pm taquitos' }],
+  ['1 am pm hot dog', { qty: 1, multiplier: 1, unit: null, name: 'am pm hot dog' }],
+  ['2 ampm hot dogs', { qty: 2, multiplier: 1, unit: null, name: 'ampm hot dogs' }],
+  ['2:1 rice water', { qty: 2, multiplier: 1, unit: null, name: 'rice water' }],
+  ['3:2', null],
+  ['1 bag 5:1 trail mix', { qty: 1, multiplier: 1, unit: 'bag', name: '5:1 trail mix' }],
+  ['10:30:45 bar', { qty: 10, multiplier: 1, unit: 'bar', name: 'bar' }],
+  ['24:00 snack', { qty: 24, multiplier: 1, unit: null, name: 'snack' }],
+  ['7-eleven hot dog', { qty: 7, multiplier: 1, unit: null, name: 'hot dog' }],
+  ['24 hour fitness shake', { qty: 24, multiplier: 1, unit: null, name: 'hour fitness shake' }],
+  ['at 7 eggs', { qty: 1, multiplier: 1, unit: null, name: 'at 7 eggs' }],
+  ['eggs @ 2', { qty: 1, multiplier: 1, unit: null, name: 'eggs @ 2' }],
+];
+
+describe('refute r1: controls equal master', () => {
+  it.each(refuteControls)('%s', (line, expected) => {
+    expect(shape(line)).toEqual(expected);
+  });
+});

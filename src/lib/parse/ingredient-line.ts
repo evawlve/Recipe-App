@@ -616,15 +616,18 @@ function stripDefiniteFrameBeforeCount(line: string): string {
 // `at`/`around`/`about`/`by`/`@`. It is removed so the line parses EXACTLY as its time-free twin. A line that is ONLY a time
 // (`2pm`) is left as it was: removing it would leave no food. `am`/`pm` must end the token (`2 amaretti`, `3 pmole` stay).
 // Runs before every other strip. Tested in clock-time-is-not-a-quantity.test.ts.
+// Refute r1 (s453): a time followed by `:` (`7am: 2 eggs`, `6:00 AM: 2 eggs`) is stripped too - only the bare `h:mm` arm refuses a
+// following `:` (`10:30:45` stays); the ARCO brand `am/pm` / `am-pm` / `am pm` is never a time; `at around 9pm` loses both words.
 const CLOCK_TIME_RE =
-  /(?:\b(?:at|around|about|by)\s+|@\s*)?(?<![\w.:/])(?:(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s?[ap]\.?m\.?|(?:[01]?\d|2[0-3]):[0-5]\d)(?![a-z0-9:])/gi;
+  /(?:\b(?:at|around|about|by)\s+(?:(?:around|about)\s+)?|@\s*)?(?<![\w.:/])(?:(?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s?[ap]\.?m\.?(?![a-z0-9/]|-[a-z]|\s+[ap]\.?m\b)|(?:[01]?\d|2[0-3]):[0-5]\d(?![a-z0-9:]))/gi;
 function stripClockTime(line: string): string {
   const stripped = line.replace(CLOCK_TIME_RE, ' ');
   if (stripped === line) return line;
   const out = stripped
     .replace(/\s+/g, ' ')
+    .replace(/\s+([:,;])/g, '$1')
     .replace(/^[\s:,;–—-]+|[\s:,;–—-]+$/g, '');
-  return /[a-z]/i.test(out) ? out : line;
+  return /\p{L}/u.test(out) ? out : line;
 }
 
 function stripQuantityHedges(line: string): string {
