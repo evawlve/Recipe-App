@@ -3229,8 +3229,13 @@ export async function buildOffResult(
                 error: ambiguous.error,
             });
         }
-    } else if (!unit && parsed && Number.isInteger(parsed.qty) && parsed.qty >= 1) {
-        // Unitless integer count ("3 baby carrots", "13 tortilla chips").
+    } else if (!unit && parsed && Number.isFinite(parsed.qty) && parsed.qty >= 1) {
+        // Unitless count ("3 baby carrots", "13 tortilla chips"), fractional
+        // ones included (s453, 2026-11-08): `2 and a half cookies` / `2.5
+        // cookies` / `2½ cookies` parse to qty 2.5, no unit, and were gated out
+        // by Number.isInteger here, falling past every per-piece arm to
+        // flat_100g_default (250 g live, where `2 cookies` on the same record
+        // billed 60 g). The (A2) and (A') arms keep their own integer gates.
         const itemNameForCount = parsed.name || hydrated.foodName;
 
         // Bare-plural inversion (PR D pt3, A3): a digitless qty-1 plural

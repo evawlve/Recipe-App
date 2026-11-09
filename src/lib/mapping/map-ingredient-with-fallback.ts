@@ -1751,11 +1751,11 @@ async function mapIngredientWithFallbackCore(
                         : null;
                     if (targetBrand && reassertEvidence) {
                         // The decisive path keeps its historical repair byte-for-byte;
-                        // the segmenter path uses repairDroppedBrand(), which folds `&`
+                        // the segmenter and restaurant_chain paths use repairDroppedBrand(), which folds `&`
                         // when asking "kept?" and collapses an adjacent duplicate after
                         // the prepend (the two shapes the first two-arm probe found).
                         const keepBrand = (s: string | undefined) =>
-                            reassertEvidence === 'segmenter_named'
+                            reassertEvidence !== 'decisive_context'
                                 ? (repairDroppedBrand(s, targetBrand) ?? s)
                                 : s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
                                     ? `${targetBrand} ${s}`.trim()
