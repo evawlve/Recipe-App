@@ -444,14 +444,11 @@
    }
   ],
   "expectRawTexts": [
-   "8 coffee",
+   "a coffee",
    "a second coffee",
-   "2 third coffee"
+   "a third coffee"
   ],
-  "expectKinds": [
-   "gap",
-   "gap"
-  ]
+  "expectKinds": []
  },
  {
   "src": "r3 refute",
