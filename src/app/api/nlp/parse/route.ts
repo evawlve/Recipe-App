@@ -258,6 +258,7 @@ export async function POST(req: NextRequest) {
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
     const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
     const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
+    const { dropMeasuredRecipeHead } = await import('@/lib/nlp/measured-recipe-head-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
     const { rewriteExtraPortions } = await import('@/lib/nlp/extra-portion');
@@ -485,6 +486,13 @@ export async function POST(req: NextRequest) {
         items = dp.items;
         if (dp.drops.length > 0) {
           logger.info('nlp_parse.dish_part_drop', { count: dp.drops.length });
+        }
+        // s453 C3P: a dish named, then amounts for its ingredients, no homemade marker -> bill the ingredients, not the dish.
+        // The cache keeps the undropped split.
+        const mr = dropMeasuredRecipeHead(lineKey, items);
+        items = mr.items;
+        if (mr.drops.length > 0) {
+          logger.info('nlp_parse.measured_recipe_head_drop', { count: mr.drops.length });
         }
         // A milk named after a latte-type drink ("a matcha latte with almond milk") is the drink's variant, not a
         // second billed item; after the dish drop, before the trailing-quantity fold. The cache keeps the unfolded split.
