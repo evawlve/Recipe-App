@@ -84,6 +84,13 @@
  * `of it` / `of them` still folds onto the host, and a volume or count (`2 cups`) still folds. Named miss: a host that IS
  * spoon-measured (`peanut butter with honey, 4 tbsp`) loses its stated amount.
  *
+ * CLOCK TIME (s453, MAGIC C14). `..., then a chicken wrap at 7` billed 7 wraps (2,450 kcal): `at` is a LEAD word for `at least 3`
+ * / `at most 2`, so `at 7` read as a hedged count. parseClause() now refuses any other `at` before the number (`at 7`, `at seven`,
+ * `at around 7`), in every shape; a bare `around 8` / `about 8` (0-23) does not fold onto an `a|an` item (`a chicken wrap around 8`)
+ * but still counts anything else (`chicken nuggets, around 8`). `7pm`, `6:30`, `o'clock`, `by 9`, `noon` never parsed as a count.
+ * Named misses: a split-off clock time stays its own item; the fast path's `11am snack: string cheese` (11 sticks) is
+ * parseIngredientLine(), not this fold.
+ *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
  * case/punctuation variant that shares its key. Pure; imports only parseIngredientLine;
@@ -212,6 +219,8 @@ export function parseClause(t: string[], opts: { fractions?: boolean } = {}): Cl
   let i = 0;
   while (i < n && LEAD.has(t[i])) i++;
   if (i >= n) return null;
+  // s453 (MAGIC C14): `at` leads a count only as `at least` / `at most`; any other `at` (`at 7`, `at around 7`) is a clock time.
+  if (t.slice(0, i).some((x, k) => x === 'at' && t[k + 1] !== 'least' && t[k + 1] !== 'most')) return null;
 
   let value: number;
   let half = false;
@@ -286,6 +295,18 @@ export function parseClause(t: string[], opts: { fractions?: boolean } = {}): Cl
   if (food.length > 0 && FOOD_BAD_START.has(food[0])) return null;
   if (food.includes('each')) return null;
   return { value, unit, food };
+}
+
+// s453 (MAGIC C14): a bare `around 8` / `about 8` after ONE item (`a chicken wrap around 8`) is when it was eaten, not how many;
+// after anything else (`chicken nuggets, around 8`) it stays a hedged count. A count word (`around a couple`, `about a dozen`)
+// or a pointer back at the food (`around 4 of them`) is never a clock time (s453 refute r1).
+function isClockHedge(said: string[], clause: Clause, target: Item): boolean {
+  if (clause.unit || clause.food.length || !Number.isInteger(clause.value) || clause.value > 23) return false;
+  let i = 0;
+  while (i < said.length && LEAD.has(said[i])) i++;
+  const rest = said.slice(i).join(' ');
+  if (/^(a\s+)?(couple|dozen)\b/.test(rest) || /\bof (them|those|these|it)\b/.test(rest)) return false;
+  return said.slice(0, i).some(x => x === 'around' || x === 'about') && /^\s*(a|an)\s/i.test(target.rawText);
 }
 
 function formatValue(v: number): string {
@@ -854,7 +875,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
       removed.add(j);
       continue;
     }
-    if (clause.fractionWord || viaConsume) continue;
+    if (clause.fractionWord || viaConsume || isClockHedge(jt, clause, W[t])) continue;
     if (clause.food.length === 0 && !aloneInPiece(t, j)) continue;
     if (spoonOnTopping(W[t], clause, words(W[j].rawText))) {
       folds.push({ kind: 'topping', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: W[t].rawText });
@@ -944,7 +965,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
       folded.set(t, st);
       continue;
     }
-    if (clause.fractionWord) continue;
+    if (clause.fractionWord || isClockHedge(first, clause, W[t])) continue;
     if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(W[t], clause.food)) continue;
     if (spoonOnTopping(W[t], clause, first)) continue;
     const after = rewrite(W[t], clause);
