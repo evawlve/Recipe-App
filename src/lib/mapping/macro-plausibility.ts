@@ -794,6 +794,40 @@ function pouredDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityI
     return `rank:poured_drink_kcal_${round1(kcal)}_over_${ceiling}`;
 }
 
+// Made-drink dry panel (s453-P1): `hot chocolate`, `hot cocoa`, `cafe con leche`, `horchata`, `atole`, `cider` can resolve to a DRY-MIX
+// record (330-470 kcal/100g) while made-drink records (75-110) sit in the pool. Ceiling = PREPARED_DRINK_MAX_KCAL.
+// RANK-TIME ONLY: the reason lives in assessRankTimePlausibility() alone and demotes through the floor-hit partition; the save gate and
+// assessMacroPlausibility() are untouched. The HEAD is read from queryName ONLY (never headLine), as in the poured-drink rule.
+// Bare `cocoa` is deliberately NOT a head: that word is usually the powder. Exemptions are the poured rule's plus MADE_DRINK_EXTRA_EXEMPT.
+const MADE_DRINK_PHRASES = new Set([
+    'hot chocolate', 'hot cocoa', 'cafe con leche', 'cafe au lait', 'leche con chocolate', 'chocolate caliente', 'chocolate milk',
+]);
+const MADE_DRINK_WORDS = new Set(['cider', 'horchata', 'atole']);
+const MADE_DRINK_EXTRA_EXEMPT = new RegExp(
+    `\\b(?:${[
+        'unsweetened', 'dutch', 'baking', 'cacao', 'nibs', 'bombs?', 'packets?', 'envelopes?', 'sachets?', 'sticks?', 'scoops?', 'tbsp', 'tsp',
+        'tablespoons?', 'teaspoons?', 'vinegar', 'donuts?', 'doughnuts?', 'cookies?', 'bars?', 'fudge', 'pudding', 'spread', 'dulce', 'puffs?',
+        'pebbles?', 'krispies', 'cereal',
+    ].join('|')})\\b`
+);
+function madeDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= PREPARED_DRINK_MAX_KCAL) return null;
+    const words = headClauseWords((queryName || '').toLowerCase().split(POURED_DRINK_PLACE_BREAK)[0]);
+    while (words.length > 1 && POURED_DRINK_TRAILING.has(words[words.length - 1])) words.pop();
+    if (words.length === 0) return null;
+    const last = words[words.length - 1];
+    if (last.endsWith('s')) words[words.length - 1] = last.slice(0, -1);
+    const n = words.length;
+    const phraseHit = [2, 3].some((k) => n >= k && MADE_DRINK_PHRASES.has(words.slice(n - k).join(' ')));
+    if (!phraseHit && !MADE_DRINK_WORDS.has(words[n - 1])) return null;
+    const lowered = [queryName, (headLine || '').toLowerCase().split(DRINK_SIBLING_BREAK)[0]].map((t) => (t || '').toLowerCase());
+    const exemptTexts = [...lowered, ...lowered.flatMap((t) => pluralForms(dietDrinkPadded(t)))];
+    if (exemptTexts.some((t) => POURED_DRINK_EXEMPT_PATTERN.test(t) || MADE_DRINK_EXTRA_EXEMPT.test(t))) return null;
+    return `rank:made_drink_kcal_${round1(kcal)}_over_${PREPARED_DRINK_MAX_KCAL}`;
+}
+
 /**
  * Rank-time plausibility: composes assessMacroPlausibility with the SAME
  * deterministic floors as the save-time gate (collectDeterministicFloorReasons
@@ -823,6 +857,7 @@ export function assessRankTimePlausibility(
     const teaReason = brewedTeaReason(queryName, macrosPer100g, headLine);
     const dietReason = dietDrinkReason(queryName, macrosPer100g, headLine);
     const pouredReason = pouredDrinkReason(queryName, macrosPer100g, headLine);
+    const madeReason = madeDrinkReason(queryName, macrosPer100g, headLine);
     const reasons = [
         ...base.reasons,
         ...floorReasons,
@@ -830,6 +865,7 @@ export function assessRankTimePlausibility(
         ...(teaReason ? [teaReason] : []),
         ...(dietReason ? [dietReason] : []),
         ...(pouredReason ? [pouredReason] : []),
+        ...(madeReason ? [madeReason] : []),
     ];
 
     const floorHit =
@@ -838,6 +874,7 @@ export function assessRankTimePlausibility(
         teaReason != null ||
         dietReason != null ||
         pouredReason != null ||
+        madeReason != null ||
         base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
     const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
 
