@@ -76,3 +76,37 @@ describe('CONTROLS: every count fold is unchanged', () => {
     expect(out.kinds).toEqual(['segment']);
   });
 });
+
+// s453 refute r1 (independent lens on PR #647): counts that are never a clock time, the > 23 boundary, the container
+// improvements, and the named `@` miss.
+describe('refute r1: explicit counts still fold onto an a|an item', () => {
+  test.each([
+    ['a coke, a cookie, around 4 of them', 'a cookie', '4 cookie'],
+    ['a coke, a chicken wrap, around a couple', 'a chicken wrap', '2 chicken wrap'],
+    ['a coke, a chicken wrap, about a dozen', 'a chicken wrap', '12 chicken wrap'],
+    ['a coke, a taco, about 3 tacos', 'a taco', '3 taco'],
+    ['a coke, a chicken wrap, about 24', 'a chicken wrap', '24 chicken wrap'],
+  ])('%s', (line, food, after) => {
+    const out = run(line, [{ rawText: 'a coke', normalizedForm: 'coke' }, { rawText: food, normalizedForm: food.replace(/^a /, '') }]);
+    expect(out.raw).toEqual(['a coke', after]);
+    expect(out.kinds).toEqual(['gap']);
+  });
+});
+
+describe('refute r1: improvements over base (a hedged time no longer bills N of the container)', () => {
+  test.each([
+    ['a coke, an order of wings, about 10', 'an order of wings'],
+    ['a coke, a chicken wrap like at 7', 'a chicken wrap'],
+  ])('%s', (line, food) => {
+    const out = run(line, [{ rawText: 'a coke', normalizedForm: 'coke' }, { rawText: food, normalizedForm: food }]);
+    expect(out.raw).toEqual(['a coke', food]);
+    expect(out.kinds).toEqual([]);
+  });
+});
+
+describe('named miss (base does the same): `@ 7` - words() drops the `@`', () => {
+  test('a banana, then a chicken wrap @ 7 still folds to 7', () => {
+    const out = run('a banana, then a chicken wrap @ 7', [banana, wrap]);
+    expect(out.raw).toEqual(['a banana', '7 chicken wrap']);
+  });
+});

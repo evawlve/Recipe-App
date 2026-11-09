@@ -298,11 +298,14 @@ export function parseClause(t: string[], opts: { fractions?: boolean } = {}): Cl
 }
 
 // s453 (MAGIC C14): a bare `around 8` / `about 8` after ONE item (`a chicken wrap around 8`) is when it was eaten, not how many;
-// after anything else (`chicken nuggets, around 8`) it stays a hedged count.
+// after anything else (`chicken nuggets, around 8`) it stays a hedged count. A count word (`around a couple`, `about a dozen`)
+// or a pointer back at the food (`around 4 of them`) is never a clock time (s453 refute r1).
 function isClockHedge(said: string[], clause: Clause, target: Item): boolean {
   if (clause.unit || clause.food.length || !Number.isInteger(clause.value) || clause.value > 23) return false;
   let i = 0;
   while (i < said.length && LEAD.has(said[i])) i++;
+  const rest = said.slice(i).join(' ');
+  if (/^(a\s+)?(couple|dozen)\b/.test(rest) || /\bof (them|those|these|it)\b/.test(rest)) return false;
   return said.slice(0, i).some(x => x === 'around' || x === 'about') && /^\s*(a|an)\s/i.test(target.rawText);
 }
 
