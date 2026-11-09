@@ -1,0 +1,31 @@
+idx	draw	truth	corpusVerdict	status	itemCount	itemsJson	ms	line
+101	1	2	HO	ok	1	[{"r":"pan con tomate","n":"pan con tomate","b":""}]	981	pan con tomate
+101	2	2	HO	ok	1	[{"r":"pan con tomate","n":"pan con tomate","b":""}]	757	pan con tomate
+101	3	2	HO	ok	1	[{"r":"pan con tomate","n":"pan con tomate","b":""}]	841	pan con tomate
+102	1	1	HO	ok	1	[{"r":"arroz con leche","n":"arroz con leche","b":""}]	907	arroz con leche
+102	2	1	HO	ok	1	[{"r":"arroz con leche","n":"arroz con leche","b":""}]	1163	arroz con leche
+102	3	1	HO	ok	1	[{"r":"arroz con leche","n":"arroz con leche","b":""}]	813	arroz con leche
+103	1	1	HO	ok	1	[{"r":"chile con carne","n":"chile con carne","b":""}]	865	chile con carne
+103	2	1	HO	ok	1	[{"r":"chile con carne","n":"chile con carne","b":""}]	1308	chile con carne
+103	3	1	HO	ok	1	[{"r":"chile con carne","n":"chile con carne","b":""}]	839	chile con carne
+104	1	2	HO	ok	1	[{"r":"pollo con arroz","n":"pollo con arroz","b":""}]	838	pollo con arroz
+104	2	2	HO	ok	1	[{"r":"pollo con arroz","n":"pollo con arroz","b":""}]	993	pollo con arroz
+104	3	2	HO	ok	1	[{"r":"pollo con arroz","n":"pollo con arroz","b":""}]	784	pollo con arroz
+105	1	2	HO	ok	1	[{"r":"tortilla con queso","n":"tortilla con queso","b":""}]	797	tortilla con queso
+105	2	2	HO	ok	1	[{"r":"tortilla con queso","n":"tortilla con queso","b":""}]	1021	tortilla con queso
+105	3	2	HO	ok	1	[{"r":"tortilla con queso","n":"tortilla con queso","b":""}]	760	tortilla con queso
+106	1	2	HO	ok	2	[{"r":"cafe","n":"cafe","b":""},{"r":"pan dulce","n":"pan dulce","b":""}]	1047	cafe y pan dulce
+106	2	2	HO	ok	1	[{"r":"cafe y pan dulce","n":"cafe y pan dulce","b":""}]	656	cafe y pan dulce
+106	3	2	HO	ok	2	[{"r":"cafe","n":"cafe","b":""},{"r":"pan dulce","n":"pan dulce","b":""}]	1099	cafe y pan dulce
+107	1	2	HO	ok	1	[{"r":"galletas con leche","n":"galletas con leche","b":""}]	803	galletas con leche
+107	2	2	HO	ok	1	[{"r":"galletas con leche","n":"galletas con leche","b":""}]	817	galletas con leche
+107	3	2	HO	ok	1	[{"r":"galletas con leche","n":"galletas con leche","b":""}]	654	galletas con leche
+108	1	3	HO	ok	2	[{"r":"carne asada con arroz","n":"carne asada con arroz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1088	carne asada con arroz y frijoles
+108	2	3	HO	ok	3	[{"r":"carne asada","n":"carne asada","b":""},{"r":"arroz","n":"arroz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1326	carne asada con arroz y frijoles
+108	3	3	HO	ok	2	[{"r":"carne asada con arroz","n":"carne asada con arroz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1101	carne asada con arroz y frijoles
+109	1	1	HO	ok	1	[{"r":"quesadilla de queso","n":"quesadilla de queso","b":""}]	969	quesadilla de queso
+109	2	1	HO	ok	1	[{"r":"quesadilla de queso","n":"quesadilla de queso","b":""}]	899	quesadilla de queso
+109	3	1	HO	ok	1	[{"r":"quesadilla de queso","n":"quesadilla de queso","b":""}]	949	quesadilla de queso
+110	1	1	HO	ok	1	[{"r":"fresas con crema","n":"fresas con crema","b":""}]	835	fresas con crema
+110	2	1	HO	ok	1	[{"r":"fresas con crema","n":"fresas con crema","b":""}]	846	fresas con crema
+110	3	1	HO	ok	1	[{"r":"fresas con crema","n":"fresas con crema","b":""}]	982	fresas con crema

@@ -1,0 +1,22 @@
+idx	draw	truth	corpusVerdict	status	itemCount	itemsJson	ms	line
+201	1	2	S453	ok	2	[{"r":"pan tostado","n":"pan tostado","b":""},{"r":"mantequilla","n":"mantequilla","b":""}]	1395	pan tostado con mantequilla
+201	2	2	S453	ok	2	[{"r":"pan tostado","n":"pan tostado","b":""},{"r":"mantequilla","n":"mantequilla","b":""}]	1182	pan tostado con mantequilla
+201	3	2	S453	ok	2	[{"r":"pan tostado","n":"pan tostado","b":""},{"r":"mantequilla","n":"mantequilla","b":""}]	1065	pan tostado con mantequilla
+202	1	2	S453	ok	2	[{"r":"tres tortillas de maiz","n":"tortillas de maiz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1279	tres tortillas de maiz con frijoles
+202	2	2	S453	ok	2	[{"r":"tres tortillas de maiz","n":"tortillas de maiz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1392	tres tortillas de maiz con frijoles
+202	3	2	S453	ok	2	[{"r":"tres tortillas de maiz","n":"tortillas de maiz","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1231	tres tortillas de maiz con frijoles
+203	1	2	S453	ok	1	[{"r":"cereal con leche","n":"cereal con leche","b":""}]	1132	cereal con leche
+203	2	2	S453	ok	1	[{"r":"cereal con leche","n":"cereal con leche","b":""}]	2710	cereal con leche
+203	3	2	S453	ok	1	[{"r":"cereal con leche","n":"cereal con leche","b":""}]	866	cereal con leche
+204	1	2	S453	ok	2	[{"r":"huevos","n":"huevos","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1064	huevos y frijoles
+204	2	2	S453	ok	2	[{"r":"huevos","n":"huevos","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1120	huevos y frijoles
+204	3	2	S453	ok	2	[{"r":"huevos","n":"huevos","b":""},{"r":"frijoles","n":"frijoles","b":""}]	1178	huevos y frijoles
+205	1	AMB	S453	ok	1	[{"r":"papas con huevo","n":"papas con huevo","b":""}]	850	papas con huevo
+205	2	AMB	S453	ok	1	[{"r":"papas con huevo","n":"papas con huevo","b":""}]	854	papas con huevo
+205	3	AMB	S453	ok	1	[{"r":"papas con huevo","n":"papas con huevo","b":""}]	661	papas con huevo
+206	1	AMB	S453	ok	1	[{"r":"huevos con chorizo","n":"huevos con chorizo","b":""}]	698	huevos con chorizo
+206	2	AMB	S453	ok	2	[{"r":"huevos","n":"huevos","b":""},{"r":"chorizo","n":"chorizo","b":""}]	1051	huevos con chorizo
+206	3	AMB	S453	ok	1	[{"r":"huevos con chorizo","n":"huevos con chorizo","b":""}]	1266	huevos con chorizo
+207	1	1	S453	ok	1	[{"r":"arroz con gandules","n":"arroz con gandules","b":""}]	922	arroz con gandules
+207	2	1	S453	ok	1	[{"r":"arroz con gandules","n":"arroz con gandules","b":""}]	1017	arroz con gandules
+207	3	1	S453	ok	1	[{"r":"arroz con gandules","n":"arroz con gandules","b":""}]	1066	arroz con gandules

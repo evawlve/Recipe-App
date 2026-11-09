@@ -17,6 +17,7 @@
  * segmentation stage.
  */
 
+import { isSpanishLine } from '@/lib/mapping/spanish-detect';
 import { callStructuredLlm } from '@/lib/ai/structured-client';
 
 /**
@@ -91,7 +92,7 @@ export const NLP_SPLIT_SCHEMA = {
 
 // Minimal prompt: the JSON schema already constrains the output shape,
 // so the prompt only needs the field semantics and one example.
-const SEGMENT_SYSTEM_PROMPT = `Split the food-log text into individual food items. Per item:
+export const SEGMENT_SYSTEM_PROMPT = `Split the food-log text into individual food items. Per item:
 - rawText: original chunk incl. quantity/unit (e.g. "2 scrambled eggs")
 - mealType: breakfast|lunch|dinner|snacks (default "snacks")
 - brand: explicit brand name, else ""
@@ -99,6 +100,18 @@ const SEGMENT_SYSTEM_PROMPT = `Split the food-log text into individual food item
 "with" SPLITS: when "with" joins a base food to another real food that has its own calories, output them as SEPARATE items ("toast with butter" -> 2, "toast with peanut butter" -> 2, "coffee with milk" -> 2, "granola with yogurt" -> 2, "chicken with rice and broccoli" -> 3). Only two exceptions: do not split inside a single branded product or restaurant menu item name ("mcdonalds sausage mcmuffin with egg" -> 1, "nature valley biscuits with almond butter" -> 1), and never split off zero-calorie seasonings, spices or herbs.
 Two distinct whole foods joined by "and" are SEPARATE items ("chicken and rice" -> 2, "eggs and bacon" -> 2, "rice and beans" -> 2). Keep "and" together ONLY when the whole phrase names ONE product or a single flavor ("cookies and cream", "peaches and cream", "mac and cheese", "peanut butter and jelly" = 1 item). A restaurant or brand name containing "and" is part of the item name, NEVER a split point ("noodles and company buttered noodles" -> 1, "slim chickens mac and cheese" -> 1, "cheesecake factory bang bang chicken and shrimp" -> 1).
 Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
+
+// MEASUREMENT-ONLY (s453 A2): Spanish clause variants, selected by env at call time.
+// Unset => '' => master prompt for every line. Not shippable as-is (env read, no version bump).
+const SPANISH_CLAUSES: Record<string, string> = {
+  V1: 'SPANISH INPUT: "con" means "with" and "y" means "and". Apply the two rules above to the English meaning: split two real foods; keep one named dish whole (arroz con pollo, arroz con leche, chile con carne, leche con chocolate, café con leche, huevos rancheros = 1 item).',
+  V2: 'SPANISH INPUT: "con" means "with" and "y" means "and". Apply the two rules above to the English meaning: split two real foods; keep one named dish whole (arroz con pollo, arroz con leche, chile con carne, leche con chocolate, café con leche, huevos rancheros = 1 item). ("arroz con frijoles" -> 2, "pan con mantequilla" -> 2, "cereal con leche" -> 2, "café y pan dulce" -> 2)',
+  V3: 'SPANISH INPUT: "con" means "with" and "y" means "and". Apply the two rules above to the English meaning: split two real foods; keep one named dish whole.',
+};
+export function segmenterSystemPrompt(text: string): string {
+  const clause = SPANISH_CLAUSES[process.env.SEG_ES_VARIANT ?? ''] ?? '';
+  return clause && isSpanishLine(text) ? `${SEGMENT_SYSTEM_PROMPT}\n${clause}` : SEGMENT_SYSTEM_PROMPT;
+}
 
 // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
 // (previously up to 15s+) now degrades to the lenient heuristic split
@@ -119,7 +132,7 @@ export async function segmentTextWithAi(text: string): Promise<SegmentedItem[] |
   const llmResult = await Promise.race([
     callStructuredLlm({
       schema: NLP_SPLIT_SCHEMA,
-      systemPrompt: SEGMENT_SYSTEM_PROMPT,
+      systemPrompt: segmenterSystemPrompt(text),
       userPrompt: `Unstructured text: "${text}"`,
       purpose: 'parse',
       timeout: LLM_ATTEMPT_TIMEOUT_MS,
