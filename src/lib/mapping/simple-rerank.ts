@@ -2510,12 +2510,16 @@ export function simpleRerank(
     let poolBandDemotedId: string | null = null;
     if (process.env.RANK_POOL_BAND !== '0'
         && !(isBranded || targetBrand || decisiveBrandActive || grainCookedPreference || scored.length < 2)) {
+        // s453-PB2: a joiner (with/and/plus/&/in/on, comma, w/, +) marks a multi-food line whose head-noun guess is
+        // unreliable (`coffee with half and half`, `cream in coffee`); the band skips it.
+        const joinerLine = /\s(?:with|and|plus|&|in|on)\s|,|\sw\/\s|\s\+\s/.test(query.toLowerCase());
         const headPart = query.toLowerCase().split(/\s(?:with|and|plus|&)\s|,|\sw\/\s/)[0];
         const headTokens = tokenize(headPart);
         const headTok = headTokens.length > 0 ? headTokens[headTokens.length - 1] : null;
         const topEntry = scored[0];
         const topKcal = topEntry.candidate.nutrition?.kcal;
         if (headTok
+            && !joinerLine
             && topEntry.candidate.source === 'openfoodfacts'
             && topEntry.candidate.nutrition?.per100g === true
             && typeof topKcal === 'number' && Number.isFinite(topKcal)) {

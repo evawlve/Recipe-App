@@ -147,3 +147,31 @@ describe('pool band: unchanged', () => {
         expect(on.winner?.id).not.toBe('off_nokcal');
     });
 });
+
+// s453-PB2: a query with a joiner is a multi-food line whose head-noun guess is unreliable; the band skips it.
+const coffeePool = (): RerankCandidate[] =>
+    tofuPool().map(c => ({ ...c, name: c.name.replace('Tofu', 'Coffee') }));
+
+describe('pool band: joiner lines are skipped (s453-PB2)', () => {
+    it('tofu with rice: unchanged (the outlier stays)', () => {
+        const on = withSwitch(undefined, () => run('tofu with rice', 'tofu with rice', tofuPool()));
+        const off = withSwitch('0', () => run('tofu with rice', 'tofu with rice', tofuPool()));
+        expect(on.winner?.id).toBe('off_3070451041461');
+        expect(on.winner?.id).toBe(off.winner?.id);
+    });
+
+    it.each([
+        'coffee with half and half',
+        'a splash of cream in coffee',
+        'turkey on wheat',
+        'pasta w/ marinara',
+        'coffee, black',
+        'coffee + milk',
+    ])('%s: unchanged vs the kill-switch arm', (q) => {
+        const pool = () => (q.startsWith('pasta') || q.startsWith('turkey') ? tofuPool() : coffeePool());
+        const on = withSwitch(undefined, () => run(q, q, pool()));
+        const off = withSwitch('0', () => run(q, q, pool()));
+        expect(on.winner?.id).toBe(off.winner?.id);
+        expect(on.rerankPool.some(p => (p as { poolBandDemoted?: boolean }).poolBandDemoted)).toBe(false);
+    });
+});
