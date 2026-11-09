@@ -8,7 +8,8 @@
  * quantity fold (the drop's guards skip a BRANDED item, so fill-first would bill `no pickles` under
  * chick-fil-a); the segmentation cache keeps the unfilled split.
  *
- * A fifth brand list - the parse route's own, read by nothing else. It is deliberately NOT
+ * A fifth brand list - the parse route's own, read by `self-correction.ts` and, since s453 row C, by
+ * `brandReassertEvidence()` in `mapping/quantity-word-brand.ts` (a dropped chain brand is put back). It is deliberately NOT
  * `filter-candidates.ts`'s list, which also drives `queryTargetsCandidateBrand()`.
  * `cracker barrel` is NOT listed: Cracker Barrel cheese is a grocery brand, and a fill would give an
  * apple logged beside it the restaurant's brand. For the same reason `starbucks`, `dunkin` and `panera`
