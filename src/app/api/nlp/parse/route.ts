@@ -257,6 +257,7 @@ export async function POST(req: NextRequest) {
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
     const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
+    const { foldModifierStutter } = await import('@/lib/nlp/modifier-stutter-fold');
     const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
     const { dropMeasuredRecipeHead } = await import('@/lib/nlp/measured-recipe-head-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
@@ -474,6 +475,11 @@ export async function POST(req: NextRequest) {
             kinds: sc.corrections.map(c => c.kind),
           });
         }
+        // s455 DS1: a stuttered modifier ("1 tablespoon of sugar sugar-free maple syrup") bills the sugar-free food, not a
+        // phantom sugar. The cache keeps the unfolded split.
+        const ms = foldModifierStutter(lineKey, items);
+        items = ms.items;
+        if (ms.folds.length > 0) logger.info('nlp_parse.modifier_stutter_fold', { count: ms.folds.length });
         const np = dropNegatedParts(lineKey, items);
         items = np.items;
         if (np.drops.length > 0) {
