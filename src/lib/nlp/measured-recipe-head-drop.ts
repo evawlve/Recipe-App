@@ -6,7 +6,7 @@
  * dish, so billing the dish too counts the whole recipe twice. Diego's ruling (2026-11-09): a dish named, then
  * amounts for its ingredients, with no homemade marker -> keep the ingredients, drop the dish.
  *
- * RULE. Scan items d = 0 .. n-3; drop the FIRST d meeting all of:
+ * RULE. Scan items d = 0 .. n-1; drop the FIRST d meeting all of:
  *  1. the line has no made with / i made / we made / homemade / home made marker (dish-part-drop owns those);
  *  2. d has no brand, its rawText holds no amount and no `with`;
  *  3. d's name (normalizedForm || rawText) ends in a composite-dish head (BASE below);
@@ -14,6 +14,7 @@
  *  5. >= 2 LATER items carry an amount, not counting a bare unit leftover ("1 cup" split off a line);
  *  6. >= 1 later item names that head's base (rice / egg / mix / bread / ...).
  * At most one drop per line.
+ * LATER means later in the LINE (s455 MR1): the segmenter can emit the head last.
  *
  * PASS ORDER. Runs right after dropDishParts (which is a no-op wherever this fires, rule 1) and before
  * foldDrinkMilk. The SegmentationCache keeps the undropped split.
@@ -62,7 +63,14 @@ export function dropMeasuredRecipeHead<T extends Item>(
 ): { items: T[]; drops: MeasuredRecipeHeadDrop[] } {
   const lk = ' ' + words(lineKey).join(' ') + ' ';
   if (MARKER.test(lk)) return { items, drops: [] };
-  for (let d = 0; d < items.length - 2; d++) {
+  // s455 MR1: an item's space-padded word needles (rawText, then normalizedForm when non-empty).
+  const needles = (x: Item): string[] => {
+    const out = [' ' + words(x.rawText).join(' ') + ' '];
+    const nf = words(x.normalizedForm || '').join(' ');
+    if (nf) out.push(' ' + nf + ' ');
+    return out;
+  };
+  for (let d = 0; d < items.length; d++) {
     const h = items[d];
     const hw = words(h.rawText);
     if (h.brand) continue;
@@ -74,7 +82,14 @@ export function dropMeasuredRecipeHead<T extends Item>(
     const at = lk.indexOf(needle);
     if (at < 0) continue;
     if (!LEAD.test(lk.slice(at + needle.length))) continue;
-    const later = items.slice(d + 1);
+    // LATER = found in the line past the head's own span; an item found nowhere falls back to array order.
+    const from = at + needle.length - 1;
+    const later = items.filter((x, i) => {
+      if (i === d) return false;
+      const ns = needles(x);
+      if (ns.some(n => lk.indexOf(n, from) >= 0)) return true;
+      return i > d && !ns.some(n => lk.indexOf(n) >= 0);
+    });
     const amt = later.filter(x => {
       const raw = x.rawText.trim();
       if (!AMT.test(raw)) return false;

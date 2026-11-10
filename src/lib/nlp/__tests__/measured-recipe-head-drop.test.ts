@@ -1,5 +1,5 @@
 /**
- * s453 C3P - a measured recipe bills its ingredients, not the dish. POS cases drop item 0; NEG cases and
+ * s453 C3P - a measured recipe bills its ingredients, not the dish. POS cases drop item 0 (or `dropIndex`, since the head can be emitted last - s455 MR1); NEG cases and
  * every case of the six dish-part fixtures (the GUARD, 544 cases) drop nothing.
  */
 import { dropMeasuredRecipeHead } from '../measured-recipe-head-drop';
@@ -17,7 +17,7 @@ describe('dropMeasuredRecipeHead', () => {
     const r = dropMeasuredRecipeHead(canonicalizeSegLine(c.line), c.input);
     expect(r.items.map(i => i.rawText)).toEqual(c.expectRawTexts);
     expect(r.drops.length).toBe(c.changed ? 1 : 0);
-    if (c.changed) expect(r.drops[0]).toEqual({ index: 0, rawText: c.input[0].rawText });
+    if (c.changed) expect(r.drops[0]).toEqual({ index: c.dropIndex ?? 0, rawText: c.input[c.dropIndex ?? 0].rawText });
   });
 
   test('never mutates its input', () => {
