@@ -25,6 +25,7 @@ import {
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import { isPourOntoSecondFood, restoreLeadingPour } from '@/lib/parse/loose-measures';
 import { maskKeptDishNames } from '@/lib/nlp/kept-dish-names';
+import { cookingStateFor } from '@/lib/nlp/cooking-state';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
   MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
@@ -816,6 +817,7 @@ export async function POST(req: NextRequest) {
         }
 
         const portionProvenance = portionProvenanceForTier(mapped.servingTier);
+        const cookingState = cookingStateFor({ rawText, foodName: mapped.foodName, source: standardSource });
 
         return {
           rawText,
@@ -874,6 +876,7 @@ export async function POST(req: NextRequest) {
           // Owner: sync-docs/reports/2026-08-17_can-the-badge-be-aimed.md §6 (mobile),
           // and the plan that named the field, 2026-08-17_ultracode-execution-plan-2.md Lane D.
           ...(portionProvenance ? { portionProvenance } : {}),
+          ...(cookingState ? { cookingState } : {}),
           // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
           // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
           // funnel outcome straight off the response instead of re-deriving it
