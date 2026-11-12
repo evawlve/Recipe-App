@@ -705,5 +705,296 @@
    "1 cup peas"
   ],
   "changed": false
+ },
+ {
+  "src": "MR2 POS H19.d2",
+  "line": "shakshuka with 2 eggs, 1 cup tomato sauce, half an onion and a piece of crusty bread",
+  "input": [
+   {
+    "rawText": "shakshuka with 2 eggs",
+    "normalizedForm": "shakshuka",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1 cup tomato sauce",
+    "normalizedForm": "tomato sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "half an onion",
+    "normalizedForm": "onion",
+    "brand": ""
+   },
+   {
+    "rawText": "a piece of crusty bread",
+    "normalizedForm": "crusty bread",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs",
+   "1 cup tomato sauce",
+   "half an onion",
+   "a piece of crusty bread"
+  ],
+  "changed": true,
+  "dropIndex": 0
+ },
+ {
+  "src": "MR2 POS d23:post-2-1.json",
+  "line": "shakshuka with 2 eggs, 1 cup tomato sauce, half an onion and a piece of crusty bread",
+  "input": [
+   {
+    "rawText": "shakshuka with 2 eggs",
+    "normalizedForm": "shakshuka with 2 eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "2 eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1 cup tomato sauce",
+    "normalizedForm": "1 cup tomato sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "half an onion",
+    "normalizedForm": "half an onion",
+    "brand": ""
+   },
+   {
+    "rawText": "a piece of crusty bread",
+    "normalizedForm": "a piece of crusty bread",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs",
+   "1 cup tomato sauce",
+   "half an onion",
+   "a piece of crusty bread"
+  ],
+  "changed": true,
+  "dropIndex": 0
+ },
+ {
+  "src": "MR2 POS probe:3-1",
+  "line": "an omelette with 3 eggs, 1/4 cup shredded cheese and 1/2 cup spinach",
+  "input": [
+   {
+    "rawText": "an omelette with 3 eggs",
+    "normalizedForm": "omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "3 eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1/4 cup shredded cheese",
+    "normalizedForm": "1/4 cup shredded cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "1/2 cup spinach",
+    "normalizedForm": "1/2 cup spinach",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "1/4 cup shredded cheese",
+   "1/2 cup spinach"
+  ],
+  "changed": true,
+  "dropIndex": 0
+ },
+ {
+  "src": "MR2 NEG d23:post-1-4.json",
+  "line": "shakshuka with 2 eggs, 1 cup tomato sauce, half an onion and a piece of crusty bread",
+  "input": [
+   {
+    "rawText": "shakshuka with 2 eggs",
+    "normalizedForm": "shakshuka with 2 eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1 cup tomato sauce",
+    "normalizedForm": "1 cup tomato sauce",
+    "brand": ""
+   },
+   {
+    "rawText": "half an onion",
+    "normalizedForm": "half an onion",
+    "brand": ""
+   },
+   {
+    "rawText": "a piece of crusty bread",
+    "normalizedForm": "a piece of crusty bread",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "shakshuka with 2 eggs",
+   "1 cup tomato sauce",
+   "half an onion",
+   "a piece of crusty bread"
+  ],
+  "changed": false
+ },
+ {
+  "src": "MR2 NEG segmenter-echo-drop.json#11",
+  "line": "popeyes chicken sandwich with half a biscuit",
+  "input": [
+   {
+    "rawText": "popeyes chicken sandwich with half a biscuit",
+    "normalizedForm": "chicken sandwich with half a biscuit",
+    "brand": "popeyes"
+   },
+   {
+    "rawText": "half a biscuit",
+    "normalizedForm": "biscuit",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "popeyes chicken sandwich with half a biscuit",
+   "half a biscuit"
+  ],
+  "changed": false
+ },
+ {
+  "src": "MR2 NEG dish-part-drop-r5.json#13",
+  "line": "a protein pancake made with one scoop of whey, an egg and half a banana",
+  "input": [
+   {
+    "rawText": "a protein pancake made with one scoop of whey",
+    "normalizedForm": "protein pancake",
+    "brand": ""
+   },
+   {
+    "rawText": "one scoop of whey",
+    "normalizedForm": "whey",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "half a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a protein pancake made with one scoop of whey",
+   "one scoop of whey",
+   "an egg",
+   "half a banana"
+  ],
+  "changed": false
+ },
+ {
+  "src": "MR2 NEG stock-consumed.json#138",
+  "line": "a dozen eggs, made an omelette with 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "an omelette with 3 eggs",
+    "normalizedForm": "omelette",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a dozen eggs",
+   "an omelette with 3 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "MR2 NEG repeated-eggs-fused",
+  "line": "2 eggs and 1 slice of toast, then an omelette with 2 eggs and 1/4 cup cheese",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1 slice of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "an omelette with 2 eggs",
+    "normalizedForm": "omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "1/4 cup cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs",
+   "1 slice of toast",
+   "an omelette with 2 eggs",
+   "1/4 cup cheese"
+  ],
+  "changed": false
+ },
+ {
+  "src": "MR2 POS repeated-eggs-fused-echo",
+  "line": "2 eggs and 1 slice of toast, then an omelette with 2 eggs and 1/4 cup cheese",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1 slice of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "an omelette with 2 eggs",
+    "normalizedForm": "omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "1/4 cup cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 eggs",
+   "1 slice of toast",
+   "2 eggs",
+   "1/4 cup cheese"
+  ],
+  "changed": true,
+  "dropIndex": 2
  }
 ]
