@@ -153,9 +153,20 @@ describe('name_count_derived - bare-pair twin', () => {
 
 describe('name_count_derived - SILENT (today\'s path)', () => {
     it('ID GATE: a 13-digit (real GTIN) id keeps label_serving_default', async () => {
+        // estimator off: isolates the id gate from s456 CXL-1's label_piece_estimate
+        (getOrCreateAmbiguousServing as jest.Mock).mockResolvedValue({ status: 'error' });
         const result = await run('Chick-Fil-A, 4 Grilled Nuggets', '12 count chick-fil-a nuggets', { id: REAL_ID });
+        expect(result?.servingTier).not.toBe('name_count_derived');
         expect(result?.servingTier).toBe('label_serving_default');
         expect(result?.grams).toBeCloseTo(1200, 1);
+    });
+
+    it('ID GATE + s456 CXL-1: a real-GTIN placeholder label with the estimator on bills label_piece_estimate, never name_count_derived', async () => {
+        (getOrCreateAmbiguousServing as jest.Mock).mockResolvedValue({ status: 'success', grams: 17 });
+        const result = await run('Chick-Fil-A, 4 Grilled Nuggets', '12 count chick-fil-a nuggets', { id: REAL_ID });
+        expect(result?.servingTier).toBe('label_piece_estimate');
+        expect(result?.servingTier).not.toBe('name_count_derived');
+        expect(result?.grams).toBeCloseTo(12 * 100 / 6, 0);
     });
 
     it('EXCLUSION ONLY: "7 Layer Burritos" `2 burritos` is refused by the size-word gate', async () => {
