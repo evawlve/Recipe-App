@@ -221,6 +221,9 @@ export const REPLAY_NONDETERMINISTIC_SERVING_TIERS: readonly string[] = Object.f
         // The durable fix is a provenance field at the producer, not a longer list —
         // owner: sync-docs/reports/2026-08-05_ai-serving-spend-audit.md.
         'discrete_unit_backfill',
+        // Same shape: one name for cache hit AND miss of the 'piece' estimate
+        // (serving/hydration-lane.ts, label_piece_estimate, s456 CXL-1).
+        'label_piece_estimate',
 
         // --- getOrCreateFdcSizeServings() -> estimateAmbiguousServing() ---
         // Uncached by construction (its own docstring says caching is "a future

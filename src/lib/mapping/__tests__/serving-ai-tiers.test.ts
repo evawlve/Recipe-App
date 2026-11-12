@@ -173,11 +173,11 @@ describe('the two predicates are related but NOT equal', () => {
         }
     });
 
-    it('but not the reverse — three members bill nothing through SERVING_AI_TIERS', () => {
+    it('but not the reverse — four members bill nothing through SERVING_AI_TIERS', () => {
         // ai_generated_serving: runs no model, reads a model-WRITTEN row.
-        // discrete_unit_backfill / fdc_size_qualifier: deliberately not added to the
+        // discrete_unit_backfill / fdc_size_qualifier / label_piece_estimate: deliberately not added to the
         // billing allowlist (see the module header) — it has its own owner doc.
-        for (const tier of ['ai_generated_serving', 'discrete_unit_backfill', 'fdc_size_qualifier']) {
+        for (const tier of ['ai_generated_serving', 'discrete_unit_backfill', 'fdc_size_qualifier', 'label_piece_estimate']) {
             expect(isReplayNondeterministicTier(tier)).toBe(true);
             expect(servingAiCallForTier(tier).called).toBe(false);
         }
@@ -233,7 +233,8 @@ describe('producer call-site census — the guard against the next silent miss',
     // identical under both rules today (verified 2026-08-18) — this restores the
     // census's stated meaning ("outside tests") without changing what it asserts.
     const EXPECTED: Record<string, number> = {
-        getOrCreateAmbiguousServing: 7,
+        // 7 -> 8 on 2026-11-12: buildOffResult() label_piece_estimate step (s456 CXL-1)
+        getOrCreateAmbiguousServing: 8,
         getOrCreateFdcSizeServings: 3,
         insertFdcAiServing: 1,
         estimateAmbiguousServing: 4,
