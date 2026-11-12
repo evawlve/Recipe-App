@@ -258,17 +258,23 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
   // table the 2026-08-17 prose report section 6.5 declines (that ban covers "a bit of" /
   // "a splash of" / "a drizzle of" / "some"); the grams still come from the record's
   // per-unit serving.
+  // s456 NW: English 13-99 and hundreds, so `thirty grams` = `30 grams` (ASC row 31); `forty thieves` counts as `40 thieves` does.
   const WORD_NUMBERS: Record<string, number> = {
     one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
     nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, couple: 2, few: 3,
+    thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+    twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+    hundred: 100,
   };
   const article = tokens[0].toLowerCase();
   const hasArticle =
     (article === 'a' || article === 'an') &&
     tokens.length >= 2 &&
     (tokens[1].toLowerCase() === 'dozen' || tokens[1].toLowerCase() === 'couple' ||
-      tokens[1].toLowerCase() === 'few');
+      tokens[1].toLowerCase() === 'few' || tokens[1].toLowerCase() === 'hundred');
   const numIdx = hasArticle ? 1 : 0;
+  const compound = readEnglishCompound(tokens, numIdx);
+  if (compound) return compound;
   const word = tokens[numIdx].toLowerCase();
   if (WORD_NUMBERS[word] !== undefined) {
     let wordConsumed = numIdx + 1;
@@ -331,4 +337,45 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
   }
 
   return { qty, consumed };
+}
+
+const UNITS_1_9: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+const TENS_20_90: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+/** 21-99 at tokens[k]: "twenty five" (2 tokens) or "twenty-five" (1 token). */
+function readTensUnits(tokens: string[], k: number): { qty: number; consumed: number } | null {
+  const t = tokens[k]?.toLowerCase();
+  if (t === undefined) return null;
+  const h = /^([a-z]+)-([a-z]+)$/.exec(t);
+  if (h && TENS_20_90[h[1]] !== undefined && UNITS_1_9[h[2]] !== undefined) return { qty: TENS_20_90[h[1]] + UNITS_1_9[h[2]], consumed: 1 };
+  const nxt = tokens[k + 1]?.toLowerCase();
+  if (TENS_20_90[t] !== undefined && nxt !== undefined && UNITS_1_9[nxt] !== undefined) return { qty: TENS_20_90[t] + UNITS_1_9[nxt], consumed: 2 };
+  return null;
+}
+const ONE_TO_NINETEEN: Record<string, number> = { ...UNITS_1_9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+/** 1-99 at tokens[k]. */
+function readOneToNinetyNine(tokens: string[], k: number): { qty: number; consumed: number } | null {
+  const tu = readTensUnits(tokens, k);
+  if (tu) return tu;
+  const t = tokens[k]?.toLowerCase();
+  if (t === undefined) return null;
+  if (ONE_TO_NINETEEN[t] !== undefined) return { qty: ONE_TO_NINETEEN[t], consumed: 1 };
+  if (TENS_20_90[t] !== undefined) return { qty: TENS_20_90[t], consumed: 1 };
+  return null;
+}
+/** The multi-token English compounds (s456 NW): "<1-9|a|an> hundred [and] [1-99]", and 21-99. The opening article is at k-1 when k = 1. */
+function readEnglishCompound(tokens: string[], k: number): { qty: number; consumed: number } | null {
+  const t = tokens[k]?.toLowerCase();
+  if (t === undefined) return null;
+  let base: number | null = null;
+  let at = k;
+  if (t === 'hundred') { base = 100; at = k + 1; }
+  else if (UNITS_1_9[t] !== undefined && tokens[k + 1]?.toLowerCase() === 'hundred') { base = UNITS_1_9[t] * 100; at = k + 2; }
+  if (base !== null) {
+    const andAt = tokens[at]?.toLowerCase() === 'and' ? at + 1 : at;
+    const rest = readOneToNinetyNine(tokens, andAt);
+    if (rest) return { qty: base + rest.qty, consumed: andAt + rest.consumed };
+    return { qty: base, consumed: at };
+  }
+  const tu = readTensUnits(tokens, k);
+  return tu ? { qty: tu.qty, consumed: k + tu.consumed } : null;
 }
