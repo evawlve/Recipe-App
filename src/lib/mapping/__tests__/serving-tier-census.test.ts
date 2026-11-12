@@ -156,6 +156,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     // pins the two together in both directions so neither can drift.
     count_unit_ai: 'NONDETERMINISTIC',
     discrete_unit_backfill: 'NONDETERMINISTIC',
+    label_piece_estimate: 'NONDETERMINISTIC',
     fdc_size_estimate: 'NONDETERMINISTIC',
     fdc_medium_estimate: 'NONDETERMINISTIC',
     fdc_size_qualifier: 'NONDETERMINISTIC',
@@ -531,8 +532,9 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // 55 -> 56 on 2026-10-18: buildOffResult() gained bare_prepared_drink_cup (S202)
         // 56 -> 57 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
         // 57 -> 58 on 2026-10-22: buildOffResult() gained label_count_band_derived (C70 row 10)
-        expect(LIVE_TIERS).toHaveLength(58);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(58);
+        // 58 -> 59 on 2026-11-12: buildOffResult() gained label_piece_estimate (s456 CXL-1)
+        expect(LIVE_TIERS).toHaveLength(59);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(59);
     });
 });
 

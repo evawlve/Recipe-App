@@ -3605,6 +3605,39 @@ export async function buildOffResult(
             }
         }
 
+        // (E) LABEL SERVING HOLDS >= 3 ESTIMATED PIECES (s456 CXL-1) — a bare
+        // count ("20 skittles") on a record whose label serving ("1 portion
+        // (30 g)") is several pieces billed qty x the WHOLE serving (600 g).
+        // The label stays the anchor; the 'piece' estimate P only COUNTS pieces
+        // (n = round(label / P)) and the bill is qty x label / n. n >= 3: one P
+        // draw is persisted and a whole item (a bar, a frank, a tamal) must
+        // survive a 2.5x under-draw. P < 200: 200 is the estimator's 'piece'
+        // clamp, not a weight (a 355 g can would halve). Lower-only; in none of
+        // the bare guard's sets; writes OffServing (barcode,'piece') on first hit.
+        if (grams == null && !barePluralRequest && !bareRequest && qty >= 2
+            && hydrated.servingGrams && hydrated.servingGrams > 0) {
+            const amb = await getOrCreateAmbiguousServing(
+                candidate.id, hydrated.foodName, 'piece', brandForBorrow
+            );
+            if ((amb.status === 'success' || amb.status === 'cached')
+                && amb.grams && amb.grams > 0 && amb.grams < 200) {
+                const n = Math.round(hydrated.servingGrams / amb.grams);
+                if (n >= 3) {
+                    const per = hydrated.servingGrams / n;
+                    grams = qty * per;
+                    servingDescription = `${qty} piece (${per.toFixed(1)}g each, label ~ ${n} pieces)`;
+                    servingTier = 'label_piece_estimate';
+                    logger.info('off.build_result.label_piece_estimate', {
+                        foodId: candidate.id,
+                        labelGrams: hydrated.servingGrams,
+                        estimatePerPiece: amb.grams,
+                        n,
+                        status: amb.status,
+                    });
+                }
+            }
+        }
+
         // Still no per-piece weight for a counted item: flag it so the fallback
         // below bills a single bounded serving instead of 100g * count.
         if (grams == null) {
