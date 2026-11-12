@@ -8,19 +8,21 @@
  *
  * RULE. Scan items d = 0 .. n-1; drop the FIRST d meeting all of:
  *  1. the line has no made with / i made / we made / homemade / home made marker (dish-part-drop owns those);
- *  2. d has no brand, its rawText holds no amount and no `with`;
+ *  2. d has no brand, its rawText holds no amount and no `with` (a FUSED head, below, is the exception);
  *  3. d's name (normalizedForm || rawText) ends in a composite-dish head (BASE below);
  *  4. in the line, d's text is followed by with / filled with / topped with;
  *  5. >= 2 LATER items carry an amount, not counting a bare unit leftover ("1 cup" split off a line);
  *  6. >= 1 later item names that head's base (rice / egg / mix / bread / ...).
  * At most one drop per line.
+ * FUSED (s455 MR2): a head carrying its own `with <amount> <base>` drops when that ingredient is ALSO its own item,
+ * once per time the line says it.
  * LATER means later in the LINE (s455 MR1): the segmenter can emit the head last.
  *
  * PASS ORDER. Runs right after dropDishParts (which is a no-op wherever this fires, rule 1) and before
  * foldDrinkMilk. The SegmentationCache keeps the undropped split.
  *
  * KNOWN MISSES (left alone on purpose): a trailing dish quantity (", about 2 cups") orphans once the head
- * drops; `w/` is not `with`; fused splits (the head carries its own `with 2 eggs`) stay; a side naming the base
+ * drops; `w/` is not `with`; a fused head with no echo stays (s455 findings N2); a side naming the base
  * (fried rice with 2 egg rolls and 1 cup white rice) drops the dish.
  *
  * Pure; never mutates its input.
@@ -56,6 +58,30 @@ const MARKER = /\b(made with|i made|we made|homemade|home made)\b/;
 const LEAD = /^(with|filled with|topped with)\b/;
 const UNIT_ONLY = /^(cups?|c|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|grams?|g|lbs?|pounds?|scoops?|slices?|pieces?|servings?|bowls?|halves|half|of them|of it|more)$/;
 
+const FUSED_ARTICLE = /^(a|an|the|some|my)$/;
+
+/** s455 MR2: a head that carries its own `with <amount> <base>` and whose tail is ALSO its own item, once per time the line says it. */
+function isFusedHead(h: Item, hw: string[], wi: number, d: number, items: Item[], lk: string): boolean {
+  let headW = hw.slice(0, wi);
+  if (headW.length && FUSED_ARTICLE.test(headW[0])) headW = headW.slice(1);
+  if (!headW.length) return false;
+  const head = headW.join(' ');
+  const tail = hw.slice(wi + 1).join(' ');
+  const nfw = words(h.normalizedForm || '');
+  const nfi = nfw.indexOf('with');
+  const nfHead = (nfi < 0 ? nfw : nfw.slice(0, nfi)).join(' ');
+  const pair = BASE.find(([hr, br]) => hr.test(head) && (nfHead === '' || hr.test(nfHead)) && AMT.test(tail) && br.test(tail));
+  if (!pair) return false;
+  const others = items.filter((_, i) => i !== d);
+  const echoes = others.filter(x => words(x.rawText).join(' ') === tail).length;
+  if (echoes < 1) return false;
+  const tn = ' ' + tail + ' ';
+  let occ = 0;
+  for (let k = lk.indexOf(tn); k >= 0; k = lk.indexOf(tn, k + tn.length - 1)) occ++;
+  if (echoes < occ) return false;
+  return others.filter(x => AMT.test(x.rawText.trim())).length >= 2;
+}
+
 /** Drop the dish head of a measured recipe. Never mutates; at most one drop per line. */
 export function dropMeasuredRecipeHead<T extends Item>(
   lineKey: string,
@@ -74,7 +100,15 @@ export function dropMeasuredRecipeHead<T extends Item>(
     const h = items[d];
     const hw = words(h.rawText);
     if (h.brand) continue;
-    if (!hw.length || AMT.test(h.rawText.trim()) || hw.includes('with')) continue;
+    if (!hw.length || AMT.test(h.rawText.trim())) continue;
+    const wi = hw.indexOf('with');
+    if (wi >= 1) {
+      if (isFusedHead(h, hw, wi, d, items, lk)) {
+        return { items: items.filter((_, i) => i !== d), drops: [{ index: d, rawText: h.rawText }] };
+      }
+      continue;
+    }
+    if (hw.includes('with')) continue;
     const nf = words(h.normalizedForm || h.rawText).join(' ');
     const pair = BASE.find(([hr]) => hr.test(nf));
     if (!pair) continue;
