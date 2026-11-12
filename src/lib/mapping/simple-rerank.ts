@@ -7,7 +7,7 @@
 
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
-import { detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
+import { COVERAGE_SPELLING_FOLD, detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
 import { DRY_GRAIN_PANEL_MIN_KCAL_PER_100G } from './estimate-state-guard';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -810,6 +810,8 @@ function tokenize(text: string): string[] {
 /** Check if two tokens match (including synonyms) */
 function tokensMatch(queryToken: string, candidateToken: string): boolean {
     if (queryToken === candidateToken) return true;
+    // s456 BB: the admission layer's spelling folds, both directions, so a requested `barbecue` is not charged VARIANT_QUALIFIER_PENALTY on `BBQ` (ASC rows 28/29). Every tokensMatch() caller inherits it; getWordCoverageBonus() deliberately does not.
+    if ((COVERAGE_SPELLING_FOLD[queryToken] ?? queryToken) === (COVERAGE_SPELLING_FOLD[candidateToken] ?? candidateToken)) return true;
     const synonyms = SYNONYMS[queryToken];
     return synonyms ? synonyms.includes(candidateToken) : false;
 }

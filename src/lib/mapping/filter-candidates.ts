@@ -3525,7 +3525,7 @@ function narrowBranchCoverageTokens(tokens: string[]): string[] {
 }
 // The narrow-branch coverage test is a SUBSET filter over the admitted pool (covered is a subset of filtered by construction),
 // singular/plural tolerant and spelling-folded, so `omelette` covers `Omelet` records.
-const COVERAGE_SPELLING_FOLD: Record<string, string> = { omelette: 'omelet', creme: 'cream', doughnut: 'donut', yoghurt: 'yogurt', chilli: 'chili', catsup: 'ketchup', bbq: 'barbecue', 'n': 'and' };
+export const COVERAGE_SPELLING_FOLD: Record<string, string> = { omelette: 'omelet', creme: 'cream', doughnut: 'donut', yoghurt: 'yogurt', chilli: 'chili', catsup: 'ketchup', bbq: 'barbecue', 'n': 'and' };
 function coverageForm(t: string): string {
     const f = COVERAGE_SPELLING_FOLD[t] ?? t;
     if (f.length > 4 && f.endsWith('ies')) return `${f.slice(0, -3)}y`;
