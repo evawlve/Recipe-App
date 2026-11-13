@@ -90,6 +90,11 @@ export interface RerankScoredCandidate {
     /** Whether this candidate hit the plausibility floor. Recorded because the
      *  sort has partitions ABOVE score — see `RerankOutcome.gap`. */
     plausibilityFloorHit: boolean;
+    /** LOG-ONLY (s453-PB). True on the one OFF record the pool-band swap moved
+     *  out of seat 0 (an OFF row whose per-100g kcal sits outside the band of the
+     *  head-noun FatSecret/FDC consensus). Absent everywhere else; no score is
+     *  changed by the swap, so read this to tell a swap from a score win. */
+    poolBandDemoted?: true;
 }
 
 /**
@@ -208,6 +213,16 @@ const WEIGHTS = {
     // Brand macro-consensus outlier demotion (fs displacement hardening, Jul 2026)
     CONSENSUS_OUTLIER_PENALTY: 0.25,  // Fires only with a detected target brand and >=3 nutrition-bearing same-product siblings whose majority agrees; demotes the record whose panel deviates hard from the sibling median ("42% protein Quest bar" — passes every absolute floor, only sibling agreement catches it). Sized to beat the max ORIGINAL_SCORE spread between a saturating outlier and unsaturated siblings (0.18) plus the fs branded prior (0.03), while staying below the 0.35 partitions.
 };
+
+// MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
+// Reject low-confidence winners to trigger fallback recovery.
+// This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
+// NOTE: Lowered from 0.80 → 0.74 → 0.70 to allow close semantic matches like:
+//   - "sugar free" ↔ "no sugar added" (cherry pie filling)
+//   - "plum tomatoes" ↔ "whole peeled plum tomatoes" (0.741 conf)
+//   - "green peppers cut in strips" ↔ "bell green raw peppers" (0.72 conf)
+// Module scope since s453-PB: the pool-band swap after the sort reads it too.
+const MIN_RERANK_CONFIDENCE = 0.70;
 
 
 // Nutrition scoring thresholds
@@ -2486,6 +2501,76 @@ export function simpleRerank(
         return a.candidate.id.localeCompare(b.candidate.id);
     });
 
+    // Pool-consensus kcal band (s453-PB, Design B). A POST-SORT SWAP, not a sort
+    // partition: only when scored[0] is an OFF record whose per-100g kcal is an
+    // outlier against the median of the head-noun FatSecret/FDC records, the first
+    // in-band head-noun record behind it (same plausibility-floor side) takes seat 0.
+    // Every other entry keeps its order and no `score` changes. Skipped on branded /
+    // brand-named / cooked-grain lines, and by two guards: G (the promoted record
+    // must itself clear MIN_RERANK_CONFIDENCE) and D (never promote a dry-grain
+    // panel over a sub-280 kcal one). Kill-switch: RANK_POOL_BAND="0".
+    let poolBandDemotedId: string | null = null;
+    if (process.env.RANK_POOL_BAND !== '0'
+        && !(isBranded || targetBrand || decisiveBrandActive || grainCookedPreference || scored.length < 2)) {
+        // s453-PB2: a joiner (with/and/plus/&/in/on, comma, w/, +) marks a multi-food line whose head-noun guess is
+        // unreliable (`coffee with half and half`, `cream in coffee`); the band skips it.
+        const joinerLine = /\s(?:with|and|plus|&|in|on)\s|,|\sw\/\s|\s\+\s/.test(query.toLowerCase());
+        const headPart = query.toLowerCase().split(/\s(?:with|and|plus|&)\s|,|\sw\/\s/)[0];
+        const headTokens = tokenize(headPart);
+        const headTok = headTokens.length > 0 ? headTokens[headTokens.length - 1] : null;
+        const topEntry = scored[0];
+        const topKcal = topEntry.candidate.nutrition?.kcal;
+        if (headTok
+            && !joinerLine
+            && topEntry.candidate.source === 'openfoodfacts'
+            && topEntry.candidate.nutrition?.per100g === true
+            && typeof topKcal === 'number' && Number.isFinite(topKcal)) {
+            const refKcals = scored
+                .filter(s => (s.candidate.source === 'fatsecret' || s.candidate.source === 'fdc')
+                    && s.candidate.nutrition?.per100g === true
+                    && typeof s.candidate.nutrition.kcal === 'number'
+                    && s.candidate.nutrition.kcal > 0
+                    && tokenize(s.candidate.name).includes(headTok))
+                .map(s => s.candidate.nutrition!.kcal)
+                .sort((x, y) => x - y);
+            if (refKcals.length >= 2) {
+                const mid = refKcals.length >> 1;
+                const ref = refKcals.length % 2 === 1 ? refKcals[mid] : (refKcals[mid - 1] + refKcals[mid]) / 2;
+                const outlier = (k: number): boolean =>
+                    (k / ref > 2 || k / ref < 0.5) && Math.abs(k - ref) > 30;
+                const inBand = (c: RerankCandidate): boolean =>
+                    c.nutrition?.per100g === true && Number.isFinite(c.nutrition.kcal) && !outlier(c.nutrition.kcal);
+                if (outlier(topKcal)) {
+                    const pIdx = scored.findIndex((s, i) => i >= 1
+                        && s.plausibilityFloorHit === topEntry.plausibilityFloorHit
+                        && tokenize(s.candidate.name).includes(headTok)
+                        && inBand(s.candidate));
+                    if (pIdx >= 1) {
+                        const P = scored[pIdx];
+                        let pConf = Math.min(0.5 + P.score * 0.5, 0.95);
+                        if (isExactMatch(query, P.candidate.name)) pConf = Math.min(pConf + 0.1, 0.98);
+                        const pKcal = P.candidate.nutrition!.kcal;
+                        const guardD = topKcal < DRY_GRAIN_PANEL_MIN_KCAL_PER_100G
+                            && pKcal >= DRY_GRAIN_PANEL_MIN_KCAL_PER_100G;
+                        if (pConf >= MIN_RERANK_CONFIDENCE && !guardD) {
+                            scored.splice(pIdx, 1);
+                            scored.unshift(P);
+                            poolBandDemotedId = topEntry.candidate.id;
+                            logger.info('simple_rerank.pool_band_promoted', {
+                                query,
+                                headTok,
+                                ref,
+                                nRefs: refKcals.length,
+                                from: topEntry.candidate.id,
+                                to: P.candidate.id,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Per-candidate score breakdown (Bug 3 fix, Feb 2026)
     // Shows ALL score components for top candidates to aid debugging.
     // Enable: set DEBUG_RERANK_SCORES=true or pass debug option.
@@ -2691,6 +2776,7 @@ export function simpleRerank(
         baseScore: fin(sc.baseScore) as number,
         nutritionScore: fin(sc.nutritionScore) as number,
         plausibilityFloorHit: sc.plausibilityFloorHit,
+        ...(sc.candidate.id === poolBandDemotedId ? { poolBandDemoted: true as const } : {}),
     }));
     const buildOutcome = (returnedWinner: string | null, outcomeReason: string): RerankOutcome => ({
         winner: returnedWinner,
@@ -2712,15 +2798,6 @@ export function simpleRerank(
         scoredCount: scored.length,
         brandSpelling,
     });
-
-    // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
-    // Reject low-confidence winners to trigger fallback recovery.
-    // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
-    // NOTE: Lowered from 0.80 → 0.74 → 0.70 to allow close semantic matches like:
-    //   - "sugar free" ↔ "no sugar added" (cherry pie filling)
-    //   - "plum tomatoes" ↔ "whole peeled plum tomatoes" (0.741 conf)
-    //   - "green peppers cut in strips" ↔ "bell green raw peppers" (0.72 conf)
-    const MIN_RERANK_CONFIDENCE = 0.70;
 
     // Emitted AFTER the gate is known, never before it. An earlier revision logged
     // this above the gate, so the line reported `reason: sole_survivor` on rows the
