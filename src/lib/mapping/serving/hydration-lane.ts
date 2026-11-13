@@ -3284,6 +3284,7 @@ export async function buildOffResult(
                 labelUnitCount,
                 labelUnitWord,
                 itemName: parsed.name || hydrated.foodName,
+                labelDescription: hydrated.servingDescription,
             });
             if (lbs && lbs.perPiece >= BARE_MIN_PIECE_SERVING_GRAMS) {
                 grams = lbs.perPiece;
@@ -3454,6 +3455,7 @@ export async function buildOffResult(
                 labelUnitCount,
                 labelUnitWord,
                 itemName: itemNameForCount,
+                labelDescription: hydrated.servingDescription,
             });
             if (lb) {
                 grams = qty * lb.perPiece;

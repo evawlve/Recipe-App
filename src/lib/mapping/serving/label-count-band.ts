@@ -78,8 +78,10 @@ export function labelCountPerPiece(args: {
     labelUnitCount: number;
     labelUnitWord: string | null;
     itemName: string;
+    /** The label text (`3 COOKED LINKS (53 g)`), for the participle read below. */
+    labelDescription?: string | null;
 }): { perPiece: number; n: number; noun: string } | null {
-    const { servingGrams, labelUnitCount, labelUnitWord, itemName } = args;
+    const { servingGrams, labelUnitCount, labelUnitWord, itemName, labelDescription } = args;
     if (!(labelUnitCount >= 2) || servingGrams == null || !(servingGrams > 0)) return null;
     if (!labelUnitWord) return null;
 
@@ -100,6 +102,16 @@ export function labelCountPerPiece(args: {
     } else if (has(LABEL_NOUN_COUNTS_ITEM_HEAD, labelNoun)
         && LABEL_NOUN_COUNTS_ITEM_HEAD[labelNoun].includes(itemHead)) {
         bandNoun = labelNoun;
+    }
+    // s457 PS: a preparation participle between the count and the noun
+    // (`3 COOKED LINKS (53 g)`, `3 broiled links`) hid the noun, so `2 pork
+    // sausage links` fell to the 45 g seed (90 g / 289 kcal against the
+    // label's 35 g). Skip exactly ONE `-ed` word; a size word (`mini`,
+    // `large`) is never skipped, because it changes the piece. The band
+    // below still gates the weight.
+    if (bandNoun == null && labelDescription && !GENERIC_PIECE_WORDS.has(itemHead)) {
+        const m = labelDescription.match(/^\s*\d+\s+[a-z]{2,}ed\s+([a-z]+)\b/i);
+        if (m && singularizeUnit(m[1].toLowerCase()) === itemHead) bandNoun = itemHead;
     }
     if (bandNoun == null || !has(LABEL_COUNT_BAND, bandNoun)) return null;
 
