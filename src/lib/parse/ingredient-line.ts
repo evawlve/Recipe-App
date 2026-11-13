@@ -244,6 +244,8 @@ function consumePartitiveOf(tokens: string[], i: number): number {
 const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
   'ten', 'eleven', 'twelve', 'dozen', 'couple', 'few',
+  'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+  'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred',
 ]);
 
 /**
