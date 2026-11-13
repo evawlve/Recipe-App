@@ -1,0 +1,15 @@
+# C68 s370 POST-DEPLOY-5 READ (box 4-JWjeuJzQ1eMODVc-qA1 = 49c923eb), warm. Draft: s343 2026-10-20-postdeploy3.tsv minus MGR's 10-22 read minus golden lines. Expectations (grams/kcal) are in the report table.
+a pint of water	1	OK	portion	-
+a gallon of water	1	OK	portion	-
+16 ounces of water	1	OK	portion	-
+1 svg tortilla chips	1	OK	parse	-
+2 ts cinnamon	1	OK	parse	-
+1 bx mac and cheese	1	OK	parse	-
+1 cn tuna	1	OK	portion	-
+a little bit of onion	1	OK	portion	-
+an onion	1	OK	portion	-
+a muffin, ate the top only	1	OK	portion	-
+a turkey sandwich, actually a ham sandwich, um, too	2	OK	parse	-;-
+gatorade zero glacier cherry	1	OK	identity	gatorade
+a diet cherry coke	1	OK	identity	-
+espresso	1	OK	identity	-

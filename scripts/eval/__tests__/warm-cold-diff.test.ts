@@ -799,9 +799,14 @@ describe('population builders account for every line they were given', () => {
         // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
         // 12 wings at the 100 g no-serving default vs at the 34 g seed.
         // 310 / 177 / 144 since 2026-10-18: n-r3-01..10 (S202 round-3 pins) — ten `text` lines; six grams bands (02-07); three kcal100 bands (04, 05, 10); two forbidName (01, 10); no total, no expectItems.
-        expect(p.lines).toHaveLength(310);
-        expect(p.lines.filter(l => l.band).length).toBe(177);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(144);
+        // 311 / 178 / 145 since 2026-10-25: n-qty-10 `2 eggs x2` (trailing x<N> after a digit count) — one `text` line, one grams band.
+        // 325 / 189 / 159 since 2026-11-03: n-s424-01..06 + n-s429-01..08 (the s424/s429 nominations, all knownIssue, MGR s438) — fourteen `text` lines; eleven grams bands; two total bands (s424-06, s429-01); three expectItems (s424-05 with the new maxItems, s429-05, s429-06); one forbidName (s424-03); three kcal100 bands (s424-02, s429-07 and none else).
+        // 328 / 189 / 162 since 2026-11-04: n-s445-02..04 (s445a) — three `text` lines, three total bands, three forbidName.
+        // 329 / 163 since 2026-11-05: n-s448-01 (s448a) — one `text` line.
+        // 332 / 189 / 166 since 2026-11-05: n-s448-02..04 (MGR s448 nominations, all knownIssue) — three `text` lines, no band, three forbidName; merged over n-s448-01.
+        expect(p.lines).toHaveLength(332);
+        expect(p.lines.filter(l => l.band).length).toBe(189);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(166);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 

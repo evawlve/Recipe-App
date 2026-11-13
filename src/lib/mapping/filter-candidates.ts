@@ -10,6 +10,7 @@ import { logger } from '../logger';
 // Import direction is safe: brand-detector imports only brand-lexicon.json and
 // digit-brands.ts, neither of which reaches back here, so this adds no cycle.
 import { detectBrandInQuery } from './brand-detector';
+import { demoteRemovedParts, parseRemovalClause } from './removal-clause';
 
 // ============================================================
 // Types
@@ -466,6 +467,39 @@ export function isWrongCookingStateForGrain(rawLine: string, normalizedName: str
 
     return false;
 }
+
+/**
+ * The EXPLICIT-cooked twin of the soft-cooked branch in detectGrainCookingContext()
+ * (C6970 s396, 2026-10-27). True for a line that function reads as explicit-cooked
+ * (preferCooked, NOT softCooked) whose head noun (last token of the normalized name)
+ * is a VOLUME_COOKED_GRAINS grain, logged by an eaten-portion volume unit, with no dry
+ * signal on either string — "1 cup cooked oats", "a bowl of cooked rice". simpleRerank()
+ * gives such a line the cooked-grain boost / partition / 0.75 floor the soft twin
+ * ("1 cup oats") already gets. Before this, writing "cooked" got the line LESS
+ * protection: a dry 389 kcal estimate sank every cooked candidate to a 0.596 decline
+ * (golden n-cook-06). The explicit path already hard-rejects candidates without a
+ * cooking word upstream (isWrongCookingStateForGrain), so the preference only reorders
+ * cooked-looking records among themselves.
+ *
+ * Deliberately a NEW symbol: detectGrainCookingContext() and the four tables it reads
+ * are one-hop-guarded (scripts/eval/one-hop-guard.sh) because gather-candidates.ts
+ * imports the function; this one is read only by simple-rerank.ts. COOKING_KEYWORDS is
+ * matched by SUBSTRING, so steamed/fried/baked lines count, and "uncooked" sets
+ * preferCooked — only GRAIN_DRY_SIGNAL_RE ("uncooked") keeps "a cup of uncooked rice"
+ * false. Re-derive: src/lib/mapping/__tests__/cooked-grain-preference.test.ts.
+ */
+export function isExplicitCookedGrainVolumeLine(rawLine: string, normalizedName: string): boolean {
+    const context = detectGrainCookingContext(rawLine, normalizedName);
+    if (!context.preferCooked || context.softCooked) return false;
+    const lower = rawLine.toLowerCase();
+    const normLower = normalizedName.toLowerCase();
+    const nameTokens = normLower.split(/\s+/).filter(Boolean);
+    const headNoun = nameTokens[nameTokens.length - 1] ?? '';
+    return VOLUME_COOKED_GRAINS.includes(headNoun)
+        && COOKED_VOLUME_UNIT_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(normLower);
+}
 // ============================================================
 
 // Product categories that are typically NOT raw ingredients
@@ -868,6 +902,12 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['macaroni', 'pasta', 'elbow macaroni', 'penne', 'spaghetti'],
         excludeIfContains: ['cracker', 'crackers', 'saltines', 'saltine']
     },
+    // Bread-carrier sandwich vs cracker sandwiches (C70 S239)
+    {
+        query: ['bagel sandwich', 'bagel sandwiches', 'croissant sandwich', 'croissant sandwiches', 'english muffin sandwich',
+            'english muffin sandwiches', 'sub sandwich', 'sub sandwiches'],
+        excludeIfContains: ['cracker', 'crackers']
+    },
     // === NEW: Plant-based cheese vs Meat balls ===
     {
         query: ['rice cheese', 'vegan cheese', 'mozzarella style'],
@@ -1234,7 +1274,12 @@ export function hasCoreTokenMismatch(
     cachedBrandName?: string | null
 ): boolean {
     const queryLower = normalizedQuery.toLowerCase().trim();
-    const queryTokens = queryLower.split(/\s+/).filter(Boolean);
+    let queryTokens = queryLower.split(/\s+/).filter(Boolean);
+    // s445a: derive core tokens from the query's HEAD (a removed part is not required of the cached food). No rawLine here. A
+    // token-SORTED cache key (validated-mapping-helpers passes one) has no clause order, so it is never parsed.
+    if (queryTokens.join(' ') !== [...queryTokens].sort().join(' ')) {
+        queryTokens = parseRemovalClause(queryLower).head.split(/\s+/).filter(Boolean);
+    }
     const foodLower = [cachedFoodName, cachedBrandName].filter(Boolean).join(' ').toLowerCase();
 
     // Find core tokens in the query
@@ -1625,6 +1670,41 @@ const MUST_HAVE_CALORIES_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * A zero-calorie MARKER word: the label (or the user) is saying the product is
+ * the diet / zero / sugar-free variant. On its own it proves nothing — "Zero
+ * Sugar Creamer" still has calories — so it never waives anything by itself.
+ * hasNullOrInvalidMacros() uses it only for the ALL-ZERO branch, and only when
+ * BOTH the user's line AND the candidate name carry one (see the header there).
+ */
+export const ZERO_CAL_MARKER_RE = /\b(diet|zero|sugar[\s-]*free|no[\s-]+sugar)\b/i;
+
+/**
+ * The marker waiver's COVERAGE condition. A marker on both sides is not enough:
+ * "Propel Zero - Black Cherry" [Gatorade] carries `zero` and was admitted for
+ * `gatorade zero glacier cherry`, where it outranked the right record (winner
+ * gate c6970-zerocal, 2026-10-25: fs_26665706 "Zero Glacier Cherry (20 oz)" ->
+ * fs_1395249). So the candidate must also COVER the line: every line token left
+ * after dropping the marker words, the detected brand's tokens, purely numeric
+ * tokens, units (STOP_WORDS) and WAIVER_STOPWORDS must appear among the
+ * candidate NAME's tokens. Tokens on both sides are lowercased and split on
+ * /[^a-z0-9]+/ — that fold is load-bearing: "Diet Dr. Pepper" must give `dr`,
+ * not `dr.`. The name only, not the brand: hasNullOrInvalidMacros() receives no
+ * brandName, and widening its four call sites would move the transcribed
+ * caller. Name-only is the stricter reading — it admits a subset.
+ */
+const WAIVER_STOPWORDS = new Set(['a', 'an', 'the', 'of', 'with', 'in', 'from', 'my', 'some', 'one']);
+const waiverTokens = (text: string): string[] => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+export function candidateCoversZeroCalLine(candidateName: string, queryLine: string): boolean {
+    const markerFree = queryLine.toLowerCase().replace(new RegExp(ZERO_CAL_MARKER_RE.source, 'gi'), ' ');
+    const brand = detectBrandInQuery(queryLine).matchedBrand;
+    const brandTokens = new Set(brand ? waiverTokens(brand) : []);
+    const nameTokens = new Set(waiverTokens(candidateName));
+    return waiverTokens(markerFree)
+        .filter(t => !/^[0-9]+$/.test(t) && !brandTokens.has(t) && !STOP_WORDS.has(t) && !WAIVER_STOPWORDS.has(t))
+        .every(t => nameTokens.has(t));
+}
+
+/**
  * Check if a food name belongs to a category that MUST have calories.
  * Foods like salt, baking soda, and seasonings legitimately have 0 kcal
  * and are NOT covered by this list.
@@ -1645,13 +1725,49 @@ function isFoodThatMustHaveCalories(candidateName?: string): boolean {
  * since we can't validate what we don't have. The data will be validated
  * later when the candidate is hydrated with full nutrition info.
  * 
+ * THE ZERO-CALORIE MARKER WAIVER (queryLine). The all-zero branch below deletes
+ * any 0/0/0/0 panel whose NAME matches MUST_HAVE_CALORIES_PATTERNS, and those
+ * lists carry `pepper`, `grape`, `cherry` and `sugar`. So the genuine 0-kcal
+ * drinks — fs_51053 "Diet Dr. Pepper", fs_1627897 "Powerade Zero Grape",
+ * fs_35448222 "Pepsi Zero Sugar", fs_1683050 "Diet Cherry Coke (Can)" — arrive
+ * from the FatSecret lane at API rank #1 for exactly those lines and are deleted
+ * before ranking, and a floor-hit sugared panel wins instead. The only waiver was
+ * isExplicitlyZeroCal, which reads the name alone. MEASURED 2026-10-22 (s366) on
+ * the box: 291 stored FatSecretFood rows carry an all-zero panel; the rule drops
+ * 94 of them; 24 of those 94 carry a marker word and ALL 24 are genuine 0-kcal
+ * drinks (Diet Dr Pepper x2, Powerade Zero x5, Pepsi Zero Sugar x3, Sprite Zero,
+ * Mountain Dew Zero, ...). The 94/24 split is the 291 names run through
+ * MUST_HAVE_CALORIES_PATTERNS and ZERO_CAL_MARKER_RE; the 291, and the 55 of them
+ * with a marker, re-derive (re-run 2026-10-24: 55 | 291) with
+ *   SELECT count(*) FILTER (WHERE name ~* '\m(diet|zero|sugar[[:space:]-]*free|no[[:space:]-]+sugar)\M'),
+ *          count(*)
+ *     FROM "FatSecretFood"
+ *    WHERE "nutrientsPer100g"::text <> '{}'
+ *      AND coalesce(("nutrientsPer100g"->>'calories')::float, -1) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'protein')::float, 0) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'carbs')::float, 0) = 0
+ *      AND coalesce(("nutrientsPer100g"->>'fat')::float, 0) = 0;
+ * So the all-zero branch does NOT reject when the caller passes the line and
+ * ZERO_CAL_MARKER_RE matches BOTH the line and the candidate name, AND the name
+ * covers the line (candidateCoversZeroCalLine(), above). Both markers, because
+ * either alone is the corrupt shape this branch exists for: `diet pepper` must
+ * not admit an all-zero "Crushed Red Pepper", and a plain `dr pepper` must not
+ * admit an all-zero "Diet Dr. Pepper". Admit-only: this never ranks anything.
+ * A call WITHOUT the line (the FDC cache check has no name either) is unchanged.
+ * The line must reach EVERY caller that has it in scope — the token filter, the
+ * mapper's Step 3c, and both cache-validity reads — or a downstream copy of the
+ * same check re-deletes (or escapes) what the first one admitted.
+ *
  * @param nutrients - The nutrition data to check
  * @param candidateName - Optional candidate food name, used to check if
  *   the food belongs to a category that MUST have calories (for the all-zero check)
+ * @param queryLine - Optional raw user line; enables the zero-calorie marker
+ *   waiver on the all-zero check (see above)
  */
 export function hasNullOrInvalidMacros(
     nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null; fiber?: number | null } | null,
-    candidateName?: string
+    candidateName?: string,
+    queryLine?: string
 ): boolean {
     // If nutrients object doesn't exist, we can't validate - allow through
     // (will be validated after hydration when we have actual data)
@@ -1744,7 +1860,12 @@ export function hasNullOrInvalidMacros(
     const nameForCheck = (candidateName || '').toLowerCase();
     const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck) ||
         /\b(cooking\s*spray|pan\s*spray|baking\s*spray|spray\s*oil|oil\s*spray)\b/i.test(nameForCheck);
-    if (allZero && !isExplicitlyZeroCal && isFoodThatMustHaveCalories(candidateName)) {
+    // The marker waiver — see the function header. Needs the line AND the name.
+    const isMarkedZeroCalOnBothSides = queryLine != null
+        && ZERO_CAL_MARKER_RE.test(nameForCheck)
+        && ZERO_CAL_MARKER_RE.test(queryLine)
+        && candidateCoversZeroCalLine(nameForCheck, queryLine);
+    if (allZero && !isExplicitlyZeroCal && !isMarkedZeroCalOnBothSides && isFoodThatMustHaveCalories(candidateName)) {
         return true;
     }
 
@@ -2683,6 +2804,30 @@ export function isDietaryConstraintViolation(
 
 
 // ============================================================
+// Serving-vessel head nouns (relaxed pass only) -- see the block in filterCandidatesByTokens()
+// ============================================================
+
+/**
+ * Serving vessels: a trailing `plate`/`platter` names how the food is served, not what it is.
+ * `bowl`, `basket`, `box`, `board` and `combo` are deliberately NOT here: they are dish or product
+ * heads in the corpus (burrito bowl, poke bowl, chicken strip basket, bento box, charcuterie board).
+ */
+export const VESSEL_WORDS: ReadonlySet<string> = new Set(['plate', 'plates', 'platter', 'platters']);
+
+/**
+ * Words that, directly before a vessel word, make the PAIR the dish (`dinner plate`, `combo plate`,
+ * `kids plate`, `party platter`, `sampler platter`): the vessel word is then the head noun and must
+ * stay the relax key. Measured set from the C70 S239 refute. Removing `dinner` re-opens
+ * `dinner plate` -> `Dinner Ham`/`Dinner Roll`.
+ */
+export const VESSEL_QUALIFIER_WORDS: ReadonlySet<string> = new Set([
+    'breakfast', 'brunch', 'lunch', 'dinner', 'supper', 'meal', 'entree', 'combo', 'combination',
+    'kids', 'kid', 'childrens', 'mixed', 'assorted', 'party', 'family', 'sampler', 'appetizer',
+    'deli', 'big', 'small', 'large', 'huge', 'full', 'half', 'hot', 'cold', 'side', 'dessert',
+    'snack', 'paper', 'special', 'house', 'value', 'mini', 'bbq', 'barbecue',
+]);
+
+// ============================================================
 // Main Filter Function
 // ============================================================
 
@@ -2692,6 +2837,11 @@ export function filterCandidatesByTokens(
     options: FilterOptions = {}
 ): FilterResult {
     const { debug = false, rawLine, relaxed = false } = options;
+
+    // s445a: a trailing `no|without|minus <part>` clause is a removal, not a food to require. Admission reads the HEAD only
+    // (must-have, K2 head noun, coverage, mismatch checks); rawLine-based checks below keep the full line.
+    const removal = parseRemovalClause(normalizedName, rawLine);
+    normalizedName = removal.head;
 
     // Use rawLine for modifier detection if available, otherwise fall back to normalizedName
     const modifierCheckSource = rawLine || normalizedName;
@@ -2775,14 +2925,47 @@ export function filterCandidatesByTokens(
             : new Set<string>();
         const brandToken = mustHaveTokens.find(t =>
             relaxBrandTokens.has(t) || relaxBrandTokens.has(foldApostrophes(t)));
+        const requiredTokens = mustHaveTokens;
         const headNoun = mustHaveTokens[mustHaveTokens.length - 1];
         if (brandToken && brandToken !== headNoun) headNounRelaxFallback = headNoun;
         mustHaveTokens = [brandToken ?? headNoun];
+
+        // VESSEL HEAD RE-AIM (C70 S239). `falafel plate` derives [falafel, plate]; no record carries
+        // both, strict admits 0, and this relaxed pass keeps only the LAST slot, `plate`. The only
+        // gathered record naming `plate` is the FatSecret cut `Veal Breast (Plate Half, Cooked,
+        // Braised)`, which survives alone, skips simpleRerank() (single_candidate, 0.95) and clears
+        // the save gate: the food vanishes. A trailing vessel word is how the food is served, not
+        // what it is, so on that shape relax on the FOOD token before it, and keep the vessel word
+        // as the FALLBACK key (the existing S3 second pass below) so that an empty food-token pass
+        // returns exactly master's result. This is a re-aim with an ordered fallback, NON-MONOTONE
+        // on its fire set (a line may lose master's `[plate]` admissions when the food token admits
+        // >= 1); it is NOT admit-only. It is byte-identical to master on every line it does not fire on.
+        //
+        // Fires only when ALL hold: relaxed (we are inside that block); NOT branded
+        // (`!relaxDetection.isBranded`, and not a brand-token test: on a brand line the brand key
+        // and its S3 fallback already own the re-aim, and the brand's own `plate` is the dish, e.g.
+        // `panda express plate`); >= 2 required tokens (block guard); the last required token is a
+        // vessel word AND the line's last word; the token before it is not itself a vessel word and
+        // not in VESSEL_QUALIFIER_WORDS (`dinner plate`, `kids plate`, `party platter` name the dish;
+        // the food token there would admit `Dinner Ham`, `Kids Combo`, `Party Mix`).
+        //
+        // KNOWN RESIDUAL, STATED NOT HIDDEN: this fixes IDENTITY only. One falafel patty is ~17 g
+        // against a plate's 68-102 g, so `falafel plate` bills ~57 kcal where veal billed 240:
+        // the right food, under-billed about 4-6x. That is a separate PORTION question.
+        if (!relaxDetection.isBranded && VESSEL_WORDS.has(headNoun)) {
+            const lastWord = normalizedName.trim().toLowerCase().split(/\s+/).pop()?.replace(/[^\w]+$/, '') ?? '';
+            const prev = requiredTokens[requiredTokens.length - 2];
+            if (lastWord === headNoun && !VESSEL_WORDS.has(prev) && !VESSEL_QUALIFIER_WORDS.has(prev)) {
+                headNounRelaxFallback = headNoun;
+                mustHaveTokens = [prev];
+            }
+        }
     }
 
     if (mustHaveTokens.length === 0) {
         // No tokens to filter by - keep all
-        return { filtered: candidates, removedCount: 0 };
+        // s448a: window composition only (records naming the removed part yield slots to their lane-mates).
+        return { filtered: demoteRemovedParts(candidates, removal.removed, removal.head), removedCount: 0 };
     }
 
     // Filter candidates. Named so the S3 fallback below can run the SAME predicate a second time
@@ -3124,7 +3307,7 @@ export function filterCandidatesByTokens(
 
         // Check for NULL/INVALID macros (corrupted data)
         // e.g. Red lentils with P:0, C:0, kcal:314 - this is bad data
-        if (hasNullOrInvalidMacros(nutrientsToCheck, candidate.name)) {
+        if (hasNullOrInvalidMacros(nutrientsToCheck, candidate.name, modifierCheckSource)) {
             if (debug) logger.info('filter.candidates.null_or_invalid_macros', { candidate: candidate.name, nutrients: nutrientsToCheck });
             return false;
         }
@@ -3320,7 +3503,8 @@ export function filterCandidatesByTokens(
     }
 
     return {
-        filtered,
+        // s448a: window composition only; owner is the s448a report (mobile sync-docs/reports).
+        filtered: demoteRemovedParts(filtered, removal.removed, removal.head),
         removedCount,
         reason: removedCount > 0 ? 'removed_by_must_have_tokens' : undefined,
     };
@@ -3341,7 +3525,7 @@ function narrowBranchCoverageTokens(tokens: string[]): string[] {
 }
 // The narrow-branch coverage test is a SUBSET filter over the admitted pool (covered is a subset of filtered by construction),
 // singular/plural tolerant and spelling-folded, so `omelette` covers `Omelet` records.
-const COVERAGE_SPELLING_FOLD: Record<string, string> = { omelette: 'omelet', creme: 'cream', doughnut: 'donut', yoghurt: 'yogurt', chilli: 'chili', catsup: 'ketchup', bbq: 'barbecue', 'n': 'and' };
+export const COVERAGE_SPELLING_FOLD: Record<string, string> = { omelette: 'omelet', creme: 'cream', doughnut: 'donut', yoghurt: 'yogurt', chilli: 'chili', catsup: 'ketchup', bbq: 'barbecue', 'n': 'and' };
 function coverageForm(t: string): string {
     const f = COVERAGE_SPELLING_FOLD[t] ?? t;
     if (f.length > 4 && f.endsWith('ies')) return `${f.slice(0, -3)}y`;

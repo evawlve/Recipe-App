@@ -1,0 +1,2794 @@
+[
+ {
+  "src": "s240 draw",
+  "line": "one egg, sorry, two eggs, scrambled",
+  "input": [
+   {
+    "rawText": "one egg",
+    "normalizedForm": "egg"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "scrambled",
+    "normalizedForm": "scrambled"
+   }
+  ],
+  "expectRawTexts": [
+   "2 egg",
+   "scrambled"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a pint of ice cream, ok fine half a pint",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "ice cream"
+   },
+   {
+    "rawText": "half a pint",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pint of ice cream"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "three slices of bacon, wait, four",
+  "input": [
+   {
+    "rawText": "three slices of bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "four",
+    "normalizedForm": "four"
+   }
+  ],
+  "expectRawTexts": [
+   "4 slices of bacon"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "two coffees, wait, three",
+  "input": [
+   {
+    "rawText": "two coffees",
+    "normalizedForm": "coffees"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 coffees"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a bagel, sorry, two bagels",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "bagels"
+   }
+  ],
+  "expectRawTexts": [
+   "2 bagel"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "one beer, ok fine two beers",
+  "input": [
+   {
+    "rawText": "one beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "two beers",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "2 beer"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a slice of pizza, wait, two slices",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "2 slices of pizza"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a slice of pizza, wait, two slices",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices"
+   }
+  ],
+  "expectRawTexts": [
+   "2 slices of pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burger, wait, i also had fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burger, wait, i also had fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "i also had fries",
+    "normalizedForm": "i also had fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "i also had fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, wait, two pieces of toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "two pieces of toast",
+    "normalizedForm": "pieces of toast"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "two pieces of toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, another coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "another coffee",
+    "normalizedForm": "another coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "another coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, another coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "three tacos, wait, two more",
+  "input": [
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "two more",
+    "normalizedForm": "more"
+   }
+  ],
+  "expectRawTexts": [
+   "three tacos",
+   "two more"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "three tacos, wait, two more",
+  "input": [
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "three tacos",
+   "two"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "three tacos, wait, two more",
+  "input": [
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "two more tacos",
+    "normalizedForm": "more tacos"
+   }
+  ],
+  "expectRawTexts": [
+   "three tacos",
+   "two more tacos"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "wait staff brought bread",
+  "input": [
+   {
+    "rawText": "bread",
+    "normalizedForm": "bread"
+   }
+  ],
+  "expectRawTexts": [
+   "bread"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a steak, wait staff brought bread",
+  "input": [
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak"
+   },
+   {
+    "rawText": "bread",
+    "normalizedForm": "bread"
+   }
+  ],
+  "expectRawTexts": [
+   "a steak",
+   "bread"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "ok fine i had dessert too, a cookie",
+  "input": [
+   {
+    "rawText": "dessert",
+    "normalizedForm": "dessert"
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "dessert",
+   "a cookie"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a salad, ok fine i had dessert too, a cookie",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "dessert",
+    "normalizedForm": "dessert"
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "dessert",
+   "a cookie"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a salad, ok fine, a cookie",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "a cookie"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, wait, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, wait, three strips of bacon",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three strips of bacon",
+    "normalizedForm": "strips of bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three strips of bacon"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, wait, three strips of bacon",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three strips of bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three strips of bacon"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "eggs and toast, wait, three",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "toast",
+   "three"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "eggs and toast, wait, three",
+  "input": [
+   {
+    "rawText": "eggs and toast",
+    "normalizedForm": "eggs and toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs and toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "eggs, toast, wait, three",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "3 toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, wait, a second beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "second beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, ok fine a second beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "second beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, a second coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a second coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a second coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, ok fine, a third beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a third beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a third beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, a coffee for later",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a coffee for later",
+    "normalizedForm": "coffee for later"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a coffee for later"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, an iced coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "an iced coffee",
+    "normalizedForm": "iced coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "an iced coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a coffee, wait, a coffee with oat milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a coffee with oat milk",
+    "normalizedForm": "coffee with oat milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee with oat milk"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a cookie, ok fine two cookies",
+  "input": [
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie"
+   },
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectRawTexts": [
+   "2 cookie"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "one cookie, ok fine, two",
+  "input": [
+   {
+    "rawText": "one cookie",
+    "normalizedForm": "cookie"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 cookie"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "coffee with 2 sugars, wait, 3",
+  "input": [
+   {
+    "rawText": "coffee with 2 sugars",
+    "normalizedForm": "coffee with 2 sugars"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectRawTexts": [
+   "3 coffee with 2 sugars"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burger, fries, wait, two",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "2 fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a bagel, wait, a bagel with cream cheese",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "a bagel with cream cheese",
+    "normalizedForm": "bagel with cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel with cream cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burger, wait, the burger had cheese",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "the burger had cheese",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "the burger had cheese"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burger, wait, a cheeseburger",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "a cheeseburger",
+    "normalizedForm": "cheeseburger"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "a cheeseburger"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a chicken sandwich, wait, a fish sandwich",
+  "input": [
+   {
+    "rawText": "a chicken sandwich",
+    "normalizedForm": "chicken sandwich"
+   },
+   {
+    "rawText": "a fish sandwich",
+    "normalizedForm": "fish sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a fish sandwich"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a chicken sandwich, ok fine, a fish sandwich",
+  "input": [
+   {
+    "rawText": "a chicken sandwich",
+    "normalizedForm": "chicken sandwich"
+   },
+   {
+    "rawText": "a fish sandwich",
+    "normalizedForm": "fish sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a fish sandwich"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a chicken burrito, wait, a steak burrito for my lunch",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito"
+   },
+   {
+    "rawText": "a steak burrito",
+    "normalizedForm": "steak burrito"
+   }
+  ],
+  "expectRawTexts": [
+   "a steak burrito"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, three eggs, wait",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "three eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, two more eggs, wait",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "two more eggs",
+    "normalizedForm": "more eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "two more eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, a second beer, wait",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, a beer, wait",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "two eggs, ok fine",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a beer, two beers, ok fine",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "two beers",
+    "normalizedForm": "beers"
+   }
+  ],
+  "expectRawTexts": [
+   "two beers"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a latte with whole milk, wait, oat milk",
+  "input": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte with whole milk"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte with oat milk"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a latte with whole milk, ok fine, oat milk",
+  "input": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte with whole milk"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte with oat milk"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "toast with butter, wait, jam",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter"
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam"
+   }
+  ],
+  "expectRawTexts": [
+   "toast with butter",
+   "jam"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a salad with chicken, wait, shrimp",
+  "input": [
+   {
+    "rawText": "a salad with chicken",
+    "normalizedForm": "salad with chicken"
+   },
+   {
+    "rawText": "shrimp",
+    "normalizedForm": "shrimp"
+   }
+  ],
+  "expectRawTexts": [
+   "a salad with chicken",
+   "shrimp"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "pasta with chicken, wait, a side salad with chicken",
+  "input": [
+   {
+    "rawText": "pasta with chicken",
+    "normalizedForm": "pasta with chicken"
+   },
+   {
+    "rawText": "a side salad with chicken",
+    "normalizedForm": "side salad with chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "pasta with chicken",
+   "a side salad with chicken"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "a burrito bowl with rice, wait, beans",
+  "input": [
+   {
+    "rawText": "a burrito bowl with rice",
+    "normalizedForm": "burrito bowl with rice"
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito bowl with rice",
+   "beans"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "eggs on toast, wait, avocado",
+  "input": [
+   {
+    "rawText": "eggs on toast",
+    "normalizedForm": "eggs on toast"
+   },
+   {
+    "rawText": "avocado",
+    "normalizedForm": "avocado"
+   }
+  ],
+  "expectRawTexts": [
+   "eggs on toast",
+   "avocado"
+  ]
+ },
+ {
+  "src": "refute-r1 a1",
+  "line": "chicken with rice, wait, rice and beans",
+  "input": [
+   {
+    "rawText": "chicken with rice",
+    "normalizedForm": "chicken with rice"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "chicken with rice",
+   "beans"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a cup of coffee, make that two",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 cup of coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a slice of pizza, make that the whole pizza",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "the whole pizza",
+    "normalizedForm": "whole pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "the whole pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bowl of rice, actually two",
+  "input": [
+   {
+    "rawText": "a bowl of rice",
+    "normalizedForm": "bowl of rice"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 bowl of rice"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a can of soda, make it two",
+  "input": [
+   {
+    "rawText": "a can of soda",
+    "normalizedForm": "can of soda"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 can of soda"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a large coffee, actually two",
+  "input": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "large coffee"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a medium latte, actually two",
+  "input": [
+   {
+    "rawText": "a medium latte",
+    "normalizedForm": "medium latte"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a large bowl of soup, actually two",
+  "input": [
+   {
+    "rawText": "a large bowl of soup",
+    "normalizedForm": "soup"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 bowl of soup"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a handful of almonds, actually 15",
+  "input": [
+   {
+    "rawText": "a handful of almonds",
+    "normalizedForm": "handful of almonds"
+   },
+   {
+    "rawText": "15",
+    "normalizedForm": "15"
+   }
+  ],
+  "expectRawTexts": [
+   "15 almonds"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a handful of almonds, wait, fifteen",
+  "input": [
+   {
+    "rawText": "a handful of almonds",
+    "normalizedForm": "handful of almonds"
+   },
+   {
+    "rawText": "fifteen",
+    "normalizedForm": "fifteen"
+   }
+  ],
+  "expectRawTexts": [
+   "a handful of almonds",
+   "fifteen"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a handful of almonds, wait, 15",
+  "input": [
+   {
+    "rawText": "a handful of almonds",
+    "normalizedForm": "handful of almonds"
+   },
+   {
+    "rawText": "15",
+    "normalizedForm": "15"
+   }
+  ],
+  "expectRawTexts": [
+   "15 almonds"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bowl of grapes, actually 20",
+  "input": [
+   {
+    "rawText": "a bowl of grapes",
+    "normalizedForm": "bowl of grapes"
+   },
+   {
+    "rawText": "20",
+    "normalizedForm": "20"
+   }
+  ],
+  "expectRawTexts": [
+   "20 grapes"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a plate of wings, actually 8",
+  "input": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "plate of wings"
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "8"
+   }
+  ],
+  "expectRawTexts": [
+   "8 wings"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a plate of wings, sorry, 10",
+  "input": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "plate of wings"
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "10"
+   }
+  ],
+  "expectRawTexts": [
+   "10 wings"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a box of nuggets, make that 10",
+  "input": [
+   {
+    "rawText": "a box of nuggets",
+    "normalizedForm": "box of nuggets"
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "10"
+   }
+  ],
+  "expectRawTexts": [
+   "10 nuggets"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bag of chips, actually 12",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "bag of chips"
+   },
+   {
+    "rawText": "12",
+    "normalizedForm": "12"
+   }
+  ],
+  "expectRawTexts": [
+   "12 chips"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a cup of blueberries, i mean 30",
+  "input": [
+   {
+    "rawText": "a cup of blueberries",
+    "normalizedForm": "cup of blueberries"
+   },
+   {
+    "rawText": "30",
+    "normalizedForm": "30"
+   }
+  ],
+  "expectRawTexts": [
+   "30 blueberries"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a container of yogurt, actually 2",
+  "input": [
+   {
+    "rawText": "a container of yogurt",
+    "normalizedForm": "container of yogurt"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectRawTexts": [
+   "2 container of yogurt"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a packet of oatmeal, actually two",
+  "input": [
+   {
+    "rawText": "a packet of oatmeal",
+    "normalizedForm": "packet of oatmeal"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 packet of oatmeal"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a serving of fries, actually two",
+  "input": [
+   {
+    "rawText": "a serving of fries",
+    "normalizedForm": "serving of fries"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 serving of fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "100 g of chicken, actually 150",
+  "input": [
+   {
+    "rawText": "100 g of chicken",
+    "normalizedForm": "g of chicken"
+   },
+   {
+    "rawText": "150",
+    "normalizedForm": "150"
+   }
+  ],
+  "expectRawTexts": [
+   "150 g of chicken"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "8 oz of steak, actually 12",
+  "input": [
+   {
+    "rawText": "8 oz of steak",
+    "normalizedForm": "oz of steak"
+   },
+   {
+    "rawText": "12",
+    "normalizedForm": "12"
+   }
+  ],
+  "expectRawTexts": [
+   "12 oz of steak"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a glass of wine, actually two",
+  "input": [
+   {
+    "rawText": "a glass of wine",
+    "normalizedForm": "glass of wine"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 glass of wine"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bottle of wine, actually half",
+  "input": [
+   {
+    "rawText": "a bottle of wine",
+    "normalizedForm": "bottle of wine"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bottle of wine"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a pint of beer, make it two",
+  "input": [
+   {
+    "rawText": "a pint of beer",
+    "normalizedForm": "pint of beer"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 pint of beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "three slices of bacon, actually one",
+  "input": [
+   {
+    "rawText": "three slices of bacon",
+    "normalizedForm": "slices of bacon"
+   },
+   {
+    "rawText": "one",
+    "normalizedForm": "one"
+   }
+  ],
+  "expectRawTexts": [
+   "1 slices of bacon"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a slice of pizza, actually three",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 slice of pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "two cups of rice, actually 1.5",
+  "input": [
+   {
+    "rawText": "two cups of rice",
+    "normalizedForm": "cups of rice"
+   },
+   {
+    "rawText": "1.5",
+    "normalizedForm": "1.5"
+   }
+  ],
+  "expectRawTexts": [
+   "1.5 cups of rice"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "half a cup of rice, actually two",
+  "input": [
+   {
+    "rawText": "half a cup of rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 cup of rice"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a mug of tea, actually 3",
+  "input": [
+   {
+    "rawText": "a mug of tea",
+    "normalizedForm": "mug of tea"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectRawTexts": [
+   "3 mug of tea"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a scoop of protein powder, actually two",
+  "input": [
+   {
+    "rawText": "a scoop of protein powder",
+    "normalizedForm": "scoop of protein powder"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 scoop of protein powder"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a spoonful of peanut butter, actually 2",
+  "input": [
+   {
+    "rawText": "a spoonful of peanut butter",
+    "normalizedForm": "spoonful of peanut butter"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectRawTexts": [
+   "2 spoonful of peanut butter"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a piece of chicken, actually 4",
+  "input": [
+   {
+    "rawText": "a piece of chicken",
+    "normalizedForm": "piece of chicken"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectRawTexts": [
+   "4 piece of chicken"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bag of popcorn, actually half",
+  "input": [
+   {
+    "rawText": "a bag of popcorn",
+    "normalizedForm": "bag of popcorn"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 bag of popcorn"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a tablespoon of honey, actually 2",
+  "input": [
+   {
+    "rawText": "a tablespoon of honey",
+    "normalizedForm": "tablespoon of honey"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectRawTexts": [
+   "2 tablespoon of honey"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a portion of fries, actually 20",
+  "input": [
+   {
+    "rawText": "a portion of fries",
+    "normalizedForm": "portion of fries"
+   },
+   {
+    "rawText": "20",
+    "normalizedForm": "20"
+   }
+  ],
+  "expectRawTexts": [
+   "20 fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "two slices of toast, wait, three",
+  "input": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "slices of toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 slices of toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a bowl of cherries, actually a dozen",
+  "input": [
+   {
+    "rawText": "a bowl of cherries",
+    "normalizedForm": "bowl of cherries"
+   },
+   {
+    "rawText": "a dozen",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "12 cherries"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a can of tuna, make that a couple",
+  "input": [
+   {
+    "rawText": "a can of tuna",
+    "normalizedForm": "can of tuna"
+   },
+   {
+    "rawText": "a couple",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 can of tuna"
+  ]
+ },
+ {
+  "src": "refute-r1 a2",
+  "line": "a handful of grapes, wait, a dozen",
+  "input": [
+   {
+    "rawText": "a handful of grapes",
+    "normalizedForm": "handful of grapes"
+   },
+   {
+    "rawText": "a dozen",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "12 grapes"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a beer, sorry, a second beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "second beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a beer, i mean a second beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a second beer",
+    "normalizedForm": "second beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a second beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, actually an iced coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "an iced coffee",
+    "normalizedForm": "iced coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "an iced coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a chicken sandwich, sorry, a fish sandwich",
+  "input": [
+   {
+    "rawText": "a chicken sandwich",
+    "normalizedForm": "chicken sandwich"
+   },
+   {
+    "rawText": "a fish sandwich",
+    "normalizedForm": "fish sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a fish sandwich"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, two more eggs, actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "two more eggs",
+    "normalizedForm": "more eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "two more eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "coffee with 2 sugars, actually 3",
+  "input": [
+   {
+    "rawText": "coffee with 2 sugars",
+    "normalizedForm": "coffee with 2 sugars"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectRawTexts": [
+   "3 coffee with 2 sugars"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "eggs and toast, actually three",
+  "input": [
+   {
+    "rawText": "eggs and toast",
+    "normalizedForm": "eggs and toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs and toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, oh wait, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait no, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, no, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, no, wait, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, make that a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, scratch that, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, i mean three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait i mean three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, i mean a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, oh wait, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, wait, wait, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, oh wait, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, oh, wait, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, um, wait, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, um, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait. three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs. wait. three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs; wait; three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs - wait - three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs... wait... three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait! three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, also three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "also three",
+    "normalizedForm": "also three"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "also three"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, and three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, three, and toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, ok, fine, two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, okay fine, two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, ok fine, make that a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, ok fine, a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a coffee, fine, two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "two"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a pint of ice cream, ok fine half a pint",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   },
+   {
+    "rawText": "half a pint",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pint of ice cream"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a pint of ice cream, ok fine half a pint",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   },
+   {
+    "rawText": "half a pint of ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pint of ice cream"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "a pint of ice cream, ok fine half",
+  "input": [
+   {
+    "rawText": "a pint of ice cream",
+    "normalizedForm": "pint of ice cream"
+   },
+   {
+    "rawText": "half",
+    "normalizedForm": "half"
+   }
+  ],
+  "expectRawTexts": [
+   "1/2 pint of ice cream"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "wait, two eggs, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "three"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, toast, wait",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "wait",
+    "normalizedForm": "wait"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "wait"
+  ]
+ },
+ {
+  "src": "refute-r1 a3",
+  "line": "two eggs, wait, toast, wait, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "three"
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "3 toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "three slices of bacon wait four",
+  "input": [
+   {
+    "rawText": "three slices of bacon",
+    "normalizedForm": "slices of bacon"
+   },
+   {
+    "rawText": "four",
+    "normalizedForm": "four"
+   }
+  ],
+  "expectRawTexts": [
+   "4 slices of bacon"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "two tacos wait three tacos",
+  "input": [
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectRawTexts": [
+   "3 tacos"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a coffee wait a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a coffee no a latte",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a burger, wait, no pickles",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "no pickles",
+    "normalizedForm": "no pickles"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "no pickles"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a burger, wait, without onions",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "without onions",
+    "normalizedForm": "without onions"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "without onions"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "two eggs, toast, wait, three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a large fries, wait, two",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "large fries"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 fries"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a large fries, wait, a medium",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "large fries"
+   },
+   {
+    "rawText": "a medium",
+    "normalizedForm": "medium"
+   }
+  ],
+  "expectRawTexts": [
+   "a large fries",
+   "a medium"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a can of soda, wait, a bottle",
+  "input": [
+   {
+    "rawText": "a can of soda",
+    "normalizedForm": "can of soda"
+   },
+   {
+    "rawText": "a bottle",
+    "normalizedForm": "bottle"
+   }
+  ],
+  "expectRawTexts": [
+   "1 bottle of soda"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a cup of coffee, wait, a mug",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   },
+   {
+    "rawText": "a mug",
+    "normalizedForm": "mug"
+   }
+  ],
+  "expectRawTexts": [
+   "1 mug of coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a cup of coffee, ok fine, two mugs",
+  "input": [
+   {
+    "rawText": "a cup of coffee",
+    "normalizedForm": "cup of coffee"
+   },
+   {
+    "rawText": "two mugs",
+    "normalizedForm": "mugs"
+   }
+  ],
+  "expectRawTexts": [
+   "2 mugs of coffee"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a slice of pizza, wait, a whole pizza",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "a whole pizza",
+    "normalizedForm": "whole pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "a whole pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a slice of pizza, wait, the whole pizza",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "the whole pizza",
+    "normalizedForm": "whole pizza"
+   }
+  ],
+  "expectRawTexts": [
+   "the whole pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a slice of pizza, wait, two",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "slice of pizza"
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "two"
+   }
+  ],
+  "expectRawTexts": [
+   "2 slice of pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a pizza, wait, two slices",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices"
+   }
+  ],
+  "expectRawTexts": [
+   "2 slices of pizza"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a beer, wait, a 2nd beer",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a 2nd beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a beer",
+   "a 2nd beer"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a coffee, wait, one more",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "one more",
+    "normalizedForm": "more"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "one more"
+  ]
+ },
+ {
+  "src": "refute-r1 a4",
+  "line": "a coffee, wait, one more coffee",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "one more coffee",
+    "normalizedForm": "more coffee"
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "one more coffee"
+  ]
+ }
+]

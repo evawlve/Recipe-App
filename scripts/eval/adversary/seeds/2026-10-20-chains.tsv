@@ -1,0 +1,61 @@
+# C68 S343 2026-10-20, set CHAINS: the lines as passed to Mode G, by run. Source: MGR S242 pre-digest 2026-10-19-chains-R1/R2.tsv (backend PR 592). Theme dropped after run 4 (2 AiGeneratedFood rows in one run). line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (the CLI reads 4 fields)
+# run 3 (warm), chains part · PR 592 R1 data rows 1-22 · tag 2026102017211
+a wendys daves single	1		identity	wendy's
+wendy's baconator no mayo	1		identity	wendy's
+small chocolate frosty from wendys	1		identity	wendy's
+wendys spicy chicken sandwich and a small fry	2		portion	wendy's;wendy's
+a jr bacon cheeseburger from wendy's	1		identity	wendy's
+subway footlong italian bmt	1		portion	subway
+6 inch subway turkey sub on wheat	1		portion	subway
+a footlong meatball marinara from subway	1		portion	subway
+subway 6" steak and cheese	1		parse	subway
+five guys little cheeseburger	1		identity	five guys
+regular five guys fries	1		portion	five guys
+five guys bacon cheeseburger all the way	1		identity	five guys
+half a large dominos pepperoni pizza	1		portion	domino's
+2 slices dominos pepperoni	1		portion	domino's
+3 slices of dominoes hand tossed cheese pizza	1		portion	domino's
+dominos stuffed cheesy bread 2 pieces	1		parse	domino's
+a shackburger and cheese fries from shake shack	2		identity	shake shack;shake shack
+shake shack smokestack	1		identity	shake shack
+sweetgreen harvest bowl	1		identity	sweetgreen
+half a sweetgreen kale caesar	1		portion	sweetgreen
+jersey mikes #13 regular mikes way	1		parse	jersey mike's
+a giant jersey mike's italian	1		portion	jersey mike's
+# run 4 (warm), chains part · 10 repro of run 3, then R1 rows 23-40, then R2 rows 1-8 · tag 2026102017281
+a wendys daves single	1		identity	wendy's
+wendy's baconator no mayo	1		identity	wendy's
+small chocolate frosty from wendys	1		identity	wendy's
+a jr bacon cheeseburger from wendy's	1		identity	wendy's
+subway footlong italian bmt	1		portion	subway
+a footlong meatball marinara from subway	1		portion	subway
+subway 6" steak and cheese	1		parse	subway
+regular five guys fries	1		portion	five guys
+3 slices of dominoes hand tossed cheese pizza	1		portion	domino's
+jersey mikes #13 regular mikes way	1		parse	jersey mike's
+a slice of cheesecake factory original cheesecake	1		identity	cheesecake factory
+cheesecake factory avocado egg rolls half the order	1		portion	cheesecake factory
+burger king whopper no cheese	1		identity	burger king
+a whopper jr	1		identity	burger king
+bk chicken fries 9 piece	1		parse	burger king
+kfc 2 piece original recipe chicken	1		portion	kfc
+a kfc famous bowl	1		identity	kfc
+dunkin medium iced coffee with cream and sugar	1		portion	dunkin
+a boston kreme from dunkin	1		identity	dunkin
+6 glazed munchkins from dunkin	1		portion	dunkin
+2 krispy kreme original glazed	1		portion	krispy kreme
+pizza hut personal pan pepperoni pizza	1		identity	pizza hut
+2 slices of pizza hut pepperoni pan pizza	1		portion	pizza hut
+sonic large cherry limeade	1		portion	sonic
+a medium oreo blizzard from dairy queen	1		portion	dairy queen
+dq small vanilla cone	1		identity	dairy queen
+jimmy johns #9 italian night club	1		parse	jimmy john's
+a whataburger with cheese	1		identity	whataburger
+arbys classic roast beef and curly fries	2		identity	arby's;arby's
+culvers double butterburger with cheese	1		identity	culver's
+qdoba chicken burrito	1		identity	qdoba
+half order of applebees boneless wings	1		portion	applebee's
+ihop 3 buttermilk pancakes	1		portion	ihop
+dennys grand slam	1		identity	denny's
+10 bww traditional wings	1		parse	buffalo wild wings
+papa johns 2 slices pepperoni	1		parse	papa john's

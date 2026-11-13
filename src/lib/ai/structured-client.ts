@@ -2,7 +2,9 @@
  * Structured LLM Client
  * 
  * Unified client for all structured JSON LLM calls with:
- * - Provider fallback chain: OpenRouter (cheap) → OpenAI (reliable)
+ * - Provider fallback chain: Anthropic (optional head leg, dormant until ANTHROPIC_API_KEY is set;
+ *   never on 'nutrition' / 'cache_validate', and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes) → OpenRouter (cheap) → OpenAI (reliable)
+ *   ('cache_validate' is its own single-entry chain: OpenRouter, or the Anthropic Messages API when VALIDATOR_AI_PROVIDER=anthropic)
  * - AbortController timeout
  * - Retry with exponential backoff
  * - Per-purpose concurrency limiters
@@ -17,6 +19,10 @@ import {
     OPENAI_API_BASE_URL,
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_API_BASE_URL,
+    ANTHROPIC_CHEAP_MODEL,
+    ANTHROPIC_PURPOSES,
     CHEAP_AI_MODEL_PRIMARY,
     CHEAP_AI_MODEL_FALLBACK,
     STRUCTURED_LLM_TIMEOUT_MS,
@@ -27,6 +33,7 @@ import {
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
     VALIDATOR_AI_MODEL,
+    VALIDATOR_AI_PROVIDER,
 } from '../mapping/config';
 // Type-only: this module has no use for the STRUCTURED_LLM_PURPOSES array value (the union is
 // DERIVED from it, so `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` is already
@@ -49,7 +56,7 @@ import {
 // `StructuredLlmPurpose` from 'structured-client' keeps compiling unchanged, and so
 // `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` below keeps its exhaustiveness check.
 export type { StructuredLlmPurpose };
-export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
+export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai' | 'anthropic';
 
 export interface StructuredLlmOptions {
     /** JSON schema for response_format */
@@ -66,6 +73,13 @@ export interface StructuredLlmOptions {
     forceProvider?: StructuredLlmProvider;
     /** Optional max_tokens cap for the completion (omitted from the request when unset) */
     maxTokens?: number;
+    /**
+     * Optional caller cancellation (C70, S239). Once it aborts, a call still QUEUED for its
+     * purpose's concurrency slot leaves the queue without ever taking one, an in-flight fetch is
+     * aborted, and no further retry or provider fallback starts. The call then RESOLVES (it never
+     * rejects) to { status: 'error', error: STRUCTURED_LLM_ABORTED_ERROR }. Omitted: nothing changes.
+     */
+    signal?: AbortSignal;
 }
 
 export interface StructuredLlmResult {
@@ -77,6 +91,12 @@ export interface StructuredLlmResult {
     error?: string;
     durationMs?: number;
 }
+
+/**
+ * The `error` of a call ended by its caller's `signal`. Not a provider failure: the client logs
+ * nothing for it and counts nothing beyond the one `failures` an aborted in-flight attempt is.
+ */
+export const STRUCTURED_LLM_ABORTED_ERROR = 'aborted_by_caller';
 
 // ============================================================
 // Simple Semaphore for Concurrency Limiting
@@ -100,18 +120,33 @@ class Semaphore {
         return this.waiting.length;
     }
 
-    async acquire(): Promise<void> {
+    /**
+     * Take a permit, waiting in FIFO order when none is free. Resolves true once the permit is
+     * held. Resolves false, holding NOTHING (so there is nothing to release), only when `signal`
+     * aborts first: an already-aborted signal never takes a permit, and an abort while queued
+     * removes the waiter, so the next release() hands the permit to the next waiter instead.
+     */
+    async acquire(signal?: AbortSignal): Promise<boolean> {
+        if (signal?.aborted) return false;
         if (this.permits > 0) {
             this.permits--;
             this._activeCount++;
-            return;
+            return true;
         }
 
-        return new Promise<void>((resolve) => {
-            this.waiting.push(() => {
+        return new Promise<boolean>((resolve) => {
+            const grant = (): void => {
+                signal?.removeEventListener('abort', onAbort);
                 this._activeCount++;
-                resolve();
-            });
+                resolve(true);
+            };
+            const onAbort = (): void => {
+                const i = this.waiting.indexOf(grant);
+                if (i !== -1) this.waiting.splice(i, 1);
+                resolve(false);
+            };
+            this.waiting.push(grant);
+            signal?.addEventListener('abort', onAbort, { once: true });
         });
     }
 
@@ -125,8 +160,15 @@ class Semaphore {
         }
     }
 
-    async run<T>(fn: () => Promise<T>): Promise<T> {
-        await this.acquire();
+    /**
+     * Run `fn` holding a permit, released exactly once whatever `fn` does. With `abort`, a caller
+     * whose signal fires while still queued gets `abort.onAbort()` instead and never holds a permit.
+     */
+    async run<T>(fn: () => Promise<T>, abort?: { signal: AbortSignal; onAbort: () => T }): Promise<T> {
+        // acquire() can only return false when it was given a signal, i.e. when `abort` is set.
+        if (!(await this.acquire(abort?.signal)) && abort) {
+            return abort.onAbort();
+        }
         try {
             return await fn();
         } finally {
@@ -179,7 +221,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
  * 
  * Provider routing strategy:
  * - 'parse' purpose: Ollama ONLY (no cloud fallback) - for simple structural extraction
+ * - 'cache_validate': a single-entry chain, no fallback: OpenRouter, or the Anthropic Messages API
+ *   when VALIDATOR_AI_PROVIDER=anthropic
  * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
+ * - Anthropic (Messages API) heads the cloud chain ONLY when ANTHROPIC_API_KEY is set and the
+ *   purpose is neither 'nutrition' nor 'cache_validate' (the head leg never covers those two); an empty key leaves every chain unchanged, and, when ANTHROPIC_PURPOSES is non-empty, only for the listed purposes
  * - forceProvider: Overrides purpose-based routing to use a single specific provider
  */
 export function getProviderChain(
@@ -213,6 +259,14 @@ export function getProviderChain(
             },
         ];
     }
+    if (forceProvider === 'anthropic' && ANTHROPIC_API_KEY) {
+        return [{
+            name: 'anthropic',
+            baseUrl: ANTHROPIC_API_BASE_URL,
+            apiKey: ANTHROPIC_API_KEY,
+            model: ANTHROPIC_CHEAP_MODEL,
+        }];
+    }
     if (forceProvider === 'openai' && OPENAI_API_KEY) {
         return [{
             name: 'openai',
@@ -234,7 +288,10 @@ export function getProviderChain(
     }
 
     // cache_validate runs on the capable tier ONLY — a single-entry chain
-    // with NO cheap fallback legs and no OpenAI leg. The 2026-08-10 audit
+    // with NO cheap fallback legs and no OpenAI leg. The one entry is OpenRouter,
+    // or the Anthropic Messages API when VALIDATOR_AI_PROVIDER=anthropic (model
+    // stays VALIDATOR_AI_MODEL: the verdict guard compares against it). The
+    // Anthropic head leg below never covers this purpose. The 2026-08-10 audit
     // measured the gpt-4o-mini class FAILING the retention bar for this task,
     // so a failed capable call must surface as status:'error' (→ no verdict
     // row, the module's fail-closed path), never as a silently-cheap verdict:
@@ -243,6 +300,16 @@ export function getProviderChain(
     // error (the shouldRunCacheValidator gate makes that unreachable from the
     // hook; this covers direct script callers).
     if (purpose === 'cache_validate') {
+        if (VALIDATOR_AI_PROVIDER === 'anthropic') {
+            return VALIDATOR_AI_MODEL !== '' && ANTHROPIC_API_KEY
+                ? [{
+                    name: 'anthropic',
+                    baseUrl: ANTHROPIC_API_BASE_URL,
+                    apiKey: ANTHROPIC_API_KEY,
+                    model: VALIDATOR_AI_MODEL,
+                }]
+                : [];
+        }
         return VALIDATOR_AI_MODEL !== '' && OPENROUTER_API_KEY
             ? [{
                 name: 'openrouter',
@@ -255,6 +322,19 @@ export function getProviderChain(
 
     // 2. Cloud providers (OpenRouter -> OpenAI fallback)
     const useCapableModel = purpose === 'nutrition';
+
+    // Anthropic head leg (dormant while ANTHROPIC_API_KEY is empty). Not on 'nutrition' (capable
+    // tier) and never reached for 'cache_validate' (returned above; it is a single-entry chain on OpenRouter or, with VALIDATOR_AI_PROVIDER=anthropic, on the Messages API). When ANTHROPIC_PURPOSES is non-empty, only for
+    // the listed purposes. A drained balance 400s and
+    // the chain falls through to OpenRouter.
+    if (ANTHROPIC_API_KEY && !useCapableModel && (ANTHROPIC_PURPOSES.length === 0 || ANTHROPIC_PURPOSES.includes(purpose))) {
+        chain.push({
+            name: 'anthropic',
+            baseUrl: ANTHROPIC_API_BASE_URL,
+            apiKey: ANTHROPIC_API_KEY,
+            model: ANTHROPIC_CHEAP_MODEL,
+        });
+    }
 
     // OpenRouter primary (cheap cloud)
     if (OPENROUTER_API_KEY) {
@@ -292,10 +372,26 @@ export function getProviderChain(
 // ============================================================
 
 /**
- * Sleep for specified milliseconds
+ * Sleep for specified milliseconds. With a signal, an abort ends the sleep at once and clears its
+ * timer; the retry loop re-checks `signal.aborted` before the next attempt.
  */
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (!signal) return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+        if (signal.aborted) {
+            resolve();
+            return;
+        }
+        const onAbort = (): void => {
+            clearTimeout(timer);
+            resolve();
+        };
+        const timer = setTimeout(() => {
+            signal.removeEventListener('abort', onAbort);
+            resolve();
+        }, ms);
+        signal.addEventListener('abort', onAbort, { once: true });
+    });
 }
 
 /**
@@ -390,10 +486,17 @@ async function makeRequest(
     systemPrompt: string,
     userPrompt: string,
     timeout: number,
-    maxTokens?: number
+    maxTokens?: number,
+    signal?: AbortSignal
 ): Promise<RequestResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    // The caller's signal (C70, S239) aborts this attempt through the SAME controller as the
+    // per-attempt timeout, so it lands on the AbortError paths below and is counted exactly as a
+    // timed-out attempt is. Linked by hand, not AbortSignal.any(), so no Node version floor;
+    // unlinked in the finally below.
+    const onCallerAbort = (): void => controller.abort();
+    signal?.addEventListener('abort', onCallerAbort, { once: true });
 
     // One outcome per attempt. `countFailure()` is a no-op once a response has been counted, which
     // is what stops a post-body throw (`JSON.parse(rawContent)`, or `response.text()` on the error
@@ -412,6 +515,106 @@ async function makeRequest(
     };
 
     try {
+        // Anthropic Messages API transport. Raw `fetch`, not `@anthropic-ai/sdk`: the SDK is not
+        // installed, and package-lock.json and node_modules are in .stignore on both ends, so a
+        // dependency would add an un-synced install step to the deploy recipe.
+        // Counted through the same countResponse()/countFailure() closures as the OpenAI-shaped
+        // path (no `cost` field: Anthropic returns none, the Console cost page owns dollars).
+        if (provider.name === 'anthropic') {
+            const aResponse = await fetch(`${provider.baseUrl}/messages`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'x-api-key': provider.apiKey,
+                    'anthropic-version': '2026-10-21',
+                },
+                body: JSON.stringify({
+                    model: provider.model,
+                    // On Haiku 5.5 thinking counts toward max_tokens, so a caller's cap sized for an
+                    // OpenAI answer (ai-segmenter passes 600 on `parse`) is a FLOOR here, never a
+                    // cap: a max_tokens stop is billed and then billed again on the next leg.
+                    max_tokens: Math.max(maxTokens ?? 0, 2048),
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userPrompt }],
+                    // No temperature/top_p/top_k (400 on this API version), no response_format.
+                    // `name`/`strict` belong to the OpenAI wrapper and are never forwarded.
+                    output_config: {
+                        effort: 'low',
+                        format: {
+                            type: 'json_schema',
+                            schema: (schema as { schema?: object }).schema ?? schema,
+                        },
+                    },
+                }),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!aResponse.ok) {
+                // Never produced a 2xx body, so not billed. 429/5xx retry; a 400 (e.g. a drained
+                // credit balance) falls to the next leg.
+                countFailure();
+                const errorBody = await aResponse.text();
+                return {
+                    success: false,
+                    error: `HTTP ${aResponse.status}: ${errorBody}`,
+                    status: aResponse.status,
+                };
+            }
+
+            type AnthropicPayload = {
+                content?: Array<{ type?: string; text?: string }>;
+                stop_reason?: string;
+                usage?: { input_tokens?: number; output_tokens?: number };
+            };
+            let aPayload: AnthropicPayload | null = null;
+            let aEnvelopeError: Error | null = null;
+            try {
+                aPayload = (await aResponse.json()) as AnthropicPayload;
+            } catch (err) {
+                aPayload = null;
+                aEnvelopeError = err as Error;
+            }
+
+            // A 2xx is in hand: billed whatever happens below, so count BEFORE any content guard.
+            const aIn = aPayload?.usage?.input_tokens ?? 0;
+            const aOut = aPayload?.usage?.output_tokens ?? 0;
+            countResponse(
+                aPayload?.usage
+                    ? { prompt_tokens: aIn, completion_tokens: aOut, total_tokens: aIn + aOut }
+                    : undefined,
+                aEnvelopeError !== null
+            );
+
+            if (aEnvelopeError !== null) {
+                return {
+                    success: false,
+                    error:
+                        aEnvelopeError.name === 'AbortError'
+                            ? `Request timeout (${timeout}ms)`
+                            : `Unparseable response envelope from LLM provider: ${aEnvelopeError.message}`,
+                };
+            }
+
+            const stopReason = aPayload?.stop_reason;
+            if (stopReason === 'refusal' || stopReason === 'max_tokens') {
+                return { success: false, error: `anthropic stop_reason=${stopReason}`, raw: aPayload };
+            }
+
+            // Haiku 5.5 thinks by default: `thinking` blocks may precede the text block.
+            const text = aPayload?.content?.find((b) => b?.type === 'text')?.text;
+            if (!text) {
+                return { success: false, error: 'Empty response from LLM', raw: aPayload };
+            }
+
+            const aParsed = JSON.parse(text) as Record<string, unknown>;
+            if (typeof aParsed.error === 'string' && aParsed.error.length > 0) {
+                return { success: false, error: aParsed.error, raw: aParsed };
+            }
+            return { success: true, content: aParsed, raw: aParsed };
+        }
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${provider.apiKey}`,
@@ -524,6 +727,8 @@ async function makeRequest(
         }
 
         return { success: false, error: (err as Error).message };
+    } finally {
+        signal?.removeEventListener('abort', onCallerAbort);
     }
 }
 
@@ -555,9 +760,20 @@ async function makeRequest(
 export async function callStructuredLlm(
     options: StructuredLlmOptions
 ): Promise<StructuredLlmResult> {
-    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider, maxTokens } = options;
+    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider, maxTokens, signal } = options;
     const limiter = limiters[purpose];
     const startTime = Date.now();
+
+    // A call ended by its caller's signal. Deliberately NOT the all-providers-failed path: no
+    // console.error, and no counter beyond the `failures` an aborted in-flight attempt already
+    // counted in makeRequest() (an attempt that produced no 2xx, as that counter is defined).
+    const aborted = (provider?: ProviderConfig): StructuredLlmResult => ({
+        status: 'error',
+        error: STRUCTURED_LLM_ABORTED_ERROR,
+        provider: provider?.name ?? 'openai',
+        model: provider?.model ?? 'none',
+        durationMs: Date.now() - startTime,
+    });
 
     return limiter.run(async () => {
         const providerChain = getProviderChain(purpose, forceProvider);
@@ -565,7 +781,7 @@ export async function callStructuredLlm(
         if (providerChain.length === 0) {
             return {
                 status: 'error',
-                error: 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
+                error: 'No API keys configured (need ANTHROPIC_API_KEY, OPENROUTER_API_KEY or OPENAI_API_KEY)',
                 provider: 'openai',
                 model: 'none',
                 durationMs: Date.now() - startTime,
@@ -579,7 +795,10 @@ export async function callStructuredLlm(
             lastProvider = provider;
 
             for (let attempt = 0; attempt < STRUCTURED_LLM_MAX_RETRIES; attempt++) {
-                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens);
+                // Before EVERY attempt: a slot granted as the signal fired, a retry after an
+                // aborted backoff, and the first attempt of the next provider all stop here.
+                if (signal?.aborted) return aborted(provider);
+                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens, signal);
 
                 if (result.success) {
                     const durationMs = Date.now() - startTime;
@@ -612,6 +831,9 @@ export async function callStructuredLlm(
                     };
                 }
 
+                // Aborted mid-attempt: return quietly, not through the provider-failed logs.
+                if (signal?.aborted) return aborted(provider);
+
                 lastError = result.error;
 
                 // If retryable error, backoff and retry with same provider
@@ -621,7 +843,7 @@ export async function callStructuredLlm(
                         `[structured-llm] Retryable error (${result.status}) from ${provider.name}/${provider.model}, ` +
                         `retrying in ${delay}ms (attempt ${attempt + 1}/${STRUCTURED_LLM_MAX_RETRIES})`
                     );
-                    await sleep(delay);
+                    await sleep(delay, signal);
                     continue;
                 }
 
@@ -646,7 +868,7 @@ export async function callStructuredLlm(
             model: lastProvider.model,
             durationMs,
         };
-    });
+    }, signal ? { signal, onAbort: () => aborted() } : undefined);
 }
 
 // ============================================================

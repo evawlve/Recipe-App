@@ -1,0 +1,107 @@
+# C68 S343 2026-10-20, set FROZEN & PACKAGED: the lines as passed to Mode G, by run. Source: MGR S242 pre-digest 2026-10-19-frozen-mgr.tsv (backend PR 591). line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (the CLI reads 4 fields)
+# run 1 (cold, --nocache) · PR 591 data rows 1-40 · tag 2026102016453
+a lean cuisine chicken alfredo	1	OK		lean cuisine
+lean cuisine swedish meatballs	1	OK		lean cuisine
+a healthy choice power bowl	1			healthy choice
+one healthy choice cafe steamers chicken teriyaki	1			healthy choice
+an amy's bean and cheese burrito	1			amy's
+2 amys burritos	1			amy's
+a stouffers mac and cheese	1			stouffer's
+stouffer's lasagna, the single serve one	1			stouffer's
+a hot pocket	1			hot pockets
+2 hot pockets pepperoni	1			hot pockets
+a marie callenders chicken pot pie	1			marie callender's
+banquet chicken pot pie	1	OK		banquet
+a hungry man salisbury steak dinner	1			hungry-man
+a jimmy dean sausage egg and cheese croissant	1			jimmy dean
+a lunchable turkey and cheddar	1			lunchables
+an uncrustable	1	UNSURE	identity	smucker's
+2 uncrustables grape	1			smucker's
+half a digiorno	1	BAD	portion	digiorno
+half a digiorno rising crust pepperoni pizza	1	BAD	portion	digiorno
+a quarter of a red baron pepperoni pizza	1	BAD	portion	red baron
+a whole totinos party pizza	1	UNSURE	portion	totino's
+a totino's party pizza	1	UNSURE	portion	totino's
+half a totinos party pizza	1			totino's
+a trader joes mandarin orange chicken bag, had a third	1	BAD	portion	trader joe's
+half a bag of trader joes orange chicken	1	BAD	portion	trader joe's
+a third of the bag of trader joe's cauliflower gnocchi	1	BAD	portion	trader joe's
+half a marie callenders chicken pot pie	1			marie callender's
+a quarter of a marie callender's pumpkin pie	1	BAD	portion	marie callender's
+a pint of ben and jerrys half baked	1	BAD	portion	ben & jerry's
+half a pint of ben & jerry's cherry garcia	1	BAD	portion	ben & jerry's
+a whole pint of halo top vanilla bean	1			halo top
+a pint of talenti sea salt caramel	1			talenti
+2 scoops of ben and jerrys chunky monkey	1			ben & jerry's
+a halo top pint	1	UNSURE	portion	halo top
+the rest of the pint of ben and jerrys	1	UNSURE	portion	ben & jerry's
+a bag of steamfresh broccoli	1	BAD	portion	birds eye
+half a bag of birds eye steamfresh mixed vegetables	1	BAD	portion	birds eye
+a 12 oz bag of frozen broccoli	1	OK		-
+a bag of frozen peas	1	BAD	portion	-
+a box of cheez its	1	BAD	portion	cheez-it
+# run 2 (warm) · 9 repro of run 1, then PR 591 rows 41-71 · tag 2026102017133
+2 uncrustables grape	1			smucker's
+half a bag of trader joes orange chicken	1	BAD	portion	trader joe's
+a quarter of a marie callender's pumpkin pie	1	BAD	portion	marie callender's
+the rest of the pint of ben and jerrys	1	UNSURE	portion	ben & jerry's
+2 amys burritos	1			amy's
+a totino's party pizza	1	UNSURE	portion	totino's
+a box of cheez its	1	BAD	portion	cheez-it
+a bag of steamfresh broccoli	1	BAD	portion	birds eye
+a bag of frozen peas	1	BAD	portion	-
+a sleeve of ritz	1	UNSURE	portion	ritz
+a whole sleeve of ritz crackers	1	BAD	portion	ritz
+a sleeve of oreos	1			oreo
+a box of kraft mac and cheese	1			kraft
+the rest of the bag of goldfish	1	UNSURE	portion	goldfish
+a family size bag of doritos, ate about half	1			doritos
+a bag of doritos	1			doritos
+a whole bag of takis	1	BAD	portion	takis
+half a box of cheez-its	1	BAD	portion	cheez-it
+a bag of ore ida tater tots, ate a quarter	1			ore-ida
+a box of eggos	1			eggo
+2 eggos with syrup	2			eggo;-
+3 eggo waffles	1	OK		eggo
+an eggo waffle	1	BAD	portion	eggo
+a pop tart	1	BAD	portion	pop-tarts
+2 pop tarts	1			pop-tarts
+one frosted strawberry poptart	1	BAD	portion	pop-tarts
+3 oreos	1	OK		oreo
+a handful of goldfish	1			goldfish
+a handful of cheez its	1			cheez-it
+6 pizza rolls	1	OK		totino's
+a dozen totino's pizza rolls	1			totino's
+2 slices of digiorno pepperoni	1	OK		digiorno
+3 bagel bites	1			bagel bites
+a quest bar	1	OK		quest
+a quest bar cookies and cream	1	OK		quest
+a kind bar	1			kind
+a clif bar	1			clif
+an rxbar chocolate sea salt	1	OK		rxbar
+a kirkland protein bar	1	OK		kirkland
+two rx bars	1			rxbar
+# run 3 (warm), frozen part · 9 repro of run 2, then PR 591 rows 72-80 · tag 2026102017211
+a whole sleeve of ritz crackers	1	BAD	portion	ritz
+a box of kraft mac and cheese	1			kraft
+a family size bag of doritos, ate about half	1			doritos
+an eggo waffle	1	BAD	portion	eggo
+a pop tart	1	BAD	portion	pop-tarts
+2 pop tarts	1			pop-tarts
+one frosted strawberry poptart	1	BAD	portion	pop-tarts
+a dozen totino's pizza rolls	1			totino's
+an rxbar chocolate sea salt	1	OK		rxbar
+a digorno pizza slice	1			digiorno
+a lean cusine	1			lean cuisine
+hot pocket ham n cheese	1			hot pockets
+marie calendars pot pie	1			marie callender's
+stoufers lasagna	1			stouffer's
+a trader joe's orange chicken	1			trader joe's
+a microwave pouch of uncle bens ready rice	1			ben's original
+a costco hotdog	1	BAD	identity	kirkland
+12.7 real good chicken	1	BAD	portion	real good
+# run 4 (warm), frozen part · 4 repro of run 3 · tag 2026102017281
+a lean cusine	1			lean cuisine
+hot pocket ham n cheese	1			hot pockets
+a costco hotdog	1	BAD	identity	kirkland
+12.7 real good chicken	1	BAD	portion	real good

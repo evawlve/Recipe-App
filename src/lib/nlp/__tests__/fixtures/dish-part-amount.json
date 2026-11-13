@@ -1,0 +1,3266 @@
+[
+ {
+  "src": "rowAmt nf-seg [T target]",
+  "line": "homemade burrito with 2 eggs and a quarter cup of cheese",
+  "input": [
+   {
+    "rawText": "homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter cup of cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T target seed]",
+  "line": "fried rice i made with leftover rice, two eggs and peas",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "leftover rice",
+    "normalizedForm": "leftover rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "leftover rice"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T peas misattribution]",
+  "line": "fried rice i made with rice, two eggs and peas",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "rice"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T piece+coke]",
+  "line": "fried rice i made with rice, two eggs and carrots, and a coke",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "rice",
+   "a coke"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T bowl]",
+  "line": "a burrito bowl i made with a cup of rice, black beans and 4 oz chicken",
+  "input": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans",
+    "brand": ""
+   },
+   {
+    "rawText": "4 oz chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito bowl"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T pizza]",
+  "line": "a homemade pizza with pepperoni and 2 cups of mozzarella",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cups of mozzarella",
+    "normalizedForm": "mozzarella",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T smoothie]",
+  "line": "a smoothie i made with a banana, a cup of milk and 2 scoops of protein",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops of protein",
+    "normalizedForm": "protein",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [T sandwich]",
+  "line": "a homemade breakfast sandwich with 2 eggs and 3 slices of bacon on a bagel",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "homemade breakfast sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [NEW det-led part-word]",
+  "line": "a homemade burrito with eggs and cheese, and a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW det-led part-word no comma]",
+  "line": "a homemade burrito with eggs and cheese and a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW some-led]",
+  "line": "a homemade burrito with rice and beans, and some chicken",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "some chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "some chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW an-led]",
+  "line": "a homemade sandwich with turkey and swiss, and an egg",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "homemade sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an egg"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW an-led fruit]",
+  "line": "a homemade sandwich with turkey and swiss, and an avocado",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "homemade sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "an avocado",
+    "normalizedForm": "avocado",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an avocado"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW a-led]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and a salmon",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "a salmon",
+    "normalizedForm": "salmon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "a salmon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW a pickle]",
+  "line": "i made a sandwich with turkey and cheese, and a pickle",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a pickle",
+    "normalizedForm": "pickle",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a pickle"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD bowl of (real NF)]",
+  "line": "a homemade burrito with chicken and rice, and a bowl of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a bowl of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a bowl of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD bowl of no comma]",
+  "line": "a homemade burrito with chicken and rice and a bowl of beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a bowl of beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a bowl of beans"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD plate of]",
+  "line": "a homemade burrito with chicken and rice, and a plate of beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a plate of beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a plate of beans"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD side then part]",
+  "line": "a homemade burrito with chicken and rice and a side of beans and sour cream",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a side of beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a side of beans",
+   "sour cream"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD side of]",
+  "line": "a homemade burrito with chicken, rice and a side of guac",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a side of guac",
+    "normalizedForm": "guac",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a side of guac"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [COST and 2 eggs]",
+  "line": "a homemade burrito with eggs and cheese, and 2 eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [COST plus a cup of rice]",
+  "line": "a homemade burrito with chicken and rice, plus a cup of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a cup of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [COST 2 bowls]",
+  "line": "a homemade burrito with chicken and rice, and 2 bowls of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "2 bowls of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 bowls of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [COST bacon]",
+  "line": "a homemade burrito with chicken and rice, and 3 slices of bacon",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [head restate]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and 2 slices of pizza",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "2 slices of pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [head restate 2]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and 2 slices of cheese pizza",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of cheese pizza",
+    "normalizedForm": "cheese pizza",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "2 slices of cheese pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD coke]",
+  "line": "a homemade burrito with eggs and cheese and a coke",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a coke"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD some fries]",
+  "line": "a homemade burrito with eggs and cheese, and some fries",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "some fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "some fries"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD 2 tacos]",
+  "line": "a homemade burrito with eggs and cheese, and 2 tacos",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD half a sandwich]",
+  "line": "a homemade sandwich with turkey and swiss, and half a sandwich",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "homemade sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "half a sandwich"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD half a sandwich 2]",
+  "line": "a homemade burrito with chicken and rice, and half a sandwich",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "half a sandwich"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD apple]",
+  "line": "a homemade burrito with eggs and cheese, and an apple",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "an apple"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD then]",
+  "line": "a homemade burrito with eggs and cheese, then 2 eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [GUARD on the side]",
+  "line": "a homemade burrito with rice and beans, and 2 eggs on the side",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [FOLD two slices]",
+  "line": "a homemade pizza with pepperoni and mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [FOLD after amount part]",
+  "line": "a homemade pizza with pepperoni and 2 cups of mozzarella, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cups of mozzarella",
+    "normalizedForm": "mozzarella",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [FOLD restating egg]",
+  "line": "a homemade burrito with scrambled eggs, cheese, two eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "scrambled eggs",
+    "normalizedForm": "scrambled eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "scrambled eggs",
+   "two eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [FOLD dish restate]",
+  "line": "homemade tacos with chicken and cheese, 3 tacos",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "homemade tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "3 tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [BLEND a banana]",
+  "line": "a smoothie i made with milk, a banana and spinach",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a banana",
+   "spinach"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [BLEND and 2 eggs]",
+  "line": "pancakes i made with flour and milk, and 2 eggs",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "flour",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pancakes"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [BLEND bacon]",
+  "line": "homemade pancakes made with flour and milk, and 3 strips of bacon",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "homemade pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "flour",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "3 strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "3 strips of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [BLEND smoothie and 2 eggs]",
+  "line": "a smoothie i made with milk and a banana, and 2 eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a banana",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [BLEND french toast bacon]",
+  "line": "french toast i made with 2 eggs and milk, and 2 slices of bacon",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "french toast",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "2 slices of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [OMELET bacon]",
+  "line": "an omelet i made with 3 eggs and cheese, and 2 strips of bacon",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "2 strips of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [OMELET and 2 eggs]",
+  "line": "an omelet i made with spinach and cheese, and 2 eggs",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [OMELET toast]",
+  "line": "an omelet i made with 3 eggs, and 2 slices of toast",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "2 slices of toast"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [OMELET sausage]",
+  "line": "an omelet i made with 3 eggs and cheese, and a sausage",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "omelet",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a sausage",
+    "normalizedForm": "sausage",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "a sausage"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [NEW english muffin]",
+  "line": "a homemade breakfast sandwich with egg and cheese, and an english muffin",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "homemade breakfast sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich",
+   "an english muffin"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [num word outside list]",
+  "line": "a homemade burrito with chicken and rice, and seven eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "seven eggs",
+    "normalizedForm": "seven eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "seven eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [a couple of]",
+  "line": "a homemade burrito with rice, beans and a couple of eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "a couple of eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [fraction]",
+  "line": "a homemade burrito with rice, beans and 1/2 cup of cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "1/2 cup of cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-seg [a large]",
+  "line": "a homemade burrito with rice, beans and a large egg",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "a large egg",
+    "normalizedForm": "large egg",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a large egg"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-seg [after amount part a non-part]",
+  "line": "a homemade burrito with rice and beans and two eggs and a quesadilla",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a quesadilla",
+    "normalizedForm": "quesadilla",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a quesadilla"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T target]",
+  "line": "homemade burrito with 2 eggs and a quarter cup of cheese",
+  "input": [
+   {
+    "rawText": "homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a quarter cup of cheese",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T target seed]",
+  "line": "fried rice i made with leftover rice, two eggs and peas",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "leftover rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "leftover rice"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T peas misattribution]",
+  "line": "fried rice i made with rice, two eggs and peas",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "rice"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T piece+coke]",
+  "line": "fried rice i made with rice, two eggs and carrots, and a coke",
+  "input": [
+   {
+    "rawText": "fried rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "fried rice",
+   "rice",
+   "a coke"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T bowl]",
+  "line": "a burrito bowl i made with a cup of rice, black beans and 4 oz chicken",
+  "input": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "4 oz chicken",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito bowl"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T pizza]",
+  "line": "a homemade pizza with pepperoni and 2 cups of mozzarella",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cups of mozzarella",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T smoothie]",
+  "line": "a smoothie i made with a banana, a cup of milk and 2 scoops of protein",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 scoops of protein",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [T sandwich]",
+  "line": "a homemade breakfast sandwich with 2 eggs and 3 slices of bacon on a bagel",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices of bacon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [NEW det-led part-word]",
+  "line": "a homemade burrito with eggs and cheese, and a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW det-led part-word no comma]",
+  "line": "a homemade burrito with eggs and cheese and a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW some-led]",
+  "line": "a homemade burrito with rice and beans, and some chicken",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "some chicken",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "some chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW an-led]",
+  "line": "a homemade sandwich with turkey and swiss, and an egg",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an egg"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW an-led fruit]",
+  "line": "a homemade sandwich with turkey and swiss, and an avocado",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "an avocado",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an avocado"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW a-led]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and a salmon",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a salmon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "a salmon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW a pickle]",
+  "line": "i made a sandwich with turkey and cheese, and a pickle",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a pickle",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "a pickle"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD bowl of (real NF)]",
+  "line": "a homemade burrito with chicken and rice, and a bowl of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a bowl of rice",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a bowl of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD bowl of no comma]",
+  "line": "a homemade burrito with chicken and rice and a bowl of beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a bowl of beans",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a bowl of beans"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD plate of]",
+  "line": "a homemade burrito with chicken and rice, and a plate of beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a plate of beans",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a plate of beans"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD side then part]",
+  "line": "a homemade burrito with chicken and rice and a side of beans and sour cream",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a side of beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a side of beans",
+   "sour cream"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD side of]",
+  "line": "a homemade burrito with chicken, rice and a side of guac",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a side of guac",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a side of guac"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [COST and 2 eggs]",
+  "line": "a homemade burrito with eggs and cheese, and 2 eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [COST plus a cup of rice]",
+  "line": "a homemade burrito with chicken and rice, plus a cup of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup of rice",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a cup of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [COST 2 bowls]",
+  "line": "a homemade burrito with chicken and rice, and 2 bowls of rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 bowls of rice",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 bowls of rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [COST bacon]",
+  "line": "a homemade burrito with chicken and rice, and 3 slices of bacon",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 slices of bacon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [head restate]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and 2 slices of pizza",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "2 slices of pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [head restate 2]",
+  "line": "a homemade pizza with pepperoni and mushrooms, and 2 slices of cheese pizza",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of cheese pizza",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "2 slices of cheese pizza"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD coke]",
+  "line": "a homemade burrito with eggs and cheese and a coke",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a coke"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD some fries]",
+  "line": "a homemade burrito with eggs and cheese, and some fries",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "some fries",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "some fries"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD 2 tacos]",
+  "line": "a homemade burrito with eggs and cheese, and 2 tacos",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD half a sandwich]",
+  "line": "a homemade sandwich with turkey and swiss, and half a sandwich",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "half a sandwich"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD half a sandwich 2]",
+  "line": "a homemade burrito with chicken and rice, and half a sandwich",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "half a sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "half a sandwich"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD apple]",
+  "line": "a homemade burrito with eggs and cheese, and an apple",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "an apple"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD then]",
+  "line": "a homemade burrito with eggs and cheese, then 2 eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [GUARD on the side]",
+  "line": "a homemade burrito with rice and beans, and 2 eggs on the side",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [FOLD two slices]",
+  "line": "a homemade pizza with pepperoni and mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [FOLD after amount part]",
+  "line": "a homemade pizza with pepperoni and 2 cups of mozzarella, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cups of mozzarella",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [FOLD restating egg]",
+  "line": "a homemade burrito with scrambled eggs, cheese, two eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "scrambled eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "scrambled eggs",
+   "two eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [FOLD dish restate]",
+  "line": "homemade tacos with chicken and cheese, 3 tacos",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "3 tacos"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [BLEND a banana]",
+  "line": "a smoothie i made with milk, a banana and spinach",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a banana",
+   "spinach"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [BLEND and 2 eggs]",
+  "line": "pancakes i made with flour and milk, and 2 eggs",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pancakes"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [BLEND bacon]",
+  "line": "homemade pancakes made with flour and milk, and 3 strips of bacon",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 strips of bacon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "3 strips of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [BLEND smoothie and 2 eggs]",
+  "line": "a smoothie i made with milk and a banana, and 2 eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a banana",
+   "2 eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [BLEND french toast bacon]",
+  "line": "french toast i made with 2 eggs and milk, and 2 slices of bacon",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of bacon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "2 slices of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [OMELET bacon]",
+  "line": "an omelet i made with 3 eggs and cheese, and 2 strips of bacon",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 strips of bacon",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "2 strips of bacon"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [OMELET and 2 eggs]",
+  "line": "an omelet i made with spinach and cheese, and 2 eggs",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [OMELET toast]",
+  "line": "an omelet i made with 3 eggs, and 2 slices of toast",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "2 slices of toast",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "2 slices of toast"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [OMELET sausage]",
+  "line": "an omelet i made with 3 eggs and cheese, and a sausage",
+  "input": [
+   {
+    "rawText": "an omelet",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a sausage",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "an omelet",
+   "a sausage"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [NEW english muffin]",
+  "line": "a homemade breakfast sandwich with egg and cheese, and an english muffin",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich",
+   "an english muffin"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [num word outside list]",
+  "line": "a homemade burrito with chicken and rice, and seven eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "seven eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "seven eggs"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [a couple of]",
+  "line": "a homemade burrito with rice, beans and a couple of eggs",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a couple of eggs",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [fraction]",
+  "line": "a homemade burrito with rice, beans and 1/2 cup of cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "1/2 cup of cheese",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "changed": true
+ },
+ {
+  "src": "rowAmt nf-empty [a large]",
+  "line": "a homemade burrito with rice, beans and a large egg",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a large egg",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a large egg"
+  ],
+  "changed": false
+ },
+ {
+  "src": "rowAmt nf-empty [after amount part a non-part]",
+  "line": "a homemade burrito with rice and beans and two eggs and a quesadilla",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "a quesadilla",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a quesadilla"
+  ],
+  "changed": true
+ }
+]

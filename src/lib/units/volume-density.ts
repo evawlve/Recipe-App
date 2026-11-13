@@ -275,12 +275,151 @@ const POUR_EXTRA_RE = /\bhalf[\s-]*(?:and|&|n'?|'n'?)[\s-]*half\b|\b(?:heavy|whi
 const POUR_EXTRA_EXCLUDE_RE = /\b(?:powder(?:ed)?|ice cream|whipped|float|cheese|pie|cake|cookies?|bars?|glazed?|wings?|ribs?|pulled|pork|chicken|ham|gumm(?:y|ies)|candy|biscuits?|pizza|flavou?r(?:ed)?|bundt)\b/i;
 
 /**
+ * SOUPS AND STEWS — the fourth slice of "foods that pour" (2026-10-31, D29).
+ * `LIQUID_RE` names no soup token, so every soup line WITHOUT a declared label
+ * volume billed a cup at the dry-solid 0.5 g/ml = 120 g, where a label that
+ * declares its volume reads 240-250 (split pea 250, tomato 244, miso 240,
+ * lobster bisque 248, italian wedding 244).
+ *
+ * THE MEASUREMENT (60-day MappingEventLog on the box, 2026-10-31; re-derive):
+ *   select "rawLine","servingTier",grams,"foodName","noCache" from "MappingEventLog"
+ *   where "createdAt" >= now() - interval '60 days'
+ *   and "rawLine" ~* 'soup|chowder|bisque|stew|gumbo|caldo|minestrone'
+ *   and "rawLine" ~* 'cup' order by "createdAt" desc;
+ * `a cup of soup` x7, `a cup of broccoli cheddar soup`, `cup of french onion
+ * soup`, `a cup of caldo de res` x2 and `a cup of navy bean soup` all read 120
+ * g (tiers volume_unit and fs_volume_density).
+ *
+ * WHY A FOURTH SLICE, NOT NEW TOKENS IN LIQUID_RE. Same blast-radius argument as
+ * BEVERAGE_RE / POUR_EXTRA_RE: checked LAST, so only `solid` -> `beverage` can
+ * move and NO NUMBER moves. Soup joins the `beverage` class, which bills the
+ * liquid numbers cell for cell; the soup and drink populations are therefore no
+ * longer separately countable by class (re-count by name if needed). No density
+ * is changed for rice / grain / legume / dairy (the "Do not fix this back" notes).
+ *
+ * WHY WORD-BOUNDED AND WHY `chili` IS ABSENT. `chili` is a flavour word (1,886
+ * OFF names, about half not a dish: sweet chili chips, chili lime candy, chili
+ * dog), the D3 trap BEVERAGE_RE names. `noodle` is deliberately NOT excluded:
+ * chicken noodle soup is the commonest soup there is. `ramen`, `cup noodles`
+ * and `cup-a-soup` are excluded (dry / instant). Substrings were refuted:
+ * `mix` hits mixed, `base` hits based, `cube` hits cubed.
+ *
+ * THE CENSUS (2026-10-31; base vs this change, names classified by
+ * `resolveVolumeGrams()`):
+ *   - coverage corpus `scripts/eval/coverage-corpus-2026-08-08.tsv` col 3:
+ *     53 move, ALL solid -> beverage, 0 false;
+ *   - distinct 60-day MEL `foodName`: 46 move, 0 false by name (Osem `Consomme`,
+ *     a powder at 250 kcal/100 g, is false by PANEL only);
+ *   - record side (this module classifies the MATCHED RECORD's name): OffFood
+ *     6,154 and FatSecretFood 440 distinct soup-token names move; the
+ *     false-marker grep over them leaves only soup/stew names that also say
+ *     chili (88), 2 `stew meat`, 1 `popcorn`.
+ *
+ * KNOWN LIMITATION: the class reads the NAME, not the panel. 28% of soup-named
+ * OFF records carry > 200 kcal/100 g (dry cup-soups, flakes, per-bowl panels,
+ * unlabelled condensed SKUs) and their bill doubles with the grams. The cure is
+ * label volume, not this slice.
+ */
+const SOUP_RE = /\b(?:soup[es]?|chowders?|bisques?|gumbo|minestrone|consomm[eé]|gazpacho|borscht|caldo|pho|stews?)\b/i;
+const SOUP_EXCLUDE_RE = /\b(?:mix(?:es)?|powder(?:ed)?|bouillon|cubes?|packets?|instant|dry|dried|dehydrated|ramen|cup noodles?|cup[- ]?a[- ]?soup|cup soups?|seasonings?|base|concentrate|flakes|crisps?|chips|crackers|flavou?r(?:ed|s)?|starter|kits?|dumplings?|m[eé]lange|bread bowl|sandwich(?:es)?|burritos?|stew (?:meat|beef)|for stew|stewing)\b/i;
+
+/**
  * Dense pastes and spreads, ~1 g/ml rather than the dry-goods default.
  * Verbatim from the OFF path — this is the list that made `2 tbsp peanut
  * butter` bill ~32 g instead of 15 g.
  */
 const PASTE_RE =
     /butter|spread|hummus|yogurt|yoghurt|honey|mayo|mayonnaise|jam|jelly|nutella|tahini|cream cheese|sour cream|ricotta|paste|dressing|ketchup|mustard/i;
+
+/**
+ * SPANISH-NAMED LIQUIDS AND PASTES — the fifth and sixth slices (2026-11-01,
+ * C6970-D30). Every regex above carries English tokens only (plus `horchata`,
+ * `caldo`), so a record NAMED `Leche` or `Crema de cacahuate` was a `solid` at
+ * the dry 0.5 g/ml: two cups of milk billed 240 g (should be 480), two
+ * tablespoons of peanut butter 15 g (should be ~32).
+ *
+ * THE MEASUREMENT (60-day MappingEventLog on the box, 2026-11-01; re-derive):
+ *   select "rawLine","foodName","servingTier",grams,"noCache",count(*)
+ *   from "MappingEventLog" where "createdAt" >= now() - interval '60 days'
+ *   and "rawLine" ~* '(^|[^[:alpha:]])(leche|jugo|agua|aceite|crema|mantequilla|miel|yogur|salsa|vinagre|mayonesa|mostaza|mermelada|aderezo|cajeta|horchata|atole|refresco|licuado|batido)([^[:alpha:]]|$)'
+ *   and "rawLine" ~* '(taza|cucharad|vaso|ml|litro|onza)' group by 1,2,3,4,5 order by 6 desc;
+ * Only 3 of those events are a volume tier (`2 tazas de leche`, `dos tazas de
+ * leche`, `2 cucharadas de crema de cacahuate`), and all three are
+ * `isSpanishLine()`-true and translated to an English key by #631, so this
+ * row's live reach is code-switched / English lines and search picks landing on
+ * Spanish-named RECORDS (the record-side population is the row).
+ *
+ * HEAD-ANCHORED: Spanish is head-initial, so the food is the FIRST word and a
+ * token later in the name is a modifier (`Chocolate con leche`, `Noix de cajou
+ * au miel`, `Tacos with salsa verde`). The unanchored cut flipped ~3,576 OFF
+ * names at ~23 % false (miel ~50 %, crema ~37 %, leche ~35 %, salsa 11 %).
+ * Anchored, it gives up brand-first names (`Lala Leche entera`), `Arroz con
+ * leche`, `Tamarindo Agua Fresca` — they stay at today's 0.5.
+ *
+ * OUT, with numbers: `salsa` (11 % false in an 80-sample; 241 of 2,498 flips
+ * carry a dish marker), `nata` (9 of 23 false: Pasteis/Gorditas de nata),
+ * `atole` (6 of 8 records 333-372 kcal/100 g, powders), `batido(s)` (350-392
+ * kcal/100 g, powders), `dulce de leche` (its one cached identity is an ice
+ * cream). Dead tokens `mayonesa`, `nutella`, `yogurt` are already PASTE_RE
+ * substrings and are not re-listed.
+ *
+ * WHY TWO SLICES CHECKED LAST. Same blast-radius argument as BEVERAGE_RE /
+ * POUR_EXTRA_RE / SOUP_RE: they test only a name that is otherwise `solid`, so
+ * only `solid` -> `paste` | `beverage` can move and NO NUMBER moves. These names
+ * JOIN the existing `paste` / `beverage` classes and are no longer separately
+ * countable by class. Paste is tested BEFORE pour so `Crema de cacahuate` is a
+ * paste while bare `Crema` pours. Not new tokens in LIQUID_RE / PASTE_RE: those
+ * are unanchored substrings (the "Do not fix this back" notes).
+ *
+ * THE CENSUS (2026-11-01; base vs this change, names classified by
+ * `resolveVolumeGrams()`; names, not rows): CENSUS_PLACEHOLDER
+ *
+ * KNOWN LIMITATION: the class reads the NAME, not the panel. 93 of 322
+ * POUR-flipped OFF records (aceite excluded) carry > 200 kcal/100 g, mostly
+ * cream / condensed milk / nut spreads; the panel-wrong ones are ~11 names
+ * (powdered milk named `Leche`, dry `Crema de ...` soups) plus two panel errors
+ * (`Crema Mexicana` 1,180, `Crema Estilo Salvadorena` 1,200 kcal). The cure is
+ * label volume, not these slices.
+ */
+const ES_PASTE_RE = /^[^\p{L}]*(?:crema de (?:cacahuate|cacahuete|man[ií]|avellanas?|almendras?)|mantequilla(?: de (?:cacahuate|man[ií]|almendras?))?|miel|cajeta|mermelada|aderezo|yogur|queso crema|mostaza)(?![\p{L}\p{N}])/iu;
+const ES_POUR_RE = /^[^\p{L}]*(?:leche|jugo|agua|aceite|vinagre|crema|refresco|licuados?)(?![\p{L}\p{N}])/iu;
+const ES_EXCLUDE_RE = /(?<![\p{L}\p{N}])(?:en polvo|polvo|nido|instant\w*|helad[ao]s?|paletas?|galletas?|barras?|barritas?|cereal(?:es)?|caramelos?|chips|totopos?|tortillas?|botanas?|pastel(?:es)?|flan(?:es)?|gelatinas?|mix|mezcla|sazonador|condimento|seasoning|ice ?cream|gelato|cakes?|cookies?|bars?|candy|powder|whey|gainer|protein|pops|batida|montada|chantilly|crema d[ei] (?:arroz|riso)|crema e (?:aroma|gusto)|y cebolla|y especias|knorr|beans?|trencito)(?![\p{L}\p{N}])/iu;
+
+
+/**
+ * Light dry solids (s457 S1). A record name with no liquid/paste/beverage/category
+ * token otherwise bills 240 x 0.5 = 120 g a cup, which is 3-12x too heavy for a
+ * cup of dry cereal or popcorn. Per-class density (g/ml, so g per 240 ml cup):
+ *
+ *   cereal 0.15 (36 g/cup)  — FatSecretServing Cheerios 30, Corn Flakes 28,
+ *                             Rice Krispies 26 g/cup; OFF cup-label median 40 g
+ *                             over 2,497 names.
+ *   puffed 0.04 (9.6 g/cup) — FDC 173141 popcorn 7.9 g/cup, FatSecret Puffed
+ *                             Rice 14 g/cup.
+ *
+ * WHY THIS RUNS FIRST: the liquid/paste tests are substring tests, and `butter`,
+ * `honey` and `oil` put "Movie Theater Butter Popcorn", "Honey Nut Cheerios" and
+ * "Popcorn, oil-popped" on PASTE (250 g/cup). The class test claims the name
+ * before they can (hence the `!lightClass &&` on every pour/paste flag below).
+ * Label rungs (label_unit_match, off_label_volume, fs_label_volume*,
+ * fdc_label_volume) precede this constant and are untouched.
+ *
+ * Both regexes are paired with an EXCLUDE list so that cooked, sweetened,
+ * coated, bar/granola and dish names stay on the old default.
+ */
+export type LightSolidClass = 'cereal' | 'puffed';
+export const LIGHT_SOLID_DENSITY_GML: Readonly<Record<LightSolidClass, number>> = { cereal: 0.15, puffed: 0.04 };
+const CEREAL_RE = /\b(?:cereals?|cheerios|(?:corn|bran|frosted|wheat|multi[- ]?grain|whole[- ]grain|honey) ?flakes|krispies|chex|kix|crispy rice|crisp rice)\b/i;
+const CEREAL_EXCLUDE_RE = /\b(?:bars?|treats?|cookies?|cakes?|muffins?|ice cream|yogh?urts?|parfaits?|milk|smoothies?|shakes?|drinks?|powder|whey|mix|granola|muesli|oats|oat bran|oatmeal|porridge|hot|cooked|prepared|cream of|creamy|cracked|farina|grits|malt[- ]o[- ]meal|raisin bran|all[- ]?bran|bran buds|fiber one|grape[- ]?nuts|nuggets|mini[- ]?wheats|shredded wheat|squares|clusters|bites|baby|infant|toddler|gerber|single grain|\d[- ]?grain|millet|superseed|bear naked|crumbs|coating|breading|egg whites?|chivda|crackers?|barras?|barritas?|isolate|kind|dark chocolate|galletas?|biscuits?|instant|crema|spread|salad|chicken|noodles|nestum)\b/i;
+
+const PUFFED_RE = /\b(?:pop(?:ped)?corn|kettle corn|boom chicka pop|skinny ?pop|smartfood|puffed (?:rice|wheat|corn|millet|kamut|quinoa|amaranth))\b/i;
+const PUFFED_EXCLUDE_RE = /\b(?:kernels?|unpopped|yellow|white popcorn|microwave|popcorn (?:oil|salt|seasoning|butter|topping|rice|cornmeal)|coated|chicken|shrimp|fish|jelly beans?|cand(?:y|ies)|caramel|toffee|candied|chocolate|drizzled?|clusters|cracker jack|balls?|bars?|cakes?|crackers?|chips|ice cream|gumm(?:y|ies)|seeds?|gourmet|premium|munch|pressed|partially|peanuts?|mix|factory|sweetened|honey|frosted|chick'?n|bites|nuggets|cauliflower|bucket|kit|mushroom|tins?|syrup|patty|burgers?|coating|cracklins|pork|squid|slim jim|poppycock|carm[ae]l|glazed|pecans?|jelly|belly|gummi|whey)\b/i;
+
+export function lightSolidClass(name: string): LightSolidClass | null {
+    if (PUFFED_RE.test(name) && !PUFFED_EXCLUDE_RE.test(name)) return 'puffed';
+    if (CEREAL_RE.test(name) && !CEREAL_EXCLUDE_RE.test(name)) return 'cereal';
+    return null;
+}
 
 /**
  * `beverage` bills exactly what `liquid` bills — see BEVERAGE_RE. It is a
@@ -294,8 +433,10 @@ export interface VolumeGrams {
     perUnit: Record<string, number>;
     /** Which branch decided it — logged, so a wrong bill is traceable to a rule. */
     volumeClass: VolumeClass;
-    /** g/ml actually used for solids (category density, or the 0.5 default). */
+    /** g/ml actually used for solids (light class, category density, or the 0.5 default). */
     solidDensity: number;
+    /** S1: the light-solid class that set solidDensity, or null. */
+    lightClass: LightSolidClass | null;
 }
 
 /**
@@ -319,15 +460,20 @@ export interface VolumeGrams {
 export function resolveVolumeGrams(...names: Array<string | null | undefined>): VolumeGrams {
     const name = names.find(n => n && n.trim().length > 0)?.trim() ?? '';
 
-    const isLiquid = LIQUID_RE.test(name);
-    const isPaste = !isLiquid && PASTE_RE.test(name);
+    const lightClass = lightSolidClass(name);
+    const isLiquid = !lightClass && LIQUID_RE.test(name);
+    const isPaste = !lightClass && !isLiquid && PASTE_RE.test(name);
     // Checked LAST, so this tier can only ever claim a name that would otherwise
     // be a `solid`. That ordering is the whole blast-radius argument for B1b —
     // see BEVERAGE_RE. `Port Wine Cheese Spread` is the case it protects: it
     // carries a beverage token and is a spread.
-    const isBeverage = !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)));
-    /** Pours at ~1 g/ml, by either vocabulary. */
-    const isPourable = isLiquid || isBeverage;
+    const isBeverage = !lightClass && !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)) || (SOUP_RE.test(name) && !SOUP_EXCLUDE_RE.test(name)));
+    // Spanish-named record slices, LAST and head-anchored — see ES_PASTE_RE.
+    const isEsPaste = !lightClass && !isLiquid && !isPaste && !isBeverage && ES_PASTE_RE.test(name) && !ES_EXCLUDE_RE.test(name);
+    const isEsPour = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && ES_POUR_RE.test(name) && !ES_EXCLUDE_RE.test(name);
+    /** Pours at ~1 g/ml, by any vocabulary. */
+    const isPourable = isLiquid || isBeverage || isEsPour;
+    const isPasteLike = isPaste || isEsPaste;
 
     // Dry-solid density: prefer the food's category density (sugar 0.85, flour
     // 0.53, oats 0.36 …) over a flat 0.5, which under-weighted DENSE solids by
@@ -339,16 +485,18 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     // conservatism — do not widen it without re-running those cases.
     let solidDensity = 0.5;
     const category = inferCategoryFromName(name);
-    if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
+    if (lightClass) {
+        solidDensity = LIGHT_SOLID_DENSITY_GML[lightClass];
+    } else if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
         const catDensity = categoryDensity(category);
         if (catDensity && catDensity > 0) solidDensity = catDensity;
     }
 
-    const cupG = isPourable ? 240 : isPaste ? 250 : 240 * solidDensity;
-    const tbspG = isPourable ? 15 : isPaste ? 16 : 15 * solidDensity;
-    const tspG = isPourable ? 5 : isPaste ? 5.3 : 5 * solidDensity;
-    const mlG = isPourable ? 1 : isPaste ? 1 : solidDensity;
-    const flozG = isPourable ? 30 : isPaste ? 30 : 30 * solidDensity;
+    const cupG = isPourable ? 240 : isPasteLike ? 250 : 240 * solidDensity;
+    const tbspG = isPourable ? 15 : isPasteLike ? 16 : 15 * solidDensity;
+    const tspG = isPourable ? 5 : isPasteLike ? 5.3 : 5 * solidDensity;
+    const mlG = isPourable ? 1 : isPasteLike ? 1 : solidDensity;
+    const flozG = isPourable ? 30 : isPasteLike ? 30 : 30 * solidDensity;
 
     return {
         perUnit: {
@@ -374,8 +522,9 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
             'dash': 0.6, 'dashes': 0.6,
             'pinch': 0.3, 'pinches': 0.3,
         },
-        volumeClass: isLiquid ? 'liquid' : isBeverage ? 'beverage' : isPaste ? 'paste' : 'solid',
+        volumeClass: isLiquid ? 'liquid' : (isBeverage || isEsPour) ? 'beverage' : isPasteLike ? 'paste' : 'solid',
         solidDensity,
+        lightClass,
     };
 }
 

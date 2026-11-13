@@ -1,0 +1,38 @@
+# 2026-10-31 repro of C68 s424 BAD lines from holiday, plantbased, lunchbox (d30): 31 BAD + 2 unbanded observation lines (col 3 blank) + 4 controls. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+a sweet potato casserole serving	1	BAD		-
+a slice of honey glazed ham	1	BAD		-
+a dinner roll with butter	1	BAD		-
+a slice of cornbread dressing	1	BAD		-
+a slice of prime rib	1	BAD		-
+a mug of hot cocoa	1	BAD		-
+a mug of hot apple cider	1	BAD		-
+a slice of roast turkey	1	BAD		-
+a slice of roast beef with horseradish	1	BAD		-
+a scoop of mashed potatoes with gravy	1	BAD		-
+a spoonful of cranberry sauce	1	BAD		-
+a serving of corn pudding	1	BAD		-
+a serving of cranberry relish	1	BAD		-
+a serving of macaroni and cheese	1	BAD		-
+a serving of tofu scramble	1	BAD		-
+a glass of oat milk	1	BAD		-
+a glass of almond milk	1	BAD		-
+a scoop of vegan ice cream	1	BAD		-
+a serving of jackfruit carnitas	1	BAD		-
+a vegan mac and cheese serving	1	BAD		-
+a tofu banh mi	1	BAD		-
+a serving of vegan egg substitute	1	BAD		-
+six plant based nuggets	1	BAD		-
+a serving of falafel	1	BAD		-
+a serving of black bean burger	1	BAD		-
+a mini bagel with cream cheese	1	BAD		-
+a small bag of pretzels	1	BAD		-
+a hot dog in a bun	1	BAD		-
+a pb and banana sandwich	1	BAD		-
+a bento box with rice chicken and broccoli	3	BAD		-
+a cheese stick	1	BAD		-
+a box of raisins	1			-
+a pack of fruit snacks	1			-
+a baked potato	1	OK		-
+a slice of white bread	1	OK		-
+a glass of water	1	OK		-
+an apple	1	OK		-

@@ -1,0 +1,1951 @@
+[
+ {
+  "src": "seat",
+  "line": "6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs, ate 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "12 cookies, ate 3",
+  "input": [
+   {
+    "rawText": "12 cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "10 wings, had 4",
+  "input": [
+   {
+    "rawText": "10 wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs, had 8",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs scrambled, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs scrambled",
+    "normalizedForm": "scrambled eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 scrambled eggs",
+    "normalizedForm": "scrambled eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, had 2",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "4 slices of pizza, ate 2",
+  "input": [
+   {
+    "rawText": "4 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "2 eggs, had 1",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 slices of pizza, ate 2",
+  "input": [
+   {
+    "rawText": "6 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 slices of pizza, ate 2",
+  "input": [
+   {
+    "rawText": "6 slices of pizza",
+    "normalizedForm": "pizza slices",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 slices of pizza",
+    "normalizedForm": "pizza slices"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 strips of bacon, had 2",
+  "input": [
+   {
+    "rawText": "4 strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 strips of bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 strips of bacon, had 2",
+  "input": [
+   {
+    "rawText": "4 strips of bacon",
+    "normalizedForm": "bacon strips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bacon strips",
+    "normalizedForm": "bacon strips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 pieces of chicken, ate 1",
+  "input": [
+   {
+    "rawText": "3 pieces of chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 pieces of chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 pieces of chicken, ate 1",
+  "input": [
+   {
+    "rawText": "3 pieces of chicken",
+    "normalizedForm": "chicken pieces",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 pieces of chicken",
+    "normalizedForm": "chicken pieces"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "made 6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "made 6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "made 6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "made 6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs for the family, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs for the family, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs for the family",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, had 6",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "2 eggs, had 1",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "2 tacos, had 1",
+  "input": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 egg whites, had 2",
+  "input": [
+   {
+    "rawText": "6 egg whites",
+    "normalizedForm": "egg whites",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 egg whites",
+    "normalizedForm": "egg whites"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 egg whites, had 2",
+  "input": [
+   {
+    "rawText": "6 egg whites",
+    "normalizedForm": "egg white",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 egg whites",
+    "normalizedForm": "egg white"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 large eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 large eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 large eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 large eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 large eggs",
+    "normalizedForm": "large eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 large eggs",
+    "normalizedForm": "large eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "half a dozen eggs, had 2",
+  "input": [
+   {
+    "rawText": "half a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "half a dozen eggs, had 10",
+  "input": [
+   {
+    "rawText": "half a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "half dozen eggs, had 10",
+  "input": [
+   {
+    "rawText": "half dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "10 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "2 dozen eggs, had 15",
+  "input": [
+   {
+    "rawText": "2 dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "15 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "18 eggs, had 15",
+  "input": [
+   {
+    "rawText": "18 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "15 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, had 2 left",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, the kids had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, had 2 with toast",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "had 6 eggs, 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "i had 6 eggs, 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 egg omelette, had 1",
+  "input": [
+   {
+    "rawText": "3 egg omelette",
+    "normalizedForm": "omelette",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 egg omelette",
+    "normalizedForm": "omelette"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 egg omelette, had 1",
+  "input": [
+   {
+    "rawText": "3 egg omelette",
+    "normalizedForm": "egg omelette",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 egg omelette",
+    "normalizedForm": "egg omelette"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 deviled eggs, had 2",
+  "input": [
+   {
+    "rawText": "6 deviled eggs",
+    "normalizedForm": "deviled eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 deviled eggs",
+    "normalizedForm": "deviled eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 cubes of cheese, ate 2",
+  "input": [
+   {
+    "rawText": "4 cubes of cheese",
+    "normalizedForm": "cheese cubes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 cheese cubes",
+    "normalizedForm": "cheese cubes"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 cloves of garlic, ate 2",
+  "input": [
+   {
+    "rawText": "6 cloves of garlic",
+    "normalizedForm": "garlic cloves",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 garlic cloves",
+    "normalizedForm": "garlic cloves"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 ribs, had 3",
+  "input": [
+   {
+    "rawText": "6 ribs",
+    "normalizedForm": "ribs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 ribs",
+    "normalizedForm": "ribs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 chicken breasts, had 1",
+  "input": [
+   {
+    "rawText": "4 chicken breasts",
+    "normalizedForm": "chicken breasts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 chicken breasts",
+    "normalizedForm": "chicken breasts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 chicken thighs, had 2",
+  "input": [
+   {
+    "rawText": "4 chicken thighs",
+    "normalizedForm": "chicken thighs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 chicken thighs",
+    "normalizedForm": "chicken thighs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "2 bars of chocolate, had 1",
+  "input": [
+   {
+    "rawText": "2 bars of chocolate",
+    "normalizedForm": "chocolate bars",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 chocolate bars",
+    "normalizedForm": "chocolate bars"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 ears of corn, had 1",
+  "input": [
+   {
+    "rawText": "3 ears of corn",
+    "normalizedForm": "corn",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 ears of corn",
+    "normalizedForm": "corn"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "3 ears of corn, had 1",
+  "input": [
+   {
+    "rawText": "3 ears of corn",
+    "normalizedForm": "corn ears",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 corn ears",
+    "normalizedForm": "corn ears"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "4 sticks of string cheese, had 2",
+  "input": [
+   {
+    "rawText": "4 sticks of string cheese",
+    "normalizedForm": "string cheese sticks",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 string cheese sticks",
+    "normalizedForm": "string cheese sticks"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "2 tubs of yogurt, had 1",
+  "input": [
+   {
+    "rawText": "2 tubs of yogurt",
+    "normalizedForm": "yogurt tubes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tubs of yogurt",
+    "normalizedForm": "yogurt tubes"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, had 2 eggs",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, ate two",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, ate a couple",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "6 eggs, i only had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "an egg, had 1",
+  "input": [
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack",
+  "line": "1 egg, had 1",
+  "input": [
+   {
+    "rawText": "1 egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, had 2 with toast",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, had 2 with toast",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "had 2 with toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "had 2 with toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs and toast, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs and toast, had 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "toast and 6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "toast and 6 eggs, had 2",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "had 2",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   },
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "had 2",
+    "normalizedForm": ""
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, had 2 more",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, had 2 more",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 more",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2 more",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, had 2 more",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "had 2 more",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "had 2 more",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 tacos, had 2 more",
+  "input": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 tacos, had 2 more",
+  "input": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "2 more",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "2 more",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, then had another 2",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, then had another 2",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "another 2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "another 2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, 2",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, 2 bananas",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2 bananas",
+    "normalizedForm": "bananas",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2 bananas",
+    "normalizedForm": "bananas"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "3 eggs, ate 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "3 eggs, ate 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "ate 2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 eggs, had 2",
+  "input": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "6 eggs, had 2, and coffee",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2"
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "3 eggs, ate 2, the dog got 1",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "made 3 eggs, ate 2 and gave 1 away",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "4 egg tacos, had 2",
+  "input": [
+   {
+    "rawText": "4 egg tacos",
+    "normalizedForm": "egg tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 egg tacos",
+    "normalizedForm": "egg tacos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "4 egg sandwiches, had 2",
+  "input": [
+   {
+    "rawText": "4 egg sandwiches",
+    "normalizedForm": "egg sandwiches",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 egg sandwiches",
+    "normalizedForm": "egg sandwiches"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "2 egg rolls, had 1",
+  "input": [
+   {
+    "rawText": "2 egg rolls",
+    "normalizedForm": "egg rolls",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 egg rolls",
+    "normalizedForm": "egg rolls"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack2",
+  "line": "3 egg muffins, had 2",
+  "input": [
+   {
+    "rawText": "3 egg muffins",
+    "normalizedForm": "egg muffins",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 egg muffins",
+    "normalizedForm": "egg muffins"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "3 tacos, and had 2 later",
+  "input": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "a dozen eggs, and had 2 later",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "3 tacos, and had 2 more",
+  "input": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "3 eggs, and had 2 more",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "3 eggs, and ate 2",
+  "input": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 attack3",
+  "line": "3 tacos, and ate 2",
+  "input": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ }
+]

@@ -1,5 +1,6 @@
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand, BRAND_PRODUCT_CONTEXT_TOKENS } from './simple-rerank';
 import { detectBrandInQuery } from './brand-detector';
+import { isRestaurantChain } from '../nlp/restaurant-brand-fill';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
 /**
@@ -446,14 +447,28 @@ export function preserveDroppedBrand(args: {
  * word as a brand in that census (0 of 205), so the refusal is principled, not
  * load-bearing.
  *
+ * A THIRD KIND, `restaurant_chain` (s453 row C): a brand the detector found
+ * that `isRestaurantChain()` lists. A line of <= 6 words / <= 60 chars skips the
+ * segmenter (`singleItemFromText()`), so `options.brand` is empty and the SOLO
+ * path has only the lexical test; the normalizer drops a one-word chain
+ * (`frosty from wendys` -> `frosty`) and nothing put it back. The chain list is
+ * safe evidence because it is a second, independent signal: a curated list of
+ * restaurant names, not the brand lexicon, and the lexicon false positives
+ * (`bell`, `one`, `giant`) are not on it. Measured firing population: 47
+ * AiNormalizeCache rows, every one restaurant intent (0 flavor-`chipotle`, 0
+ * `cava` wine); organic: 4 lines, all picked wrong. The segmenter branch falls
+ * through to this check when it does not return, so a segmenter brand the
+ * lexicon lacks (`mcdonald`, `jack in the box`) fires too. The same
+ * quantity-word refusal applies.
+ *
  * WHAT IT DOES NOT DO: it does not touch `hasDecisiveBrandContext()` itself,
  * which also decides the cache key's brand PREFIX and whether the model may
- * downgrade `is_branded` — those keep their lexical rule. The SOLO path (no
- * segmenter: `winner-diff`, the search route, a bare mapper call) is unchanged
- * by construction, which is also why `winner-diff` cannot see this change: it
- * never supplies `options.brand`.
+ * downgrade `is_branded` — those keep their lexical rule. Outside the chain
+ * list the SOLO path (no segmenter: `winner-diff`, the search route, a bare
+ * mapper call) is unchanged, which is also why `winner-diff` cannot see the
+ * segmenter evidence: it never supplies `options.brand`.
  */
-export type BrandReassertEvidence = 'decisive_context' | 'segmenter_named' | null;
+export type BrandReassertEvidence = 'decisive_context' | 'segmenter_named' | 'restaurant_chain' | null;
 
 export function brandReassertEvidence(args: {
     rawLine: string;
@@ -466,26 +481,35 @@ export function brandReassertEvidence(args: {
     if (!targetBrand.trim()) return null;
     if (hasDecisiveBrandContext(rawLine, targetBrand)) return 'decisive_context';
     const seg = segmenterBrand?.trim();
-    if (!seg) return null;
-    // On the composite path the segmenter's brand IS the target (the mapper
-    // prefers `options.brand` over the detector), but check by token rather
-    // than assume the call site: a detector hit that is not what the segmenter
-    // named must not borrow the segmenter's authority.
-    if (!candidateMatchesTargetBrand(undefined, seg, targetBrand)) return null;
-    // TWO independent signals, not one: the segmenter's brand must ALSO be a
-    // brand the lexicon knows. Refuter L1 on PR #421 found the segmenter
-    // naming an over-split chain fragment as a brand (`company` for `company
-    // zucchini noodles`, from "Noodles and Company", 32 uses) — trusting that
-    // alone would have prefixed a non-brand onto the retrieval query. All five
-    // brands in the measured firing population (Ryse, Quaker, Orgain, Perdue,
-    // m&ms) are lexicon brands; a segmenter-only brand keeps today's behaviour.
-    if (!detectBrandInQuery(seg).isBranded) return null;
-    if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) return null;
-    return 'segmenter_named';
+    // Every segmenter-branch refusal FALLS THROUGH to the chain check below; the
+    // branch itself returns exactly what it did before.
+    if (
+        seg &&
+        // On the composite path the segmenter's brand IS the target (the mapper
+        // prefers `options.brand` over the detector), but check by token rather
+        // than assume the call site: a detector hit that is not what the segmenter
+        // named must not borrow the segmenter's authority.
+        candidateMatchesTargetBrand(undefined, seg, targetBrand) &&
+        // TWO independent signals, not one: the segmenter's brand must ALSO be a
+        // brand the lexicon knows. Refuter L1 on PR #421 found the segmenter
+        // naming an over-split chain fragment as a brand (`company` for `company
+        // zucchini noodles`, from "Noodles and Company", 32 uses) — trusting that
+        // alone would have prefixed a non-brand onto the retrieval query. All five
+        // brands in the measured firing population (Ryse, Quaker, Orgain, Perdue,
+        // m&ms) are lexicon brands; a segmenter-only brand keeps today's behaviour.
+        detectBrandInQuery(seg).isBranded &&
+        !brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)
+    ) {
+        return 'segmenter_named';
+    }
+    if (isRestaurantChain(targetBrand) && !brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) {
+        return 'restaurant_chain';
+    }
+    return null;
 }
 
 /**
- * THE REPAIR ITSELF, for the `segmenter_named` evidence (2026-09-05, refuter
+ * THE REPAIR ITSELF, for the `segmenter_named` and `restaurant_chain` evidence (2026-09-05, refuter
  * L2 on PR #421). The decisive path keeps its historical closure in the mapper
  * byte-for-byte; this helper is what the segmenter path uses instead, because
  * the first two-arm probe of the fix showed two shapes that closure gets wrong

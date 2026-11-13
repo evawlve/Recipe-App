@@ -118,9 +118,11 @@ describe('the number-word lists agree', () => {
     expect(() => setMembersOf("'one', ...MORE")).toThrow(/unrecognised entry/);
   });
 
-  test('both literals name the same fourteen words', () => {
-    const expected = ['couple', 'dozen', 'eight', 'eleven', 'five', 'four', 'nine',
-      'one', 'seven', 'six', 'ten', 'three', 'twelve', 'two'];
+  // s456 NW: the lists grew to 13-99 and `hundred` (ASC row 31).
+  test('both literals name the same thirty-one words', () => {
+    const expected = ['couple', 'dozen', 'eight', 'eighteen', 'eighty', 'eleven', 'few', 'fifteen', 'fifty',
+      'five', 'forty', 'four', 'fourteen', 'hundred', 'nine', 'nineteen', 'ninety', 'one', 'seven', 'seventeen',
+      'seventy', 'six', 'sixteen', 'sixty', 'ten', 'thirteen', 'thirty', 'three', 'twelve', 'twenty', 'two'];
     expect([...parserMapWords()].sort()).toEqual(expected);
     expect([...guardSetWords()].sort()).toEqual(expected);
   });

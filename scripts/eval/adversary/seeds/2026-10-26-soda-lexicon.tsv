@@ -1,0 +1,22 @@
+# 2026-10-26 soda lexicon (C68 s389): #616 added ONLY pepsi|sprite|mountain dew|dr pepper to the getBareQueryDefault beverage rule (record-name regex). cola|coke|soda|lemonade|iced tea were already members. fanta, a can of 7up, bang energy match NOTHING: CONTROLS expected STILL. Col2=1 col3=BAD col4=portion col5=brand hint (ignored by the CLI). No golden verbatim (checked).
+lemonade	1	BAD	portion	-
+iced tea	1	BAD	portion	-
+pepsi	1	BAD	portion	pepsi
+sprite	1	BAD	portion	sprite
+mountain dew	1	BAD	portion	mountain dew
+coke	1	BAD	portion	coca-cola
+coca cola classic	1	BAD	portion	coca-cola
+dr pepper	1	BAD	portion	dr pepper
+fanta	1	BAD	portion	fanta
+a can of 7up	1	BAD	portion	7up
+a can of sprite	1	BAD	portion	sprite
+large sprite	1	BAD	portion	sprite
+diet pepsi	1	BAD	portion	pepsi
+sprite zero	1	BAD	portion	sprite
+pepsi max	1	BAD	portion	pepsi
+cherry coke zero	1	BAD	portion	coca-cola
+coke zero sugar	1	BAD	portion	coca-cola
+bang energy	1	BAD	portion	bang
+sprite zero sugar	1	BAD	portion	sprite
+zero sugar pepsi	1	BAD	portion	pepsi
+sugar free coke	1	BAD	portion	coca-cola

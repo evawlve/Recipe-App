@@ -1,0 +1,16 @@
+# C68 S343 2026-10-20, POST-DEPLOY READ of deploy 3 (hXTp_QvJ8lCIr83-mzT7b, backend 8b87b05e, PRs 557-583): MGR S338's exact list, inbox-C68 2026-10-20T20:22:41Z. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (the CLI reads 4 fields)
+# run 5 (warm) · tag 2026102020261
+a homemade burrito with chicken from yesterday for lunch and steak for dinner	2	OK	identity	-;-
+a coke and left out pizza from last night	2	OK	identity	-;-
+3 blueberries	1	OK	portion	-
+toast x2	1	OK	parse	-
+coke x12 pack	1		parse	-
+a bag of chips, um, ate 3	1	OK	portion	-
+a few blueberries	1	OK	portion	-
+a short stack	1	OK	identity	-
+leftover pizza	1	OK	identity	-
+a large iced tea	1		identity	-
+6 eggs, had 2	1	OK	portion	-
+a bottle of wine, um, drank half	1	OK	portion	-
+pasta i made with olive oil	1	OK	identity	-
+a turkey sandwich, actually a ham sandwich	1	OK	parse	-
