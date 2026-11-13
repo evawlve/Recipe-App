@@ -810,7 +810,7 @@ function tokenize(text: string): string[] {
 /** Check if two tokens match (including synonyms) */
 function tokensMatch(queryToken: string, candidateToken: string): boolean {
     if (queryToken === candidateToken) return true;
-    // s456 BB: the admission layer's spelling folds, both directions, so a requested `barbecue` is not charged VARIANT_QUALIFIER_PENALTY on `BBQ` (ASC rows 28/29). Every tokensMatch() caller inherits it; getWordCoverageBonus() deliberately does not.
+    // s456 BB: the admission layer's spelling folds, both directions, so a requested `barbecue` is not charged VARIANT_QUALIFIER_PENALTY on `BBQ` (ASC rows 28/29). Every tokensMatch() caller inherits it; getWordCoverageBonus() folds separately, through coverageSpellingMatch() (s457 R2).
     if ((COVERAGE_SPELLING_FOLD[queryToken] ?? queryToken) === (COVERAGE_SPELLING_FOLD[candidateToken] ?? candidateToken)) return true;
     const synonyms = SYNONYMS[queryToken];
     return synonyms ? synonyms.includes(candidateToken) : false;
@@ -959,6 +959,16 @@ function getModifierMatchBoost(query: string, candidateName: string): number {
     return matchRatio * WEIGHTS.MODIFIER_MATCH_BOOST;
 }
 
+// s457 R2: getWordCoverageBonus() honours the admission layer's spelling folds (bbq<->barbecue, doughnut<->donut, ...), plural-
+// tolerant. ADDITIVE and fold-only: it fires only when at least one word IS a fold spelling, so it never takes coverage away and
+// never adds a plain plural match (`berries`/`berry`) the predicate below does not already make.
+function coverageSpellingMatch(queryWord: string, candidateWord: string): boolean {
+    const fq = COVERAGE_SPELLING_FOLD[queryWord] ?? COVERAGE_SPELLING_FOLD[stem(queryWord)];
+    const fc = COVERAGE_SPELLING_FOLD[candidateWord] ?? COVERAGE_SPELLING_FOLD[stem(candidateWord)];
+    if (fq === undefined && fc === undefined) return false;
+    return (fq ?? stem(queryWord)) === (fc ?? stem(candidateWord));
+}
+
 /**
  * Calculate bonus for candidates where ALL query words appear in order.
  * 
@@ -1000,7 +1010,8 @@ function getWordCoverageBonus(query: string, candidateName: string): number {
                 qWord === cWord + 's' ||
                 qWord === cWord + 'es' ||
                 cWord.startsWith(qWord) ||
-                qWord.startsWith(cWord)
+                qWord.startsWith(cWord) ||
+                coverageSpellingMatch(qWord, cWord)
             )
         );
 
