@@ -132,7 +132,7 @@ const mockedHydrateOff = hydrateOffCandidate as jest.Mock;
  * no CATEGORY_KEYWORDS hit, so `resolveVolumeGrams()` bills the flat 0.5 g/ml
  * dry-goods default and one cup of it is exactly the 120 g the defect bills.
  */
-const SOLID_NAME = 'Crunchy Puffed Cereal';
+const SOLID_NAME = 'Crunchy Trail Mix';
 /** The class constant this lane is overtaking, restated as a number. */
 const CLASS_CONSTANT_CUP_G = 120;
 
@@ -277,14 +277,13 @@ describe('4. what the band refuses', () => {
     });
 
     /**
-     * NOT JUNK. This test pins a KNOWN LIMITATION, not a desired behaviour.
+     * NOT JUNK — and since s457 S1 no longer a ~15x overbill, fixed by the CLASS, not the band.
      *
      * A cup of popcorn really is ~8 g (0.033 g/ml). The label is CORRECT and the
-     * band refuses it anyway, so the line bills the flat-solid class constant of
-     * 120 g — a ~15x overbill, ~630 kcal charged for ~31 kcal of food. Puffed
-     * wheat at `1 cup (15 g)` (0.0625 g/ml) is the same failure at ~8x.
-     * `popcorn` matches no CATEGORY_KEYWORDS entry, so it cannot even reach a
-     * dry-granule density and takes the flat 0.5.
+     * band still refuses it, but the line now falls to the puffed light class
+     * (`lightSolidClass()` in units/volume-density.ts, 240 x 0.04 = 9.6 g), ~1.2x
+     * from the label instead of the flat-solid 120 g. Puffed wheat at `1 cup (15 g)`
+     * (0.0625 g/ml) lands on the same 9.6 g.
      *
      * It is asserted here because it is TRUE OF THIS BRANCH, and because the
      * alternative — leaving it unasserted — is how a reader concludes the low
@@ -293,17 +292,16 @@ describe('4. what the band refuses', () => {
      * population; the corpus read that would settle it was written and refused
      * by this session's permission classifier.
      *
-     * NOT A REGRESSION: master bills 120 g for this exact line too, by a
-     * different route (the label branch is unreachable there). This lane neither
-     * causes nor fixes it. Narrowing the low edge is a separate change that
-     * needs the measurement first — whoever gets it owns this test.
+     * The band's low edge is unchanged by S1. Narrowing it is a separate change
+     * that needs the OFF label-density measurement first — whoever gets it owns
+     * this test.
      */
-    it('LIMITATION, carried forward from master: real popcorn at "1 cup (8 g)" is refused and overbilled 15x', async () => {
+    it('FIXED by S1: real popcorn at "1 cup (8 g)" is still refused by the band but bills the puffed class, 9.6 g', async () => {
         mockedHydrateOff.mockResolvedValue(offHydrated({
             foodName: 'Popcorn', servingGrams: 8, servingDescription: '1 cup (8 g)', servingUnitCount: 1,
         }));
         expect(await bill({ qty: 1, unit: 'cup', name: 'popcorn' }, '1 cup popcorn', 'Popcorn'))
-            .toBe('volume_unit:120');
+            .toBe('volume_unit:9.6');
     });
 
     it('the band edges are INCLUSIVE and admit the extremes ([0.1, 1.6] g/ml on a 240 ml cup)', async () => {
@@ -326,14 +324,21 @@ describe('5. the band is strictly wider than every density the estimator itself 
     /**
      * WHAT THIS BLOCK PROVES, AND — read this first — WHAT IT DOES NOT.
      *
-     * `resolveVolumeGrams()` emits exactly four shapes of cup cell:
+     * `resolveVolumeGrams()` emits exactly five shapes of cup cell:
      *   pourable (liquid | beverage)  240 g   -> 1.0000 g/ml
      *   paste                         250 g   -> 1.0417 g/ml
      *   solid, flat default           120 g   -> 0.5000 g/ml
      *   solid, dry-granule category   240 x categoryDensity(c)
      *                                         -> {oats .36 ... sugar .85}
-     * so the whole reachable range is [0.36, 1.0417] g/ml, and [0.1, 1.6]
-     * brackets it with 3.6x of slack below and 1.54x above.
+     *   solid, light class (s457 S1)  240 x LIGHT_SOLID_DENSITY_GML -> puffed 0.04
+     *                                 sits BELOW BAND_MIN; every other light class
+     *                                 sits inside it with at most 1.5x of slack
+     * The light classes are left OUT of reachableDensities() ON PURPOSE: on a
+     * light-class name a refused LOW label falls to a constant CLOSER to it
+     * (block 4's popcorn, 9.6 g against its own 8 g), so the bound below is a
+     * statement about NON-light names only. For those the reachable range is
+     * [0.36, 1.0417] g/ml, and [0.1, 1.6] brackets it with 3.6x of slack below
+     * and 1.54x above.
      *
      * PROVES: a bound on the CHANGE. Wherever the band refuses a label, the line
      * falls to a constant that was already at least that far from the label's
@@ -344,7 +349,7 @@ describe('5. the band is strictly wider than every density the estimator itself 
      * estimator's cells; the band is applied to the LABEL's implied density, and
      * labels are a different population — real foods sit outside [0.36, 1.0417]
      * in both directions, and the low edge demonstrably refuses correct labels
-     * (block 4's popcorn case, ~15x overbill). The corpus read that would
+     * (block 4's popcorn case: still refused; since S1 the class, not the band, rescues it). The corpus read that would
      * calibrate the edges against real OFF labels was written and refused by
      * this session's permission classifier, so no such claim is made here.
      *
@@ -375,7 +380,7 @@ describe('5. the band is strictly wider than every density the estimator itself 
         expect(await probe(BAND_MAX + 0.001)).toBeNull();
     });
 
-    it('every density resolveVolumeGrams() can produce sits strictly inside the band', () => {
+    it('every density resolveVolumeGrams() can produce for a NON-light name sits strictly inside the band', () => {
         for (const d of reachableDensities()) {
             expect(d).toBeGreaterThan(BAND_MIN);
             expect(d).toBeLessThan(BAND_MAX);
@@ -386,7 +391,7 @@ describe('5. the band is strictly wider than every density the estimator itself 
         const ds = reachableDensities();
         const lo = Math.min(...ds);
         const hi = Math.max(...ds);
-        expect(lo).toBeCloseTo(0.36, 6);                 // oats, the lightest class cell
+        expect(lo).toBeCloseTo(0.36, 6);                 // oats, the lightest NON-light class cell (S1's classes excluded above)
         expect(hi).toBeCloseTo(250 / 240, 6);            // paste, the densest class cell
         expect(lo / BAND_MIN).toBeGreaterThan(1.5);
         expect(BAND_MAX / hi).toBeGreaterThan(1.5);
