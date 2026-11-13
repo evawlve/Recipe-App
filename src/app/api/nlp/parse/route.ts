@@ -12,6 +12,8 @@ import { encodeSseFrame, PARSE_STREAM_HEADERS, type ParseStreamSegmenter, type P
 // Supabase env. The client is now built lazily, on the first bearer, in
 // src/lib/supabase/admin.ts; the dev-key path never builds it at all.
 import { authenticateRequest } from '@/lib/auth/request-auth';
+// Keyed hash of the bearer's user id for MappingEventLog.userHash (s457 UID-1). Pure (node:crypto only).
+import { hashUserIdForTelemetry, MEL_USER_HASH_DEV } from '@/lib/auth/telemetry-user-hash';
 // Pure (its only import is a type), so static is free. Owns the limit defaults, the
 // per-request env read, the "did this request do paid work?" predicate, and the
 // process-local in-flight cap and reservation-error breaker.
@@ -96,6 +98,8 @@ export async function POST(req: NextRequest) {
   let isDevBypass = auth.via === 'key';
   const userId = auth.userId;
   const userEmail = auth.email;
+  // MappingEventLog.userHash: keyed on auth.via, NEVER isDevBypass: an @google.com bearer is a real account (s457 UID-1)
+  const melUserHash = auth.via === 'key' ? MEL_USER_HASH_DEV : hashUserIdForTelemetry(auth.userId);
 
   // Check if user email qualifies for the dev/test bypass. The review domain ONLY — the
   // 'test'/'dev' substring checks were removed 2026-08-20: any real user whose address
@@ -563,6 +567,7 @@ export async function POST(req: NextRequest) {
         servingTier: string | null; grams: number | null; totalKcal: number | null;
         latencyMs: number; noCache: boolean; segCacheHit: boolean | null;
         funnelStage: string | null; dropReason: string | null;
+        userHash: string | null;
       };
       const eventRows: EventRow[] = [];
       const telemetryEnabled = process.env.MAPPING_EVENT_LOG_ENABLED !== 'false';
@@ -645,6 +650,7 @@ export async function POST(req: NextRequest) {
             // (it threw, or returned a 'pending' lock status) has no stage.
             funnelStage: telemetry.funnelStage ?? null,
             dropReason: telemetry.dropReason ?? null,
+            userHash: melUserHash,
           });
         }
 

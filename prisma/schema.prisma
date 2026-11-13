@@ -755,6 +755,7 @@ model MappingEventLog {
   // 'save_rejected:implausible_macros:floor:produce_kcal_below'. Null for
   // cache_hit/saved. Normalized (numbers stripped) so it groups.
   dropReason     String?
+  userHash       String?  // keyed hash of the bearer's Supabase id (16 hex), 'dev' = dev key, 'deleted' = account deleted, null = pre-2026-11 or no secret
   createdAt      DateTime @default(now())
 
   @@index([createdAt])
