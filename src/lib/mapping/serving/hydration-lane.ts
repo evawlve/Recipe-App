@@ -2914,7 +2914,11 @@ export async function buildOffResult(
     //     line lands on a constant that was ALREADY going to be at least that
     //     far from the label's own number. Refusal therefore cannot make any
     //     line worse than master billed it. That is all this argument buys —
-    //     and note which HALF of the change it covers.
+    //     and note which HALF of the change it covers. Since s457 S1 it holds
+    //     for NON-light names only: `LIGHT_SOLID_DENSITY_GML` in that module
+    //     (puffed 0.04, below the low edge; the other light classes inside it
+    //     with at most 1.5x of slack) is deliberately outside the bracket, and
+    //     on those names a refused LOW label lands on a constant CLOSER to it.
     //
     //     REFUSALS ARE BOUNDED; ADMISSIONS ARE NOT. When the band ADMITS a
     //     label this branch bills it outright, and nothing here caps how far
@@ -2936,10 +2940,10 @@ export async function buildOffResult(
     //     LABEL's implied density, and labels are a different population from
     //     the estimator's cells. THE LOW EDGE REFUSES GENUINELY LIGHT FOODS.
     //     Popcorn at `1 cup (8 g)` is 0.033 g/ml and is REAL, not corrupt; it
-    //     is refused here and billed the flat-solid 120 g, a ~15x overbill.
-    //     Puffed wheat at `1 cup (15 g)` is 0.0625 and ~8x. Both are exactly
-    //     what master bills — this lane neither causes nor fixes them — so it
-    //     is a KNOWN LIMITATION carried forward, not a regression. It is not
+    //     is still refused here, but since s457 S1 it falls to the puffed light
+    //     class (240 x 0.04 = 9.6 g) instead of the flat-solid 120 g, so the
+    //     refusal costs ~1.2x, not ~15x; puffed wheat at `1 cup (15 g)` lands on
+    //     the same 9.6 g. The low edge itself is unchanged. It is not
     //     narrowed here because nobody in this session could measure the real
     //     OFF label-density distribution (the corpus read was written and
     //     refused by the permission classifier), and moving a threshold on a
