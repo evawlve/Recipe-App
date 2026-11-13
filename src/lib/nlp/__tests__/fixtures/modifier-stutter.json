@@ -1,0 +1,229 @@
+[
+ {
+  "src": "POS sc392 (organic)",
+  "line": "five chocolate rice cakes one oikos triple 0 yogurt 200 g of mixed berries 1 tablespoon of sugar sugar-free maple syrup",
+  "input": [
+   {
+    "brand": "",
+    "rawText": "Five chocolate rice cakes",
+    "mealType": "snacks",
+    "normalizedForm": "chocolate rice cakes"
+   },
+   {
+    "brand": "oikos",
+    "rawText": "one oikos triple 0 yogurt",
+    "mealType": "snacks",
+    "normalizedForm": "triple 0 yogurt"
+   },
+   {
+    "brand": "",
+    "rawText": "200 g of mixed berries",
+    "mealType": "snacks",
+    "normalizedForm": "mixed berries"
+   },
+   {
+    "brand": "",
+    "rawText": "1 tablespoon of sugar",
+    "mealType": "snacks",
+    "normalizedForm": "sugar"
+   },
+   {
+    "brand": "",
+    "rawText": "sugar-free maple syrup",
+    "mealType": "snacks",
+    "normalizedForm": "sugar-free maple syrup"
+   }
+  ],
+  "expectRawTexts": [
+   "Five chocolate rice cakes",
+   "one oikos triple 0 yogurt",
+   "200 g of mixed berries",
+   "1 tablespoon of sugar-free maple syrup"
+  ],
+  "changed": true
+ },
+ {
+  "src": "POS sc412 (organic)",
+  "line": "two slices of ink keto white bread 2 tablespoons of sugar-free strawberry jam two oikos triple zero yogurt 2 tablespoons of sugar sugar-free creamer",
+  "input": [
+   {
+    "brand": "ink",
+    "rawText": "Two slices of ink keto white bread",
+    "mealType": "snacks",
+    "normalizedForm": "keto white bread"
+   },
+   {
+    "brand": "",
+    "rawText": "2 tablespoons of sugar-free strawberry jam",
+    "mealType": "snacks",
+    "normalizedForm": "strawberry jam"
+   },
+   {
+    "brand": "oikos",
+    "rawText": "two oikos triple zero yogurt",
+    "mealType": "snacks",
+    "normalizedForm": "triple zero yogurt"
+   },
+   {
+    "brand": "",
+    "rawText": "2 tablespoons of sugar",
+    "mealType": "snacks",
+    "normalizedForm": "sugar"
+   },
+   {
+    "brand": "",
+    "rawText": "sugar-free creamer",
+    "mealType": "snacks",
+    "normalizedForm": "creamer"
+   }
+  ],
+  "expectRawTexts": [
+   "Two slices of ink keto white bread",
+   "2 tablespoons of sugar-free strawberry jam",
+   "two oikos triple zero yogurt",
+   "2 tablespoons of sugar-free creamer"
+  ],
+  "changed": true
+ },
+ {
+  "src": "NEG a tablespoon of sugar, sugar-free gum",
+  "line": "a tablespoon of sugar, sugar-free gum",
+  "input": [
+   {
+    "rawText": "a tablespoon of sugar",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar-free gum",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a tablespoon of sugar",
+   "sugar-free gum"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG 2 tbsp sugar and sugar free syrup",
+  "line": "2 tbsp sugar and sugar free syrup",
+  "input": [
+   {
+    "rawText": "2 tbsp sugar",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar free syrup",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 tbsp sugar",
+   "sugar free syrup"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG 1 cup gluten free pasta",
+  "line": "1 cup gluten free pasta",
+  "input": [
+   {
+    "rawText": "1 cup gluten free pasta",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1 cup gluten free pasta"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG a coke, coke zero",
+  "line": "a coke, coke zero",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "coke zero",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coke",
+   "coke zero"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG 1 tbsp sugar 1 tbsp sugar-free syrup",
+  "line": "1 tbsp sugar 1 tbsp sugar-free syrup",
+  "input": [
+   {
+    "rawText": "1 tbsp sugar",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "1 tbsp sugar-free syrup",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1 tbsp sugar",
+   "1 tbsp sugar-free syrup"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG sugar sugar-free syrup",
+  "line": "sugar sugar-free syrup",
+  "input": [
+   {
+    "rawText": "sugar",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar-free syrup",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "sugar",
+   "sugar-free syrup"
+  ],
+  "changed": false
+ },
+ {
+  "src": "NEG a cup of coffee with sugar sugar-free creamer",
+  "line": "a cup of coffee with sugar sugar-free creamer",
+  "input": [
+   {
+    "rawText": "a cup of coffee with sugar",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar-free creamer",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cup of coffee with sugar",
+   "sugar-free creamer"
+  ],
+  "changed": false
+ }
+]

@@ -173,11 +173,11 @@ describe('the two predicates are related but NOT equal', () => {
         }
     });
 
-    it('but not the reverse — three members bill nothing through SERVING_AI_TIERS', () => {
+    it('but not the reverse — four members bill nothing through SERVING_AI_TIERS', () => {
         // ai_generated_serving: runs no model, reads a model-WRITTEN row.
-        // discrete_unit_backfill / fdc_size_qualifier: deliberately not added to the
+        // discrete_unit_backfill / fdc_size_qualifier / label_piece_estimate: deliberately not added to the
         // billing allowlist (see the module header) — it has its own owner doc.
-        for (const tier of ['ai_generated_serving', 'discrete_unit_backfill', 'fdc_size_qualifier']) {
+        for (const tier of ['ai_generated_serving', 'discrete_unit_backfill', 'fdc_size_qualifier', 'label_piece_estimate']) {
             expect(isReplayNondeterministicTier(tier)).toBe(true);
             expect(servingAiCallForTier(tier).called).toBe(false);
         }
@@ -233,7 +233,8 @@ describe('producer call-site census — the guard against the next silent miss',
     // identical under both rules today (verified 2026-08-18) — this restores the
     // census's stated meaning ("outside tests") without changing what it asserts.
     const EXPECTED: Record<string, number> = {
-        getOrCreateAmbiguousServing: 7,
+        // 7 -> 8 on 2026-11-12: buildOffResult() label_piece_estimate step (s456 CXL-1)
+        getOrCreateAmbiguousServing: 8,
         getOrCreateFdcSizeServings: 3,
         insertFdcAiServing: 1,
         estimateAmbiguousServing: 4,
@@ -380,7 +381,7 @@ describe('isBorrowedOrDefaultedTier — weights that are not this food\'s', () =
     // MUTATION: change the array length without deciding about the new member.
     // Sixteen is not a magic number — it is the count that the classification
     // table in the owner report justifies row by row.
-    it('has exactly eighteen members and no duplicates', () => {
+    it('has exactly nineteen members and no duplicates', () => {
         // 16 -> 17 on 2026-09-04: `off_label_volume` (punch #66) joins its
         // sibling `volume_unit`. Both multiply the requested volume by a
         // defaulted density — the lexicon's for one, the ingest's `grams := ml`
@@ -388,8 +389,9 @@ describe('isBorrowedOrDefaultedTier — weights that are not this food\'s', () =
         // 17 -> 18 on 2026-09-23: `serving_unit_sibling_label` (punch #270) —
         // the same brand-median label borrow as `bare_sibling_serving`, reached
         // from a set `serving`/`portion` unit instead of a bare line.
-        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(18);
-        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(18);
+        // 18 -> 19 on 2026-10-18: bare_prepared_drink_cup (S202), a hardcoded 240 g cup for a bare prepared drink — a table number, not this food's weight.
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(19);
+        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(19);
     });
 });
 

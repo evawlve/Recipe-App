@@ -1,0 +1,756 @@
+[
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk in it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk into it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk with it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for me",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for myself",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for them",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for you",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for us",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for him",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for her",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for her cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for yourself",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for my son",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two cookies and a latte and some milk for them",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "some milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two cookies",
+   "a latte",
+   "some milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two cookies, a latte and milk for them",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two cookies",
+   "a latte",
+   "milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two cookies, a latte and milk for dunking them",
+  "input": [
+   {
+    "rawText": "two cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two cookies",
+   "a latte",
+   "milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a bowl of cereal, a latte and milk in it",
+  "input": [
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of cereal",
+   "a latte",
+   "milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "oatmeal, a mocha and almond milk in it",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "oatmeal",
+   "a mocha",
+   "almond milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for me and my cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for me to drink later",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for me to drink",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and whole milk for me, the latte was for my wife",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk, i put it in my cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk i put in my cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk in it and cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cereal"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "two lattes and oat milk in them",
+  "input": [
+   {
+    "rawText": "two lattes",
+    "normalizedForm": "lattes",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two lattes"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk in them",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and creamer in it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "creamer",
+    "normalizedForm": "creamer",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and half and half in it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and cream for you",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cream"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte with ice and oat milk in it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk in it with ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "ice"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and oat milk for me with ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "ice"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte for me and oat milk for you",
+  "input": [
+   {
+    "rawText": "a latte for me",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte for me",
+   "oat milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and a glass of milk for me",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "a glass of milk"
+  ]
+ },
+ {
+  "src": "cloud-36 refute-r1",
+  "line": "a latte and milk for me",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ]
+ }
+]

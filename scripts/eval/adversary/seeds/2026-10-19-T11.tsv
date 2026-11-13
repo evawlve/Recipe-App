@@ -1,0 +1,106 @@
+# run 5
+# C68 S238 · 2026-10-19 · T11 · run 5 (warm, 1wZ4O…) · 7 repro (run 4) + 4 pour-onto ARTICLE pairs (the same food with a determiner, vs runs 3–4 bare) + 28 new subtraction / self-correction / extras (no chains or brands) · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+a spoonful of jam on toast	2			-;-
+a sprinkle of parmesan on spaghetti	2			-;-
+a paloma on the rocks	1			-
+a double shot latte with skim milk	1			-
+a pitcher of beer split four ways	1			-
+an espresso with a twist of lemon	1			-
+a sparkling water with a splash of cranberry juice	2			-;-
+a spoonful of jam on a slice of toast	2			-;-
+a sprinkle of parmesan on a plate of spaghetti	2			-;-
+a drizzle of honey on a piece of toast	2			-;-
+a dollop of sour cream on chili	2			-;-
+a cheeseburger, hold the onions and pickles	1			-
+a caesar salad with no croutons and the dressing on the side	2			-;-
+a chicken burrito with no sour cream or cheese	1			-
+a bowl of ramen, skipped the egg	1			-
+a turkey club minus the bacon	1			-
+an everything bagel, no cream cheese	1			-
+a slice of pepperoni pizza, picked off the pepperoni	1			-
+a hot dog without the bun, extra mustard	2			-;-
+a baked potato with sour cream but no butter	2			-;-
+a cobb salad without the egg	1			-
+a fish taco, no slaw	1			-
+a stack of pancakes, butter but no syrup	2			-;-
+coffee with milk, no sugar	2			-;-
+a grilled chicken sandwich without mayo	1			-
+pasta with marinara, skip the parmesan	2			-;-
+two slices of toast, er, one slice	1			-
+a large fries, no wait, a medium	1			-
+a cup of yogurt, actually make it half	1			-
+three cookies, okay four	1			-
+a glass of red wine, let me correct that, two glasses	1			-
+a banana and an apple, nope, just the banana	1			-
+200 g of chicken, oops 250 g	1			-
+a bagel, i meant a croissant	1			-
+a handful of almonds, more like two handfuls	1			-
+a bowl of oatmeal, actually a big bowl	1			-
+a chicken rice bowl with extra guac	2			-;-
+a turkey sub with double meat	1			-
+a bowl of curry with a side of rice	2			-;-
+# run 11
+# C68 S238 · 2026-10-19 · T11 · run 11 (warm, 1wZ4O…) · 8 repro (run 10) + 26 new: swaps, unit corrections, add-backs, seconds, a portion spread over the day · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+a glass of kefir	1			-
+a glass of buttermilk	1			-
+a whiskey sour, double	1			-
+a small glass of port	1			-
+a cup of yerba mate	1			-
+a glass of half lemonade, half sweet tea	1			-
+a 20 oz cold brew with two pumps of caramel	1			-
+a mojito with extra mint	1			-
+a burger, swap the fries for a side salad	2			-;-
+instead of rice i had cauliflower rice with my stir fry	2			-;-
+a turkey burger, sub the bun for lettuce	1			-
+a bowl of chili, but not the cornbread	1			-
+an everything bagel with cream cheese, only used half the cream cheese	2			-;-
+a cheeseburger, make that a double	1			-
+a medium fries, upgrade to a large	1			-
+eggs and toast, actually no toast	1			-
+a coffee and a donut, scratch the donut	1			-
+chicken and rice and, wait, also broccoli	3			-;-;-
+a cup, sorry, a tablespoon of peanut butter	1			-
+two tbsp, i mean two tsp of honey	1			-
+6 oz, no, 8 oz of salmon	1			-
+a coffee, then another coffee later	1			-
+seconds on the mashed potatoes	1			-
+a plate of nachos without the jalapenos and sour cream	1			-
+a sub, no mayo, no onions, extra pickles	1			-
+an iced tea, no ice	1			-
+a bowl of cereal, skipped the milk	1			-
+a salad, dressing on the side and i used half	2			-;-
+a slice of cake, gave the frosting to my kid	1			-
+a baked potato, ate the inside but not the skin	1			-
+half a sandwich, then the other half later	1			-
+two eggs, then one more	1			-
+a large pizza, i had three of the eight slices	1			-
+a cup of soup, ended up having two	1			-
+# run 17
+# C68 S238 · 2026-10-19 · T11 · run 17 (warm, 1wZ4O…) · 5 repro (run 16) + 22 new: substitutions, ranges, percentages, corrections inside multi-food lines, saved-for-later · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+a 2 liter bottle of water over the day	1			-
+a quart of water	1			-
+a pint of water with lemon	2			-;-
+a few sips of my partner's beer	1			-
+a tall glass of iced matcha	1			-
+not a burger but a turkey burger	1			-
+a coffee or two	1			-
+one or two slices of pizza	1			-
+about 80% of a burrito	1			-
+all but one cookie from a pack of six	1			-
+a chicken plate, ate everything except the rice	1			-
+a bowl of chili minus the toppings	1			-
+a bagel, well, three quarters of it	1			-
+a slice of cake, maybe two	1			-
+a cup of rice, plus a little more	1			-
+a pork chop and potatoes, no wait, sweet potatoes	2			-;-
+a turkey sandwich and an apple, actually a pear	2			-;-
+a latte, oops, an americano	1			-
+three tacos, two chicken and one fish	2			-;-
+a handful of cashews, maybe a bit less	1			-
+a big salad, but i skipped the cheese and croutons	1			-
+pancakes, i think three	1			-
+a burrito, half now and half for later	1			-
+a pint of ice cream over two nights, this is night one	1			-
+two slices of bread, one with butter	2			-;-
+a cup of yogurt, but only like half of it	1			-
+a hamburger without the cheese, plus a side of onion rings	2			-;-

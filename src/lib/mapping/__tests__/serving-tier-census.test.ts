@@ -156,6 +156,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     // pins the two together in both directions so neither can drift.
     count_unit_ai: 'NONDETERMINISTIC',
     discrete_unit_backfill: 'NONDETERMINISTIC',
+    label_piece_estimate: 'NONDETERMINISTIC',
     fdc_size_estimate: 'NONDETERMINISTIC',
     fdc_medium_estimate: 'NONDETERMINISTIC',
     fdc_size_qualifier: 'NONDETERMINISTIC',
@@ -177,6 +178,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     bare_category_default: 'BORROWED_OR_DEFAULTED',
     bare_query_default: 'BORROWED_OR_DEFAULTED',
     bare_discrete_floor: 'BORROWED_OR_DEFAULTED',
+    bare_prepared_drink_cup: 'BORROWED_OR_DEFAULTED',
     volume_unit: 'BORROWED_OR_DEFAULTED',
     // buildOffResult()'s own-label volume read (punch #66). Classified here and
     // NOT as OWN: it bills `qty x unitMl x (servingGrams / declaredMl)`, and that
@@ -200,13 +202,16 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     weight_unit: 'USER',
     fs_weight_direct: 'USER',
 
-    // ============================= OWN — 18 members ============================
+    // ============================= OWN — 19 members ============================
     // `buildOffResult()` in serving/hydration-lane.ts:
     bare_label_serving: 'OWN',
     bare_plural_serving: 'OWN',
     label_unit_match: 'OWN',
     label_serving_package_unit: 'OWN',
     label_count_derived: 'OWN',
+    name_count_derived: 'OWN',
+    // +1 on 2026-10-20: buildOffResult() gained label_count_band_derived (C70 row 10)
+    label_count_band_derived: 'OWN',
     label_serving_default: 'OWN',
     package_count_own: 'OWN',
     package_quantity_own: 'OWN',
@@ -323,6 +328,9 @@ const KNOWN_INDIRECT_ASSIGNMENTS: Readonly<Record<string, string>> = Object.free
         'applyOffBareQueryGuard() return; its literals are scanned at their producer',
     // Pass-throughs onto a log/validator payload. None stamps a result.
     'input.servingTier': 'cache-validator payload pass-through',
+    // a-bit-of row: the amount-hedge wrapper reads the core's tier to decide whether to scale; it assigns no new tier.
+    'served.servingTier': 'amount-hedge wrapper read of the core tier; assigns nothing',
+    'served.servingTier ?? null': 'amount-hedge wrapper audit-log pass-through',
     'result.servingTier ?? null': 'mapper -> analysis-log pass-through',
     'isMapped ? ((mapped as any).servingTier ?? null) : null':
         '/api/nlp/parse -> MappingEventLog row pass-through',
@@ -521,8 +529,12 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // (punch #66). The scan found the new string on its own and this
         // assertion is what forced it to be classified — which is the whole
         // reason the census exists.
-        expect(LIVE_TIERS).toHaveLength(55);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(55);
+        // 55 -> 56 on 2026-10-18: buildOffResult() gained bare_prepared_drink_cup (S202)
+        // 56 -> 57 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
+        // 57 -> 58 on 2026-10-22: buildOffResult() gained label_count_band_derived (C70 row 10)
+        // 58 -> 59 on 2026-11-12: buildOffResult() gained label_piece_estimate (s456 CXL-1)
+        expect(LIVE_TIERS).toHaveLength(59);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(59);
     });
 });
 
@@ -595,7 +607,9 @@ describe('the map agrees with the shipped predicates', () => {
     it('OWN and USER are unknown to all five shipped predicates', () => {
         const unclaimed = LIVE_TIERS.filter((t) =>
             EXPECTED_CLASS[t] === 'OWN' || EXPECTED_CLASS[t] === 'USER');
-        expect(unclaimed.length).toBe(20);
+        // 20 -> 21 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
+        // 21 -> 22 on 2026-10-22: buildOffResult() gained label_count_band_derived (C70 row 10)
+        expect(unclaimed.length).toBe(22);
         for (const t of unclaimed) {
             expect(isBorrowedOrDefaultedTier(t)).toBe(false);
             expect(isReplayNondeterministicTier(t)).toBe(false);

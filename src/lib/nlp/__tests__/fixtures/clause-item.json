@@ -1,0 +1,836 @@
+[
+ {
+  "src": "c68 run20",
+  "line": "a muffin, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "top of muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a muffin and i ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "i ate the top only",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "gave half to my friend",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, i gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "i gave half to my friend",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, left most of it",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "left most of it",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/4 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a burrito, shared half the burrito",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half the burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 burrito",
+    "normalizedForm": "burrito"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, shared half the pizza with my son",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half the pizza with my son",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a cookie, left some",
+  "input": [
+   {
+    "rawText": "a cookie",
+    "normalizedForm": "cookie",
+    "brand": ""
+   },
+   {
+    "rawText": "left some",
+    "normalizedForm": "cookie",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3/4 cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bagel, but left some of it",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "but left some of it",
+    "normalizedForm": "bagel",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3/4 bagel",
+    "normalizedForm": "bagel"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat multi",
+  "line": "a coffee, a muffin, ate the top only",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat multi",
+  "line": "a muffin, a coffee, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat multi",
+  "line": "a muffin, ate the top only, and a coffee",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat stated",
+  "line": "two slices of pizza, gave half away",
+  "input": [
+   {
+    "rawText": "two slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "gave half away",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "two slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat stated",
+  "line": "a 12 inch sub, gave half to my brother",
+  "input": [
+   {
+    "rawText": "a 12 inch sub",
+    "normalizedForm": "sub",
+    "brand": ""
+   },
+   {
+    "rawText": "gave half to my brother",
+    "normalizedForm": "sub",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 12 inch sub",
+    "normalizedForm": "sub"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 M1",
+  "line": "a pizza, shared half and a coke",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half and a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "shared half and a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 M1",
+  "line": "a muffin, ate the top only and a coffee",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only and a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "ate the top only and a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 M1",
+  "line": "a burger, left some and had a cookie",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "left some and had a cookie",
+    "normalizedForm": "cookie",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "left some and had a cookie",
+    "normalizedForm": "cookie"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 M1",
+  "line": "a pizza, shared half the pizza and wings",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half the pizza and wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "shared half the pizza and wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 M2",
+  "line": "a sandwich, two of them, gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "gave half to my friend",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial",
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 M2",
+  "line": "a burrito, maybe two, shared half",
+  "input": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half",
+    "normalizedForm": "burrito",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burrito",
+    "normalizedForm": "burrito"
+   }
+  ],
+  "expectKinds": [
+   "partial",
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 M2",
+  "line": "a slice of pizza, maybe two, gave half away",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "gave half away",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 M2",
+  "line": "a donut, um two of them, left some",
+  "input": [
+   {
+    "rawText": "a donut",
+    "normalizedForm": "donut",
+    "brand": ""
+   },
+   {
+    "rawText": "left some",
+    "normalizedForm": "donut",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a donut",
+    "normalizedForm": "donut"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat r2",
+  "line": "a muffin, um, ate the top only",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": true
+ },
+ {
+  "src": "control",
+  "line": "coffee, shared half and half",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half and half",
+    "normalizedForm": "half and half",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "shared half and half",
+    "normalizedForm": "half and half"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a muffin, ate the top",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "ate the top",
+    "normalizedForm": "muffin top",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "ate the top",
+    "normalizedForm": "muffin top"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a burger, shared half a pizza",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "shared half a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "shared half a pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a salad, left some croutons",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "left some croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "left some croutons",
+    "normalizedForm": "croutons"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a muffin",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "ate the top only",
+  "input": [
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "top of muffin",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "ate the top only",
+    "normalizedForm": "top of muffin"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a muffin, a coffee",
+  "input": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "control",
+  "line": "a sandwich, i gave half to my friend",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "partial"
+  ],
+  "changed": false
+ }
+]

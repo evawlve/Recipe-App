@@ -18,6 +18,23 @@ export type FatSecretBarcodeFood = {
   }>;
 };
 
+// One client for the whole process. The OAuth token is cached PER INSTANCE, so a
+// fresh client per scan paid token + find_id + food.get every time (s450a2 measured
+// the token hop at about 0.1 s of a ~309 ms FatSecret leg). A 401 still forces one
+// refresh inside request(). Credentials are read at construction, so a credential
+// change needs a recipe-api restart (it always did).
+let barcodeClient: FatSecretClient | undefined;
+
+function getBarcodeClient(): FatSecretClient {
+  if (!barcodeClient) barcodeClient = new FatSecretClient();
+  return barcodeClient;
+}
+
+/** Test seam: inject a client, or pass undefined to reset the singleton. */
+export function __setFatSecretBarcodeClientForTests(client: FatSecretClient | undefined): void {
+  barcodeClient = client;
+}
+
 /**
  * Look up a food item by barcode using FatSecret API.
  * 
@@ -42,7 +59,7 @@ export async function lookupFatSecretBarcode(
     return null;
   }
 
-  const client = opts?.client ?? new FatSecretClient();
+  const client = opts?.client ?? getBarcodeClient();
 
   try {
     const foodDetails = await client.getFoodByBarcode(trimmed);

@@ -187,7 +187,6 @@ describe('normalizeIngredientName', () => {
             { prep: 'cubed', food: 'potatoes', expected: 'potatoes' },
             { prep: 'shredded', food: 'cheese', expected: 'cheese' },
             { prep: 'grated', food: 'parmesan', expected: 'parmesan' },
-            { prep: 'mashed', food: 'bananas', expected: 'bananas' },
             { prep: 'seeded', food: 'pineapple', expected: 'pineapple' },
             { prep: 'julienned', food: 'carrots', expected: 'carrots' },
         ];
@@ -367,5 +366,27 @@ describe('end-to-end: parse and normalize', () => {
         // basis alone, 'hard-boiled' does not.
         const normalized = normalizeIngredientName(parsed!.name);
         expect(normalized.cleaned.toLowerCase()).toBe('hard-boiled eggs');
+    });
+});
+
+describe('mashed is a dish, not a prep (S202)', () => {
+    it('keeps mashed on mashed potatoes', () => {
+        expect(normalizeIngredientName('mashed potatoes').cleaned).toBe('mashed potatoes');
+    });
+    it('keeps mashed on mashed bananas', () => {
+        expect(normalizeIngredientName('mashed bananas').cleaned).toBe('mashed bananas');
+    });
+    it('separates the mashed dish key from the raw key', () => {
+        expect(normalizeIngredientName('mashed potatoes').cleaned).not.toBe(
+            normalizeIngredientName('potatoes').cleaned
+        );
+    });
+    it('the shipped JSON prep_phrases has no mashed', () => {
+        const fs = require('fs');
+        const path = require('path');
+        const json = JSON.parse(
+            fs.readFileSync(path.join(process.cwd(), 'data/fatsecret/normalization-rules.json'), 'utf8')
+        );
+        expect(json.prep_phrases).not.toContain('mashed');
     });
 });

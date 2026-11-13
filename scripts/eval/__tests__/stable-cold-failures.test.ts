@@ -345,8 +345,10 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         //
         // 2026-10-07: n-mq-42 LEFT for `departed` UNFIXED — flagged knownIssue on Diego's
         // call, so it moved to the other (excused) population; it still fails cold.
+        //
+        // 2026-10-18: n-mq-41 left the set — fixed by #505 (S202).
         const REAL_MEMBERS = [
-            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01',
+            'n-cook-03', 'n-mod-02', 'n-prod-01',
             'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
         ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());

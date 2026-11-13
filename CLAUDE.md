@@ -13,7 +13,7 @@ Code, DB, and pipeline conventions are already documented — follow them, don't
 ## 🛠️ Commands
 
 - **Dev**: `npm run dev` · **Build**: `npm run build` · **Start (prod)**: `npm run start`
-- **Lint (CI parity)**: `npm run lint:ci` · **Typecheck**: `npm run typecheck` · **Test**: `npm run test`
+- **Lint**: `npm run lint` (= `eslint .`, same file set as CI) · **Lint (CI parity)**: `npm run lint:ci` (= `eslint . --max-warnings 447`, what `build` runs) · **Typecheck**: `npm run typecheck` · **Test**: `npm run test`
 - **Migration smoke test**: `npm run migrate:smoke`
 - **Run one-off TS scripts** (ingestion, eval): via **`ts-node`**, NOT `tsx` — e.g. `ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/<name>.ts`. The eval harness lives in `scripts/eval/` (golden set + stress-latency).
 
