@@ -91,6 +91,11 @@ export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://a
 // OpenRouter configuration for cheap-first LLM fallback (Jan 2026)
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? '';
 export const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
+// Anthropic Messages API leg at the head of the structured chain (dormant while the key is empty).
+export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
+export const ANTHROPIC_API_BASE_URL = process.env.ANTHROPIC_API_BASE_URL ?? 'https://api.anthropic.com/v1';
+export const ANTHROPIC_CHEAP_MODEL = process.env.ANTHROPIC_CHEAP_MODEL ?? 'claude-haiku-5-5';
+export const ANTHROPIC_PURPOSES = (process.env.ANTHROPIC_PURPOSES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 export const CHEAP_AI_MODEL_PRIMARY = process.env.CHEAP_AI_MODEL_PRIMARY ?? 'openai/gpt-4o-mini';
 export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'google/gemini-2.5-flash';
 export const STRUCTURED_LLM_TIMEOUT_MS = Number.parseInt(process.env.STRUCTURED_LLM_TIMEOUT_MS ?? '15000', 10);
@@ -114,6 +119,10 @@ export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/m
 // The exact slug is an enable-time box-.env value, not code.
 export const CACHE_VALIDATOR_ENABLED = getFlag('CACHE_VALIDATOR_ENABLED', false);
 export const VALIDATOR_AI_MODEL = process.env.VALIDATOR_AI_MODEL ?? '';
+// Which transport bills the validator. 'anthropic' = the Messages API on the Max-plan credit; it needs
+// ANTHROPIC_API_KEY and a Messages-API model id (e.g. claude-sonnet-5) in VALIDATOR_AI_MODEL.
+// Anything else = OpenRouter, today's single-entry chain.
+export const VALIDATOR_AI_PROVIDER: 'openrouter' | 'anthropic' = process.env.VALIDATOR_AI_PROVIDER === 'anthropic' ? 'anthropic' : 'openrouter';
 
 // ---------------------------------------------------------------------------
 // mapping-analysis candidate depth (2026-08-12)

@@ -1,0 +1,1144 @@
+[
+ {
+  "src": "seat: cloud-38 G2",
+  "line": "a homemade burrito with chicken from yesterday for lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat: cloud-38 G2",
+  "line": "a homemade burrito with chicken from last night for breakfast, and eggs at noon",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "eggs"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat: meal frame",
+  "line": "a homemade burrito with chicken from yesterday at dinner and a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: meal frame",
+  "line": "a homemade sandwich with turkey from the deli as a snack and chips",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "homemade sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "chips"
+  ],
+  "dropped": [
+   "turkey"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: meal frame",
+  "line": "a homemade pizza with sausage from sunday for dinner and wings",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage",
+    "normalizedForm": "sausage",
+    "brand": ""
+   },
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "wings"
+  ],
+  "dropped": [
+   "sausage"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: C12 control",
+  "line": "a homemade burrito with chicken from last night's dinner and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: C12 control",
+  "line": "a homemade burrito with chicken from lunch yesterday and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "cheese"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: C12 control",
+  "line": "a homemade burrito with chicken from lunch. later steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: C12 control",
+  "line": "a homemade burrito with eggs and cheese. later a steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a steak"
+  ],
+  "dropped": [
+   "eggs",
+   "cheese"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: control",
+  "line": "a homemade burrito with chicken and rice for lunch",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat: control",
+  "line": "a homemade burrito with chicken for lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for my lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for a late lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for an early dinner and eggs for breakfast",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "eggs"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for today's lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for the lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday as my lunch and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for snacks and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "steak"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday this morning and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday at breakfast and steak at dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday as a snack and steak for dinner",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "i made a sandwich with turkey from the deli for lunch and salmon for dinner",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "salmon",
+    "normalizedForm": "salmon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "salmon"
+  ],
+  "dropped": [
+   "turkey"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from what i made for dinner and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from what we had for dinner last night and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "cheese"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken left over from what i cooked for dinner and beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "beans"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "i made a sandwich with turkey from the one i packed for lunch and cheese",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "cheese"
+  ],
+  "dropped": [
+   "turkey"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade pizza with sausage from the batch i grilled for dinner and mushrooms",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage",
+    "normalizedForm": "sausage",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "mushrooms"
+  ],
+  "dropped": [
+   "sausage"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with leftovers from lunch for dinner and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "leftovers",
+    "normalizedForm": "leftovers",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "leftovers",
+   "rice"
+  ],
+  "dropped": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from the lunch for dinner and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for lunch and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for lunch and rice and beans",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice",
+   "beans"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken for lunch and rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday as well as rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "rice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from the place at work and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "cheese"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday at lunch time and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "cheese"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday at dinner and a coke",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "a coke"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from the cafe for dessert and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "cheese"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for lunch then steak",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "steak"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1",
+  "line": "a homemade burrito with chicken from yesterday for lunch with rice",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "homemade burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "rice"
+  ],
+  "dropped": [
+   "chicken"
+  ],
+  "changed": true
+ }
+]

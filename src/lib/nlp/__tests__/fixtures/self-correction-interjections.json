@@ -1,0 +1,606 @@
+[
+ {
+  "src": "s240 draw",
+  "line": "two slices of toast, er, one slice",
+  "input": [
+   {
+    "rawText": "two slices of toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "one slice",
+    "normalizedForm": "slice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "1 slice of toast"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a large fries, no wait, a medium",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a medium",
+    "normalizedForm": "medium",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large fries",
+   "a medium"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "three cookies, okay four",
+  "input": [
+   {
+    "rawText": "three cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "four cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "4 cookies"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "three cookies, okay four",
+  "input": [
+   {
+    "rawText": "three cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "four",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "4 cookies"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a banana and an apple, nope, just the banana",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "an apple"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "200 g of chicken, oops 250 g",
+  "input": [
+   {
+    "rawText": "200 g of chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "250 g",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "250 g of chicken"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a bagel, i meant a croissant",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "a croissant",
+    "normalizedForm": "croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "a croissant"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "two eggs, um, three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 eggs"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "two eggs, uh, toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "toast"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "a coffee, ok, two muffins",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two muffins",
+    "normalizedForm": "muffins",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "two muffins"
+  ]
+ },
+ {
+  "src": "s240 draw",
+  "line": "three tacos, whoops, two tacos",
+  "input": [
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 tacos"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "a turkey sandwich, um, a ham sandwich",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a ham sandwich",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a ham sandwich"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "orange juice, um, apple juice",
+  "input": [
+   {
+    "rawText": "orange juice",
+    "normalizedForm": "orange juice",
+    "brand": ""
+   },
+   {
+    "rawText": "apple juice",
+    "normalizedForm": "apple juice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "orange juice",
+   "apple juice"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "cereal with milk, um, a glass of milk",
+  "input": [
+   {
+    "rawText": "cereal with milk",
+    "normalizedForm": "cereal",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "cereal with milk",
+   "milk"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "cereal with milk, um, a glass of milk",
+  "input": [
+   {
+    "rawText": "cereal with milk",
+    "normalizedForm": "cereal",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "cereal with milk",
+   "milk",
+   "a glass of milk"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "two eggs, toast, three eggs, ok",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "toast",
+   "three eggs"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "a coffee, okay, one for my wife",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "white rice, uh, brown rice",
+  "input": [
+   {
+    "rawText": "white rice",
+    "normalizedForm": "white rice",
+    "brand": ""
+   },
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "white rice",
+   "brown rice"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "a large fries, um, a small fries",
+  "input": [
+   {
+    "rawText": "a large fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a small fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a large fries",
+   "a small fries"
+  ]
+ },
+ {
+  "src": "s240 negative-control draw",
+  "line": "eggs, um, toast, um, bacon",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs",
+   "toast",
+   "bacon"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a coffee, ok, and two muffins",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two muffins",
+    "normalizedForm": "muffins",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "two muffins"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a burger, um, fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "two eggs, ok, also three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "also three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two eggs",
+   "also three eggs"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a sandwich, okay, another sandwich",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "another sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "another sandwich"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "two coffees, ok so two more coffees",
+  "input": [
+   {
+    "rawText": "two coffees",
+    "normalizedForm": "coffees",
+    "brand": ""
+   },
+   {
+    "rawText": "two more coffees",
+    "normalizedForm": "coffees",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two coffees",
+   "two more coffees"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a bagel, oops, a croissant",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "a croissant",
+    "normalizedForm": "croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bagel",
+   "a croissant"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a pizza, nope, two slices",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "2 slices of pizza"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "three cookies, ok, three cookies",
+  "input": [
+   {
+    "rawText": "three cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "three cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "3 cookies"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "cereal with milk, um, a glass of milk",
+  "input": [
+   {
+    "rawText": "cereal with milk",
+    "normalizedForm": "cereal with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "cereal with milk",
+   "a glass of milk"
+  ]
+ },
+ {
+  "src": "s240 attack",
+  "line": "a smoothie with banana, um, a banana",
+  "input": [
+   {
+    "rawText": "a smoothie with banana",
+    "normalizedForm": "smoothie with banana",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie with banana",
+   "a banana"
+  ]
+ }
+]

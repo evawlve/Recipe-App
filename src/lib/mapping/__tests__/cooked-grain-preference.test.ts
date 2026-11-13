@@ -1,5 +1,6 @@
 import { detectGrainCookingContext, isWrongCookingStateForGrain } from '../filter-candidates';
 import { simpleRerank, type RerankCandidate } from '../simple-rerank';
+import { isExplicitCookedGrainVolumeLine } from '../filter-candidates';
 
 /**
  * Cooked-vs-dry grain fix (Jul 2026).
@@ -107,5 +108,89 @@ describe('rerank cooked-grain partition', () => {
         });
         const result = simpleRerank('quinoa', [dryA, dryB], undefined, '1 cup quinoa');
         expect(result.winner?.id).toBe('fdc_dry');
+    });
+});
+
+/**
+ * Explicit-cooked twin (C6970 s396, 2026-10-27): `isExplicitCookedGrainVolumeLine()` is true for
+ * a line `detectGrainCookingContext()` reads as explicit-cooked (preferCooked, NOT softCooked)
+ * whose head noun (last token of the normalized name) is a VOLUME_COOKED_GRAINS grain, logged by
+ * an eaten-portion volume unit, with no dry signal. `simpleRerank()` gives such a line the same
+ * cooked-grain boost / partition / 0.75 floor as the soft twin. Fixture-level pins live in
+ * explicit-cooked-grain-floor.test.ts.
+ */
+describe('isExplicitCookedGrainVolumeLine', () => {
+    it.each([
+        ['1 cup cooked oats', 'oats', true],
+        ['half a cup of cooked rolled oats', 'rolled oats', true],
+        ['2 cups cooked quinoa', 'quinoa', true],
+        ['a bowl of cooked rice', 'rice', true],
+        // The cooking keyword list is matched by substring, so steamed/fried/baked lines count too.
+        ['a bowl of steamed rice', 'rice', true],
+        // Head-noun rule: the grain word is a modifier, not the food.
+        ['steamed oat milk', 'oat milk', false],
+        ['a cup of rice vinegar', 'rice vinegar', false],
+        ['cooked rice flour', 'rice flour', false],
+        // Weight unit: no volume unit, and `oz` is in GRAIN_DRY_SIGNAL_RE.
+        ['4 oz of cooked pasta', 'pasta', false],
+        ['100 g uncooked rice', 'rice', false],
+        // Boundary: `uncooked` contains `cooked`, so detectGrainCookingContext() reads it
+        // preferCooked; only the GRAIN_DRY_SIGNAL_RE clause (`uncooked`) makes this false.
+        ['a cup of uncooked rice', 'rice', false],
+    ])('%s (%s) -> %s', (rawLine, normalizedName, expected) => {
+        expect(isExplicitCookedGrainVolumeLine(rawLine, normalizedName)).toBe(expected);
+    });
+
+    it('is never true on a soft-cooked line (the soft branch already owns it)', () => {
+        expect(detectGrainCookingContext('1 cup oats', 'oats').softCooked).toBe(true);
+        expect(isExplicitCookedGrainVolumeLine('1 cup oats', 'oats')).toBe(false);
+    });
+});
+
+describe('rerank cooked-grain preference stays off dry and non-grain lines', () => {
+    function cand(partial: Partial<RerankCandidate> & { id: string; name: string }): RerankCandidate {
+        return { score: 0.5, source: 'openfoodfacts', ...partial };
+    }
+
+    it('100 g uncooked rice: no cooked_grain_preference reason', () => {
+        const dry = cand({
+            id: 'fdc_dry', name: 'uncooked rice', source: 'fdc', score: 0.9,
+            nutrition: { kcal: 365, protein: 7.1, carbs: 80, fat: 0.7, per100g: true },
+        });
+        const cooked = cand({
+            id: 'fdc_cooked', name: 'white rice cooked unenriched', source: 'fdc', score: 0.6,
+            nutrition: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, per100g: true },
+        });
+        const result = simpleRerank('rice', [dry, cooked], undefined, '100 g uncooked rice');
+        expect(result.reason).not.toBe('cooked_grain_preference');
+        expect(result.winner?.id).toBe('fdc_dry');
+    });
+
+    it('steamed oat milk: no cooked_grain_preference reason', () => {
+        const milk = cand({
+            id: 'off_milk', name: 'Oat Milk', score: 0.9,
+            nutrition: { kcal: 46, protein: 1, carbs: 7, fat: 1.5, per100g: true },
+        });
+        const oats = cand({
+            id: 'fs_oats', name: 'Steel Cut Oats (Cooked)', source: 'fatsecret', score: 0.6,
+            nutrition: { kcal: 73, protein: 3.1, carbs: 12, fat: 1.5, per100g: true },
+        });
+        const result = simpleRerank('oat milk', [milk, oats], undefined, 'steamed oat milk');
+        expect(result.reason).not.toBe('cooked_grain_preference');
+        expect(result.winner?.id).toBe('off_milk');
+    });
+
+    it('boundary: the same cooked candidate DOES get the preference on `a cup of cooked rice`', () => {
+        const dry = cand({
+            id: 'off_dry', name: 'White Rice', score: 0.9,
+            nutrition: { kcal: 356, protein: 7, carbs: 80, fat: 0.6, per100g: true },
+        });
+        const cooked = cand({
+            id: 'fdc_cooked', name: 'white rice cooked unenriched', source: 'fdc', score: 0.6,
+            nutrition: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, per100g: true },
+        });
+        const result = simpleRerank('rice', [dry, cooked], undefined, 'a cup of cooked rice');
+        expect(result.winner?.id).toBe('fdc_cooked');
+        expect(result.reason).toBe('cooked_grain_preference');
     });
 });

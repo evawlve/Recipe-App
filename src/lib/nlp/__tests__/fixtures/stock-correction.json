@@ -1,0 +1,5207 @@
+[
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "ate 3",
+    "normalizedForm": "ate 3",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 family size bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, um, ate 3, no wait, 5",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "5 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no wait, 5",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "5 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no wait, 5",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "5",
+    "normalizedForm": "5",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "5 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate half, actually a third",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate half, actually a third",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "a third",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1/2 family size bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "a third",
+    "normalizedForm": "a third"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "chips, sorry, 4",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, 4 cookies",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, 4 chips",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, um, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, um, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, for lunch",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, wait, 4, no, 5",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "5 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 30",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "30 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sleeve of oreos, ate 4, oops, 6",
+  "input": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   },
+   {
+    "rawText": "6",
+    "normalizedForm": "6",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 oreos",
+    "normalizedForm": "oreos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 2 slices, wait, 3",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3, and a burger",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, sorry, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "2 tacos, actually 3",
+  "input": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, a coke",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 2 slices, wait, 3 slices",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 30",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "30 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 8",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no, 4 were stale",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no, 4 were stale",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, no, 3 of my friends had the rest",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3 were left",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3 left",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3 left",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, sorry, 3 more",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, sorry, 3 more",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, 4 more",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, 4 left",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, 2 cookies",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, 2 cookies",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "2 cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "2 cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, 2 cookies",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coffee, had 1, sorry, 2 donuts",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coffee, had 1, sorry, 2 donuts",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, make it a dozen",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "12 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, make it a dozen",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "a dozen",
+    "normalizedForm": "a dozen",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "12 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3 cans",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3 cans",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3 cans",
+    "normalizedForm": "3 cans",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 cans of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sleeve of oreos, ate 4, actually 2 oreos",
+  "input": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 oreos",
+    "normalizedForm": "oreos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, wait, 2 hours later",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, wait, 3 for my kids",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, wait, 3 for my kids",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a 6 pack of beer, drank 2, my wife had 3, no wait, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a 6 pack of beer, drank 2, my wife had 3, no wait, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, then had 3, no wait, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, then had 3, no wait, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, gave 4 to my kids, sorry, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, then later ate 2 more, sorry, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, then the kids ate 6, sorry, 8",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a family size bag of chips, ate 3, the kids ate 6, sorry, 8",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a family size bag of chips, ate 3, the kids ate 6, sorry, 8",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "8",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "8 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, um, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, um, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, um, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, um, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a burger, ate 1, actually 2, and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger, had 1, actually 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "2 burritos, ate 1, actually 2",
+  "input": [
+   {
+    "rawText": "2 burritos",
+    "normalizedForm": "burritos",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burritos",
+    "normalizedForm": "burritos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "2 burritos, ate 1, actually 2",
+  "input": [
+   {
+    "rawText": "2 burritos",
+    "normalizedForm": "burritos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 burritos",
+    "normalizedForm": "burritos"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "12 wings, ate 6, sorry, 8",
+  "input": [
+   {
+    "rawText": "12 wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "8",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "8 wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "12 wings, ate 6, sorry, 8",
+  "input": [
+   {
+    "rawText": "12 wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "8 wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a large pizza, had 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a large pizza, had 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, 4 cups",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4 cups",
+    "normalizedForm": "4 cups",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 cups of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, sorry, 2 boxes",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "2 boxes",
+    "normalizedForm": "2 boxes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 boxes of donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, sorry, 3 tacos",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, sorry, 3 tacos",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, no, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, no, i drank 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a sandwich, ate 1, actually gave half",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 sandwich",
+    "normalizedForm": "sandwich"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, scratch that, a coke",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, scratch that, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, scratch that, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a coffee, had 1, make it a large",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, i mean 2 is a lot",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait 3 hours, then 2 more",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2 for breakfast, oops, 2 for lunch",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3 at lunch, sorry, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, wait, 4, sorry, for lunch",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer and a bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, a coke, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "3 coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, a coke, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "4 coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, finished 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, finished 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, i've had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "drank 2",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "drank 2",
+    "normalizedForm": "drank 2"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "6 eggs, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "had 2",
+    "normalizedForm": "had 2",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "6 eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "had 2",
+    "normalizedForm": "had 2"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "family size bag of chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "family size bag of chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "family size chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size chips",
+    "normalizedForm": "family size chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "sorry, 4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "sorry, 4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3 beers",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "3 beers",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "actually 3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "actually 3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no wait 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 1 slice, wait, 2 slices",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 slice of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 2 slices, actually 2 and a half",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 1, actually half",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no, 1",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no, 1",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "1",
+    "normalizedForm": "1",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, oops, 4 total",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, nope, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, i mean 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, no wait, i ate 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, wait, i ate 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 12 pack of soda, drank 2, actually 12 oz each",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 12 pack of soda, drank 2, actually, 1 was a diet",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, wait, 3, and a burger",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   },
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger, a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger, a 6 pack of beer, drank 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, wait no, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, no, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, no 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, actually 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, actually 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "actually 4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "actually 4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "two eggs, had 1, wait, 2",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a dozen eggs, had 2, wait, 3 eggs",
+  "input": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a dozen eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, sorry, a few more",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, wait, 4 of them",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3, wait, 4 of them",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4 of them",
+    "normalizedForm": "4 of them",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, sorry, 3 of them",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "3 of them",
+    "normalizedForm": "3 of them",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 12 pack of soda, drank 2, sorry, 12 oz",
+  "input": [
+   {
+    "rawText": "a 12 pack of soda",
+    "normalizedForm": "soda",
+    "brand": ""
+   },
+   {
+    "rawText": "12 oz",
+    "normalizedForm": "12 oz",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "12 oz of soda",
+    "normalizedForm": "soda"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2, sorry, 12 oz",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "12 oz",
+    "normalizedForm": "12 oz",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   },
+   {
+    "rawText": "12 oz",
+    "normalizedForm": "12 oz"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, 1 oz",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "1 oz",
+    "normalizedForm": "1 oz",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 oz of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3, sorry, 4 bags",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4 bags",
+    "normalizedForm": "4 bags",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 bags of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, sorry, 2 dozen",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "2 dozen",
+    "normalizedForm": "2 dozen",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "2 dozen",
+    "normalizedForm": "2 dozen"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, actually, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, i ate like 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate maybe 3, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3 chips, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3 chips, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3 cookies, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3 cookies, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "4 family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "cloud-40 F2",
+  "line": "a family size bag of chips, ate 3 cookies, sorry, 4",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "3 cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "3 cookies",
+    "normalizedForm": "cookies"
+   },
+   {
+    "rawText": "4",
+    "normalizedForm": "4"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bag of chips, ate 3 cookies, sorry, 4",
+  "input": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a sleeve of oreos, ate 4, no, 6 oreos and a milk",
+  "input": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   },
+   {
+    "rawText": "a milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos"
+   },
+   {
+    "rawText": "a milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a sleeve of oreos and a glass of milk, ate 4, sorry, 6",
+  "input": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a glass of milk and a sleeve of oreos, ate 4, sorry, 6",
+  "input": [
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a sleeve of oreos, a glass of milk, had 1, sorry, 2",
+  "input": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a sleeve of oreos",
+    "normalizedForm": "oreos"
+   },
+   {
+    "rawText": "1 glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "eggs, had 2, sorry, 3",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "eggs, had 2, sorry, 3",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger and fries, had 1, sorry, 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger, fries, had 1, sorry, 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "1 fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a burger, fries, had 1, sorry, 2",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "2",
+    "normalizedForm": "2",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "2 fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "pancakes, had 2, actually 3 with syrup",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "pancakes, had 2, actually 3, with syrup",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "syrup",
+    "normalizedForm": "syrup"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a stack of pancakes, had 2, wait, 3",
+  "input": [
+   {
+    "rawText": "a stack of pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 stack of pancakes",
+    "normalizedForm": "pancakes"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a plate of wings, had 6, wait, 10",
+  "input": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a plate of wings, had 6, wait, 10",
+  "input": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "10",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a plate of wings",
+    "normalizedForm": "wings"
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "10"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bowl of grapes, ate 10, sorry, 20",
+  "input": [
+   {
+    "rawText": "a bowl of grapes",
+    "normalizedForm": "grapes",
+    "brand": ""
+   },
+   {
+    "rawText": "20",
+    "normalizedForm": "20",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bowl of grapes",
+    "normalizedForm": "grapes"
+   },
+   {
+    "rawText": "20",
+    "normalizedForm": "20"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bowl of grapes, ate 10, sorry, 20",
+  "input": [
+   {
+    "rawText": "a bowl of grapes",
+    "normalizedForm": "grapes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bowl of grapes",
+    "normalizedForm": "grapes"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a tray of cookies, ate 2, oh wait, 3",
+  "input": [
+   {
+    "rawText": "a tray of cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a tray of cookies, ate 2, oh wait, 3",
+  "input": [
+   {
+    "rawText": "a tray of cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no no, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no, no, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2, no, no, 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "chips, ate 3 cookies, sorry, 4",
+  "input": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a burger, had 2 fries, sorry, 3",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a burger, had 2 fries, sorry, 3",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 burger",
+    "normalizedForm": "burger"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a salad, ate 2 croutons, sorry, 5",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a coffee, had 2 sugars, sorry, 3",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a coffee, had 2 sugars, sorry, 3",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a 6 pack of beer, drank 2 waters, sorry, 3",
+  "input": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a 6 pack of beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2 coffees, actually 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a box of 12 donuts, had 2 coffees, actually 3",
+  "input": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a box of 12 donuts",
+    "normalizedForm": "donuts"
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a family size bag of chips, ate 3 cookies, sorry, 4 cookies",
+  "input": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a family size bag of chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a stack of pancakes, had 1, wait, 3",
+  "input": [
+   {
+    "rawText": "a stack of pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 stack of pancakes",
+    "normalizedForm": "pancakes"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a stack of pancakes, had 1, wait, 3",
+  "input": [
+   {
+    "rawText": "a stack of pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 stack of pancakes",
+    "normalizedForm": "pancakes"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a stack of pancakes, had 3",
+  "input": [
+   {
+    "rawText": "a stack of pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 stack of pancakes",
+    "normalizedForm": "pancakes"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bucket of chicken, had 2, sorry, 5",
+  "input": [
+   {
+    "rawText": "a bucket of chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "2 bucket of chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bucket of chicken, had 2, sorry, 5",
+  "input": [
+   {
+    "rawText": "a bucket of chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "5",
+    "normalizedForm": "5",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "5 bucket of chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a basket of fries, ate 1, sorry, 10",
+  "input": [
+   {
+    "rawText": "a basket of fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 basket of fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pot of coffee, had 1, wait, 2",
+  "input": [
+   {
+    "rawText": "a pot of coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 pot of coffee",
+    "normalizedForm": "coffee"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a platter of wings, had 1, actually 6",
+  "input": [
+   {
+    "rawText": "a platter of wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 platter of wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a pile of grapes, ate 1, actually 20",
+  "input": [
+   {
+    "rawText": "a pile of grapes",
+    "normalizedForm": "grapes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 pile of grapes",
+    "normalizedForm": "grapes"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a pizza, had 1, sorry, 3",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a pizza, had 1, sorry, 3",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "3",
+    "normalizedForm": "3",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "segment"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pizza, had 3",
+  "input": [
+   {
+    "rawText": "a pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a large pizza, had 1, actually 3",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a pan of brownies, ate 1, actually 3",
+  "input": [
+   {
+    "rawText": "a pan of brownies",
+    "normalizedForm": "brownies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 pan of brownies",
+    "normalizedForm": "brownies"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a tin of cookies, ate 1, sorry, 5",
+  "input": [
+   {
+    "rawText": "a tin of cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 tin of cookies",
+    "normalizedForm": "cookies"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a jar of pickles, ate 1, sorry, 5",
+  "input": [
+   {
+    "rawText": "a jar of pickles",
+    "normalizedForm": "pickles",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a jar of pickles",
+    "normalizedForm": "pickles"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute r1 BLOCKER control",
+  "line": "a loaf of bread, had 1, sorry, 3",
+  "input": [
+   {
+    "rawText": "a loaf of bread",
+    "normalizedForm": "bread",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 loaf of bread",
+    "normalizedForm": "bread"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a loaf of bread, had 3",
+  "input": [
+   {
+    "rawText": "a loaf of bread",
+    "normalizedForm": "bread",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 loaf of bread",
+    "normalizedForm": "bread"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a rack of ribs, had 1, actually 4",
+  "input": [
+   {
+    "rawText": "a rack of ribs",
+    "normalizedForm": "ribs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 rack of ribs",
+    "normalizedForm": "ribs"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a bunch of grapes, ate 1, actually 15",
+  "input": [
+   {
+    "rawText": "a bunch of grapes",
+    "normalizedForm": "grapes",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "a bunch of grapes",
+    "normalizedForm": "grapes"
+   }
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a carton of eggs, had 1, actually 3",
+  "input": [
+   {
+    "rawText": "a carton of eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectKinds": [
+   "stock"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a sub, had 1, wait, 2",
+  "input": [
+   {
+    "rawText": "a sub",
+    "normalizedForm": "sub",
+    "brand": ""
+   }
+  ],
+  "expect": [
+   {
+    "rawText": "1 sub",
+    "normalizedForm": "sub"
+   }
+  ],
+  "expectKinds": [
+   "gap"
+  ],
+  "changed": false
+ }
+]

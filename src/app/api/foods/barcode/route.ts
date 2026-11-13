@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { toClientSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
+import { logger } from '@/lib/logger';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import {
   runWithWritePolicy,
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
       const { getOffProductByBarcode } = await import('@/lib/openfoodfacts/client');
       const { hydrateOffCandidate } = await import('@/lib/openfoodfacts/hydrate');
       const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
+      const { findLocalOffBarcode } = await import('@/lib/openfoodfacts/local-barcode');
 
       const { searchParams } = new URL(req.url);
       const code = searchParams.get('code');
@@ -95,8 +97,19 @@ export async function GET(req: NextRequest) {
       // distinct fact from "nobody has this barcode" and from the nosave refusal below.
       let offPanelUnusable = false;
 
-      // 1. Try FatSecret first
-      const fsResult = await lookupFatSecretBarcode(trimmedCode);
+      // 1. Try FatSecret first. FatSecretError subclasses already return null inside
+      // lookupFatSecretBarcode; a timeout / network / non-JSON failure throws, and must fall
+      // through to the local OffFood row and OFF live rather than 500.
+      let fsResult: Awaited<ReturnType<typeof lookupFatSecretBarcode>> = null;
+      try {
+        fsResult = await lookupFatSecretBarcode(trimmedCode);
+      } catch (err) {
+        logger.warn('fatsecret.barcode.leg_failed', {
+          barcode: trimmedCode,
+          name: (err as Error)?.name,
+          message: (err as Error)?.message,
+        });
+      }
       if (fsResult && fsResult.foodId) {
         // The `fs_` prefix is load-bearing. resolveFoodDetails dispatches PURELY on the id
         // prefix (`fdc_` / `off_` / `fs_`) and falls through to an AiGeneratedFood lookup
@@ -127,17 +140,37 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // 2. Fall back to OpenFoodFacts — reached both when FatSecret has no hit at all AND
-      //    when a FatSecret hit resolved to nothing, so an unresolvable FatSecret id can no
-      //    longer shadow a healthy OFF answer with an empty 200.
+      // 1b. Our own Open Food Facts mirror, BEFORE OFF's live API. Reached when FatSecret
+      //     has no hit or its hit resolved to nothing. A local read is ~0.05 ms and cannot
+      //     be throttled; the live call is 0.2-4 s and answers null on a 429, which used to
+      //     turn a barcode we hold into a 404. Read-only: it writes nothing under any policy.
       if (!details) {
+        const local = await findLocalOffBarcode(trimmedCode);
+        if (local) {
+          if (local.nutrientsPer100g === null) {
+            // An existing null-panel row: resolveFoodDetails() would floor its macros to 0.
+            offPanelUnusable = true;
+          } else {
+            const localId = `off_${local.barcode}`;
+            const resolved = await resolveFoodDetails(localId);
+            if (resolved.name) {
+              foodId = localId;
+              details = resolved;
+            }
+          }
+        }
+      }
+
+      // 2. OpenFoodFacts' live API — reached only when the local mirror has no row for this
+      //    barcode, or the row it has resolved to no name.
+      if (!details && !offPanelUnusable) {
         const offProduct = await getOffProductByBarcode(trimmedCode);
         if (offProduct) {
           offProductFound = true;
           const offId = `off_${offProduct.code}`;
-          // The one write site on this route, and it is CACHE-FIRST: a barcode already in
-          // the OffFood mirror returns from the row and upserts nothing, which is the
-          // common case against a 1,085,526-row mirror. Under `nosave=1` the upserts are
+          // The one write site on this route. Barcodes already in the OffFood mirror are
+          // answered by the local read above and never get here, so this is a FRESH
+          // upsert. Under `nosave=1` the upserts are
           // refused inside the writer and the returned shape is computed all the same —
           // but resolveFoodDetails() below reads OffFood, so a barcode we have NEVER
           // mirrored then resolves to nothing. That is the 404 branch's second case.
@@ -156,8 +189,8 @@ export async function GET(req: NextRequest) {
           }, { persistPanelless: false });
 
           if (hydrated.nutrientsPer100g === null) {
-            // Also catches the (currently empty) case of an EXISTING null-panel row:
-            // resolveFoodDetails() would floor its macros to 0 and ship a 0 kcal card.
+            // The live product failed OFF's own quality gate (persistPanelless: false), so
+            // there is no row to serve; resolveFoodDetails() would floor macros to 0.
             offPanelUnusable = true;
           } else {
             const resolved = await resolveFoodDetails(offId);
@@ -308,8 +341,8 @@ export async function GET(req: NextRequest) {
  *
  * WHAT `consulted` MEANS HERE, which is narrower than on /api/nlp/parse. This route reaches
  * the guard at most once per request, and only on a FRESH OpenFoodFacts hydrate: a FatSecret
- * hit has no write site at all, and an OFF barcode already in the mirror returns cache-first
- * BEFORE the guard. So `consulted: 0` is the normal reading for both and is not by itself the
+ * hit has no write site at all, and an OFF barcode already in the mirror is answered by the
+ * local read and never reaches the writer. So `consulted: 0` is the normal reading for both and is not by itself the
  * fail-open write-policy.ts warns about.
  *
  * The falsifier that does work is at the route's own contract: under `nosave=1` a barcode

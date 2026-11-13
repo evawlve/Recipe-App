@@ -49,6 +49,7 @@ const ALL_PROVIDERS: Record<StructuredLlmProvider, true> = {
     ollama: true,
     openrouter: true,
     openai: true,
+    anthropic: true,
 };
 
 const purposes = Object.keys(ALL_PURPOSES) as StructuredLlmPurpose[];
@@ -60,6 +61,7 @@ describe('no test may reach a live LLM provider', () => {
         // real value, because dotenv only fills keys absent from process.env.
         expect(process.env.OPENROUTER_API_KEY).toBe('');
         expect(process.env.OPENAI_API_KEY).toBe('');
+        expect(process.env.ANTHROPIC_API_KEY).toBe('');
     });
 
     it('disables the provider that needs no credential', () => {
@@ -71,11 +73,12 @@ describe('no test may reach a live LLM provider', () => {
 
     it('points every provider base URL at a closed port', () => {
         // Defence in depth for a provider added without a key guard: every request in
-        // this repo is `${baseUrl}/chat/completions`.
+        // this repo is `${baseUrl}/chat/completions` (or `${baseUrl}/messages` for Anthropic).
         for (const url of [
             process.env.OPENROUTER_BASE_URL,
             process.env.OPENAI_API_BASE_URL,
             process.env.OLLAMA_BASE_URL,
+            process.env.ANTHROPIC_API_BASE_URL,
         ]) {
             expect(url).toBe('http://127.0.0.1:1/jest-no-llm-gate');
         }

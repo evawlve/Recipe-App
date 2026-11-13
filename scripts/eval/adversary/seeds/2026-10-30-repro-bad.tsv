@@ -1,0 +1,36 @@
+# 2026-10-30 repro of C68 s399 runs 2-4 BAD lines (CLI flag U own rule; incl. 3 flagged controls), verbatim, S92 shape. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+two eggs over easy	1	BAD		-
+a smoothie bowl	1	BAD		-
+a cup of stewed prunes	1	BAD		-
+a side of home fries	1	BAD		-
+a glass of whole milk	1	BAD		-
+a cup of navy bean soup	1	BAD		-
+a bowl of clam chowder	1	BAD		-
+a waldorf salad	1	BAD		-
+a three bean salad	1	BAD		-
+a hot brown	1	BAD		-
+half a sandwich and a cup of soup	2	BAD		-
+a cup of broccoli cheddar soup	1	BAD		-
+a chef salad	1	BAD		-
+a cup of macaroni salad	1	BAD		-
+a bowl of french onion soup	1	BAD		-
+a spinach salad with bacon	1	BAD		-
+a muffuletta	1	BAD		-
+a slice of turkey breast	1	BAD		-
+a cup of romaine lettuce	1	BAD		-
+a pint of ipa	1	BAD		-
+a glass of pinot grigio	1	BAD		-
+a shot of mezcal	1	BAD		-
+a can of light beer	1	BAD		-
+a bottle of stout	1	BAD		-
+a mint julep	1	BAD		-
+a rum punch	1	BAD		-
+a glass of sauvignon blanc	1	BAD		-
+a can of sour beer	1	BAD		-
+a shot of cinnamon whiskey	1	BAD		-
+a long island iced tea	1	BAD		-
+a sidecar	1	BAD		-
+a bottle of mexican lager	1	BAD		-
+a sea breeze	1	BAD		-
+a frozen daiquiri	1	BAD		-
+a pint of porter	1	BAD		-

@@ -1,0 +1,844 @@
+[
+ {
+  "src": "seat",
+  "line": "coffee with milk, wait no, oat milk",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk",
+   "oat milk"
+  ],
+  "echoes": [
+   "milk"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "toast with butter and a butter croissant",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a butter croissant",
+    "normalizedForm": "a butter croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast with butter",
+   "a butter croissant"
+  ],
+  "echoes": [
+   "butter"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a bowl of rice with chicken, then chicken nuggets",
+  "input": [
+   {
+    "rawText": "a bowl of rice with chicken",
+    "normalizedForm": "a bowl of rice with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of rice with chicken",
+   "chicken nuggets"
+  ],
+  "echoes": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "salad with chicken and more chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "salad with chicken and chicken soup",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "toast with butter, butter",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast with butter",
+   "butter"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "coffee with milk and a milkshake",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a milkshake",
+    "normalizedForm": "a milkshake",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk",
+   "a milkshake"
+  ],
+  "echoes": [
+   "milk"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A1",
+  "line": "salad with chicken, chicken, and chicken soup",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A2",
+  "line": "salad with chicken and chicken soup",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken soup"
+  ],
+  "echoes": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A3",
+  "line": "salad with chicken, chicken soup and chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A3b",
+  "line": "salad with chicken, chicken soup and chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken soup",
+   "chicken"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A4",
+  "line": "salad with chicken and more chicken",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "more chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "more chicken"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A5",
+  "line": "rice with chicken, chicken, chicken wings and chicken soup",
+  "input": [
+   {
+    "rawText": "rice with chicken",
+    "normalizedForm": "rice with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken wings",
+    "normalizedForm": "chicken wings",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice with chicken",
+   "chicken",
+   "chicken wings",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A5b",
+  "line": "rice with chicken, chicken wings and chicken soup",
+  "input": [
+   {
+    "rawText": "rice with chicken",
+    "normalizedForm": "rice with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken wings",
+    "normalizedForm": "chicken wings",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "rice with chicken",
+   "chicken wings",
+   "chicken soup"
+  ],
+  "echoes": [
+   "chicken"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A6",
+  "line": "chicken with chicken gravy and chicken",
+  "input": [
+   {
+    "rawText": "chicken with chicken gravy",
+    "normalizedForm": "chicken with chicken gravy",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken gravy",
+    "normalizedForm": "chicken gravy",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chicken with chicken gravy",
+   "chicken"
+  ],
+  "echoes": [
+   "chicken gravy"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A6b",
+  "line": "chicken with chicken gravy, and chicken gravy fries",
+  "input": [
+   {
+    "rawText": "chicken with chicken gravy",
+    "normalizedForm": "chicken with chicken gravy",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken gravy",
+    "normalizedForm": "chicken gravy",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken gravy fries",
+    "normalizedForm": "chicken gravy fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chicken with chicken gravy",
+   "chicken gravy fries"
+  ],
+  "echoes": [
+   "chicken gravy"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A7",
+  "line": "toast with peanut butter and a peanut butter cookie",
+  "input": [
+   {
+    "rawText": "toast with peanut butter",
+    "normalizedForm": "toast with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a peanut butter cookie",
+    "normalizedForm": "peanut butter cookie",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast with peanut butter",
+   "a peanut butter cookie"
+  ],
+  "echoes": [
+   "peanut butter"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A7b",
+  "line": "toast with peanut butter, peanut butter, and a peanut butter cookie",
+  "input": [
+   {
+    "rawText": "toast with peanut butter",
+    "normalizedForm": "toast with peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a peanut butter cookie",
+    "normalizedForm": "peanut butter cookie",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast with peanut butter",
+   "peanut butter",
+   "a peanut butter cookie"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A8",
+  "line": "pasta with cheese, cheese, and a grilled cheese",
+  "input": [
+   {
+    "rawText": "pasta with cheese",
+    "normalizedForm": "pasta with cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "grilled cheese sandwich",
+    "normalizedForm": "grilled cheese sandwich",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "pasta with cheese",
+   "cheese",
+   "grilled cheese sandwich"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A8b",
+  "line": "burger with bacon and bacon, then fries",
+  "input": [
+   {
+    "rawText": "burger with bacon",
+    "normalizedForm": "burger with bacon",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   },
+   {
+    "rawText": "french fries",
+    "normalizedForm": "french fries",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "burger with bacon",
+   "bacon",
+   "french fries"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A8c",
+  "line": "eggs with toast and toast and jam",
+  "input": [
+   {
+    "rawText": "eggs with toast",
+    "normalizedForm": "eggs with toast",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "toast and jam",
+    "normalizedForm": "toast with jam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "eggs with toast",
+   "toast and jam"
+  ],
+  "echoes": [
+   "toast"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A9",
+  "line": "latte with milk and a milk tea",
+  "input": [
+   {
+    "rawText": "latte with milk",
+    "normalizedForm": "latte with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a milk tea",
+    "normalizedForm": "milk tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "latte with milk",
+   "a milk tea"
+  ],
+  "echoes": [
+   "milk"
+  ],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 A9c",
+  "line": "coke with ice and an iced tea",
+  "input": [
+   {
+    "rawText": "coke with ice",
+    "normalizedForm": "coke with ice",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   },
+   {
+    "rawText": "an iced tea",
+    "normalizedForm": "iced tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coke with ice",
+   "an iced tea"
+  ],
+  "echoes": [
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A10",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk"
+  ],
+  "echoes": [
+   "milk"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A11",
+  "line": "chicken soup",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "chicken",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A12",
+  "line": "coffee with milk, 2 milk, oat milk",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee with milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk",
+   "2 milk",
+   "oat milk"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A13",
+  "line": "bagel with cream cheese, cream cheese, and a cream cheese danish",
+  "input": [
+   {
+    "rawText": "bagel with cream cheese",
+    "normalizedForm": "bagel with cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a cream cheese danish",
+    "normalizedForm": "cream cheese danish",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "bagel with cream cheese",
+   "cream cheese",
+   "a cream cheese danish"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A14",
+  "line": "salad with chicken and soup, chicken soup",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "soup",
+    "normalizedForm": "soup",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken",
+   "soup",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A15",
+  "line": "salad with chicken, chicken, and chicken soup",
+  "input": [
+   {
+    "rawText": "salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken soup",
+    "normalizedForm": "chicken soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "salad with chicken",
+   "chicken",
+   "turkey",
+   "chicken soup"
+  ],
+  "echoes": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 A16",
+  "line": "toast with butter and a butter croissant",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast with butter",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   },
+   {
+    "rawText": "a butter croissant",
+    "normalizedForm": "butter croissant",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast with butter",
+   "a butter croissant"
+  ],
+  "echoes": [
+   "butter"
+  ],
+  "changed": true
+ }
+]

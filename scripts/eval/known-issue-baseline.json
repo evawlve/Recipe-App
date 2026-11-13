@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-08-18T07:30:11.354Z",
+  "writtenAt": "2026-11-05T17:26:09.255Z",
   "cases": {
     "n-brand-05": {
       "foodId": "off_0639001461536",
@@ -48,15 +48,6 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-prose-01": {
-      "foodId": "fdc_747997",
-      "foodName": "Eggs, Grade A, Large, egg white",
-      "grams": 120,
-      "kcal100": 55,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-prose-03": {
       "foodId": "fdc_169730",
       "foodName": "fresh-refrigerated spinach cooked pasta",
@@ -70,7 +61,7 @@
       "foodId": "off_0074175016838",
       "foodName": "Texas Toast",
       "grams": 40,
-      "kcal100": 400.0,
+      "kcal100": 400,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -119,6 +110,159 @@
       "abstained": false,
       "errored": false,
       "itemCount": 27
+    },
+    "n-s424-01": {
+      "foodId": "fs_475002",
+      "foodName": "Prime Rib",
+      "grams": 21,
+      "kcal100": 266,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-02": {
+      "foodId": "off_0780982994008",
+      "foodName": "Cornbread dressing, cornbread",
+      "grams": 57,
+      "kcal100": 429,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-03": {
+      "foodId": "fdc_169303",
+      "foodName": "raw sweet potato leaves",
+      "grams": 75,
+      "kcal100": 42,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-04": {
+      "foodId": "off_0761934034058",
+      "foodName": "Jackfruit",
+      "grams": 100,
+      "kcal100": 85.71428680419922,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s424-05": {
+      "foodId": "off_0669556030895",
+      "foodName": "Bento Box",
+      "grams": 466,
+      "kcal100": 107,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 4
+    },
+    "n-s424-06": {
+      "foodId": "off_0737697019939",
+      "foodName": "Hot cocoa",
+      "grams": 100,
+      "kcal100": 360,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-01": {
+      "foodId": "off_4099100296150",
+      "foodName": "Egg",
+      "grams": 50,
+      "kcal100": 140,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-02": {
+      "foodId": "off_0044946084090",
+      "foodName": "Tortilla",
+      "grams": 47,
+      "kcal100": 297.8723449707031,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-03": {
+      "foodId": "fs_32829601",
+      "foodName": "Tamales De Pollo",
+      "grams": 57,
+      "kcal100": 202,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-04": {
+      "foodId": "off_0834450000156",
+      "foodName": "Vanilla Protein",
+      "grams": 335,
+      "kcal100": 38.80596923828125,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-05": {
+      "foodId": "off_2272940004648",
+      "foodName": "Pollo",
+      "grams": 100,
+      "kcal100": 98,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-06": {
+      "foodId": "fdc_171688",
+      "foodName": "Apples, raw, with skin",
+      "grams": 182,
+      "kcal100": 52,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-07": {
+      "foodId": "off_7802215501838",
+      "foodName": "Agua",
+      "grams": 33,
+      "kcal100": 414,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s429-08": {
+      "foodId": "off_40894355",
+      "foodName": "Cream",
+      "grams": 120,
+      "kcal100": 344,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-02": {
+      "foodId": "off_0850064951257",
+      "foodName": "85% Lean Ground Beef",
+      "grams": 112,
+      "kcal100": 214.2857208251953,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-03": {
+      "foodId": "off_0863441000035",
+      "foodName": "85% Lean 15% Fat Beef 1/3 lb Burger Patties",
+      "grams": 151,
+      "kcal100": 199,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-s448-04": {
+      "foodId": "fdc_173942",
+      "foodName": "dried sulfured stewed without added sugar apricots",
+      "grams": 4,
+      "kcal100": 85,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
     }
   }
 }

@@ -27,7 +27,7 @@
  * leave the process. Deliberately NOT done: adding a `JEST_ALLOW_LIVE_LLM`-style bypass to `src/`.
  * `setupFiles` re-runs per test file, so these assignments cannot leak into another suite.
  *
- * Every case uses `forceProvider: 'openai'`, which yields a ONE-entry provider chain. Without it a
+ * Every case in the first describe uses `forceProvider: 'openai'`, which yields a ONE-entry provider chain. Without it a
  * chain of two OpenRouter entries would make a "one failure" assertion read 2, and the test would
  * be measuring the fallback chain rather than the counter.
  */
@@ -301,5 +301,253 @@ describe('structured-client counts LLM egress at the HTTP chokepoint', () => {
         expect(snap.byPurpose.serving.responses).toBe(1);
         expect(snap.byPurpose.normalize.responses).toBe(0);
         expect(snap.byPurpose.produce.responses).toBe(0);
+    });
+});
+
+/**
+ * callStructuredLlm()'s optional `signal` (C70, S239). Once it aborts:
+ *   - a call still QUEUED for its purpose's semaphore slot leaves the queue (pending back to 0)
+ *     and never fetches;
+ *   - an in-flight fetch is aborted through its own signal;
+ *   - no retry and no provider fallback starts (the fetch count stays flat);
+ *   - the call resolves to { status: 'error', error: STRUCTURED_LLM_ABORTED_ERROR }.
+ * Without a signal nothing changes. The last case is deadline-refute §4's measurement (11
+ * concurrent aiNormalizeIngredient() calls) and pins MGR's two readings: pending returns to 0,
+ * and the fetch count does not grow after expiry.
+ *
+ * WHY A SEPARATE MODULE REGISTRY. Unlike the cases above, these need the real normalize chain
+ * with a FALLBACK in it, so a fallback fetch after an abort is visible: this block also assigns a
+ * fake OPENROUTER_API_KEY and re-requires the client inside jest.isolateModules(), giving
+ * THREE entries (OpenRouter primary, OpenRouter fallback, OpenAI), no forceProvider, its own
+ * semaphores and its own counters. The key is restored as soon as the modules are loaded, the
+ * modules above keep the one-entry chain they were loaded with, and global.fetch is still the
+ * file's per-test mock with the blackhole base URLs left in place.
+ */
+describe('callStructuredLlm caller signal (C70 S239)', () => {
+    const mockGetCache = jest.fn();
+    const mockSaveCache = jest.fn();
+    let sc: typeof import('../structured-client');
+    let usage: typeof import('../llm-usage-metrics');
+    let norm: typeof import('../../mapping/ai-normalize');
+    let log: typeof import('../../logger');
+    let maxRetries: number;
+
+    beforeAll(() => {
+        const prior = process.env.OPENROUTER_API_KEY;
+        process.env.OPENROUTER_API_KEY = 'jest-fake-key-never-dialled';
+        jest.isolateModules(() => {
+            jest.doMock('../../mapping/validated-mapping-helpers', () => ({
+                getAiNormalizeCache: (...a: unknown[]) => mockGetCache(...a),
+                saveAiNormalizeCache: (...a: unknown[]) => mockSaveCache(...a),
+            }));
+            sc = require('../structured-client') as typeof import('../structured-client');
+            usage = require('../llm-usage-metrics') as typeof import('../llm-usage-metrics');
+            norm = require('../../mapping/ai-normalize') as typeof import('../../mapping/ai-normalize');
+            log = require('../../logger') as typeof import('../../logger');
+            maxRetries = (require('../../mapping/config') as typeof import('../../mapping/config'))
+                .STRUCTURED_LLM_MAX_RETRIES;
+        });
+        process.env.OPENROUTER_API_KEY = prior ?? '';
+    });
+
+    const CHAIN_CALL = {
+        schema: { name: 'test', schema: { type: 'object' } },
+        systemPrompt: 'system',
+        userPrompt: 'user',
+        purpose: 'normalize' as const,
+        timeout: 5000,
+    };
+
+    /** A fetch that never answers and rejects with an AbortError once its own signal aborts, as undici does. */
+    function hangUntilAborted(_url: unknown, init?: RequestInit): Promise<Response> {
+        return new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener(
+                'abort',
+                () => {
+                    const e = new Error('This operation was aborted');
+                    e.name = 'AbortError';
+                    reject(e);
+                },
+                { once: true },
+            );
+        });
+    }
+
+    /** The signal makeRequest() handed to fetch call `i`. */
+    function sentSignal(i: number): AbortSignal | undefined {
+        return (fetchMock.mock.calls[i]?.[1] as RequestInit | undefined)?.signal ?? undefined;
+    }
+
+    const flush = () => jest.advanceTimersByTimeAsync(0);
+
+    beforeEach(() => {
+        jest.useFakeTimers({ doNotFake: ['nextTick', 'queueMicrotask'] });
+        usage.resetLlmUsageMetrics();
+        mockGetCache.mockReset().mockResolvedValue(null);
+        mockSaveCache.mockReset().mockResolvedValue(undefined);
+        jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        jest.spyOn(log.logger, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(async () => {
+        // Drain anything a mutated client left running, so one case cannot leak into the next.
+        fetchMock.mockImplementation(() => Promise.reject(new Error('drained')));
+        await jest.advanceTimersByTimeAsync(10 * 60_000);
+        jest.restoreAllMocks();
+        jest.useRealTimers();
+    });
+
+    it('the normalize chain here is three providers and ten slots', () => {
+        expect(sc.getProviderChain('normalize').map((p) => p.name)).toEqual(['openrouter', 'openrouter', 'openai']);
+        expect(sc.getConcurrencyLimit('normalize')).toBe(10);
+        // The backoff case needs a retry to exist (code default 3; jest sets no override).
+        expect(maxRetries).toBeGreaterThan(1);
+    });
+
+    it('abort while queued: the waiter leaves the queue, pending returns to 0, and it never fetches', async () => {
+        fetchMock.mockImplementation(hangUntilAborted);
+        const holders = new AbortController();
+        const held = Array.from({ length: 10 }, () => sc.callStructuredLlm({ ...CHAIN_CALL, signal: holders.signal }));
+        const queued = new AbortController();
+        let queuedResult: unknown;
+        const q = sc.callStructuredLlm({ ...CHAIN_CALL, signal: queued.signal }).then((r) => { queuedResult = r; return r; });
+        await flush();
+        expect(sc.getActiveCount('normalize')).toBe(10);
+        expect(sc.getPendingCount('normalize')).toBe(1);
+        expect(fetchMock).toHaveBeenCalledTimes(10);
+
+        queued.abort();
+        await flush();
+        expect(sc.getPendingCount('normalize')).toBe(0);
+        expect(queuedResult).toMatchObject({ status: 'error', error: sc.STRUCTURED_LLM_ABORTED_ERROR });
+        await q;
+
+        holders.abort();
+        await flush();
+        await Promise.all(held);
+        await jest.advanceTimersByTimeAsync(60_000);
+        expect(fetchMock).toHaveBeenCalledTimes(10);
+        expect(sc.getActiveCount('normalize')).toBe(0);
+        expect(sc.getPendingCount('normalize')).toBe(0);
+    });
+
+    it('abort in flight: the fetch signal aborts, and no retry or fallback fetch follows', async () => {
+        fetchMock.mockImplementation(hangUntilAborted);
+        const c = new AbortController();
+        let result: unknown;
+        const p = sc.callStructuredLlm({ ...CHAIN_CALL, signal: c.signal }).then((r) => { result = r; return r; });
+        await flush();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(sentSignal(0)?.aborted).toBe(false);
+
+        c.abort();
+        await flush();
+        expect(sentSignal(0)?.aborted).toBe(true);
+        expect(result).toMatchObject({ status: 'error', error: sc.STRUCTURED_LLM_ABORTED_ERROR });
+        await p;
+
+        await jest.advanceTimersByTimeAsync(60_000);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(sc.getActiveCount('normalize')).toBe(0);
+        expect(sc.getPendingCount('normalize')).toBe(0);
+        // Not the provider-failed path: neither its warn nor its error line is logged.
+        expect(jest.mocked(console.warn)).not.toHaveBeenCalled();
+        expect(jest.mocked(console.error)).not.toHaveBeenCalled();
+        // One attempt, no 2xx: one `failures`, exactly as a timed-out attempt. No logical success.
+        const snap = usage.getLlmUsageSnapshot().byPurpose.normalize;
+        expect(snap.failures).toBe(1);
+        expect(snap.responses).toBe(0);
+        expect(snap.logicalSuccesses).toBe(0);
+    });
+
+    it('abort during a retry backoff: it settles at once and no further attempt starts', async () => {
+        fetchMock.mockImplementation(async () => errBody(429));
+        const c = new AbortController();
+        let settled = false;
+        const p = sc.callStructuredLlm({ ...CHAIN_CALL, signal: c.signal }).then((r) => { settled = true; return r; });
+        await flush();
+        expect(fetchMock).toHaveBeenCalledTimes(1);   // 429, now sleeping 1.0-1.5 s before the retry
+
+        c.abort();
+        await flush();
+        expect(settled).toBe(true);
+        expect(jest.getTimerCount()).toBe(0);
+        expect(await p).toMatchObject({ status: 'error', error: sc.STRUCTURED_LLM_ABORTED_ERROR });
+
+        await jest.advanceTimersByTimeAsync(60_000);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('a signal already aborted takes no slot and never fetches', async () => {
+        const c = new AbortController();
+        c.abort();
+        const r = await sc.callStructuredLlm({ ...CHAIN_CALL, signal: c.signal });
+        expect(r).toMatchObject({ status: 'error', error: sc.STRUCTURED_LLM_ABORTED_ERROR });
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(sc.getActiveCount('normalize')).toBe(0);
+        expect(sc.getPendingCount('normalize')).toBe(0);
+    });
+
+    it('no signal: unchanged, a hung fetch times out per attempt and falls back through all three providers', async () => {
+        fetchMock.mockImplementation(hangUntilAborted);
+        let result: { status: string; error?: string } | undefined;
+        const p = sc.callStructuredLlm(CHAIN_CALL).then((r) => { result = r; return r; });
+        await flush();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await jest.advanceTimersByTimeAsync(3 * 5000);
+        await p;
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        expect(result).toMatchObject({ status: 'error', error: 'Request timeout (5000ms)' });
+    });
+
+    it('no signal: a good answer is unchanged', async () => {
+        fetchMock.mockResolvedValue(goodResponse());
+        const r = await sc.callStructuredLlm(CHAIN_CALL);
+        expect(r).toMatchObject({ status: 'success', content: { canonicalBase: 'chicken' } });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(sentSignal(0)?.aborted).toBe(false);
+    });
+
+    it('a live signal changes nothing: a 429 still backs off its full delay, a failure still falls back, no listener is left', async () => {
+        fetchMock
+            .mockResolvedValueOnce(errBody(429))
+            .mockResolvedValueOnce(errBody(400))
+            .mockResolvedValueOnce(goodResponse());
+        const c = new AbortController();
+        const p = sc.callStructuredLlm({ ...CHAIN_CALL, signal: c.signal });
+        await flush();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await jest.advanceTimersByTimeAsync(999);
+        expect(fetchMock).toHaveBeenCalledTimes(1);   // the first backoff is at least 1000 ms
+        await jest.advanceTimersByTimeAsync(600);
+        // 429, its retry a 400 (not retryable), then the OpenRouter fallback answers.
+        expect(await p).toMatchObject({ status: 'success', provider: 'openrouter' });
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        const { getEventListeners } = require('events') as typeof import('events');
+        expect(getEventListeners(c.signal, 'abort')).toHaveLength(0);
+    });
+
+    it('aiNormalizeIngredient: after expiry pending returns to 0, nothing stays active, and the fetch count does not grow', async () => {
+        fetchMock.mockImplementation(hangUntilAborted);
+        const lines = Array.from({ length: 11 }, (_, i) => `line ${i}`);
+        const all = Promise.all(lines.map((l) => norm.aiNormalizeIngredient(l)));
+        await flush();
+        expect(sc.getActiveCount('normalize')).toBe(10);
+        expect(sc.getPendingCount('normalize')).toBe(1);
+
+        await jest.advanceTimersByTimeAsync(norm.AI_NORMALIZE_DEADLINE_MS);
+        const results = await all;
+        expect(results.every((r) => r.status === 'error' && r.reason === norm.AI_NORMALIZE_DEADLINE_REASON)).toBe(true);
+        await flush();
+        expect(sc.getPendingCount('normalize')).toBe(0);
+        expect(sc.getActiveCount('normalize')).toBe(0);
+        const atExpiry = fetchMock.mock.calls.length;
+
+        await jest.advanceTimersByTimeAsync(120_000);
+        expect(fetchMock.mock.calls.length).toBe(atExpiry);
+        expect(sc.getPendingCount('normalize')).toBe(0);
+        expect(mockSaveCache).not.toHaveBeenCalled();
     });
 });
