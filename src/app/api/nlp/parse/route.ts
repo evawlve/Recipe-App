@@ -817,7 +817,10 @@ export async function POST(req: NextRequest) {
         }
 
         const portionProvenance = portionProvenanceForTier(mapped.servingTier);
-        const cookingState = cookingStateFor({ rawText, foodName: mapped.foodName, source: standardSource });
+        const cookingState = cookingStateFor({
+          rawText, foodName: mapped.foodName, source: standardSource,
+          kcal100: nutritionPer100g.kcal100, brandName: mapped.brandName ?? null,
+        });
 
         return {
           rawText,
