@@ -1,0 +1,80 @@
+# run 6
+# C68 S179 · 2026-10-18 · T12 · run 6 (warm) · 4 repro (run 5) + 7 tagged repro of OWN 10-17 T12 flags + 28 new (abbreviations/symbols on known foods; no misspelled bare foods — the mint path) · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+one egg, sorry, two eggs, scrambled	1			-
+a pint of ice cream, ok fine half a pint	1			-
+three slices of bacon, wait, four	1			-
+chips and salsa but i barely touched the chips	2			-;-
+lg coffee w/o sugar	1			-
+hb egg x2 + toast	2			-;-
+avo toast x2	1			-
+chx breast 6oz w/ rice	2			-;-
+2 tbs pb on toast	2			-;-
+expresso x2	1			-
+bagel w/ lox & cc	1			-
+turkey burger x2, no bun	1			-
+oatmeal w/o brown sugar	1			-
+BLT w/ extra bacon	1			-
+PBJ on white	1			-
+~200g chicken thigh	1			-
+approx 1 cup rice	1			-
+3 pcs fried chicken	1			-
+1/2 lb ground turkey, cooked	1			-
+salad w/ 1 tbsp EVOO	2			-;-
+eggs (2) + bacon (3 strips)	2			-;-
+coffee @ 8am, coffee @ 2pm	1			-
+chicken + rice + broccoli	3			-;-;-
+greek yogurt & honey & granola	3			-;-;-
+2x string cheese	1			-
+3/4 cup cottage cheese w/ pineapple	2			-;-
+bf: oatmeal, lunch: salad, din: salmon	3			-;-;-
+tuna sammy on wheat	1			-
+mac n cheese, 1 c	1			-
+OJ 8 oz	1			-
+2 egg whites + 1 whole egg omelet	1			-
+PB banana toast x1	1			-
+protein shake (1 scoop) w/ water	1			-
+steak 6oz & sweet potato	2			-;-
+pizza - 2 slices pepperoni	1			-
+apple + PB (2 tbsp)	2			-;-
+burrito, chicken, no rice	1			-
+tea w/ honey (1 tsp)	2			-;-
+half a turkey sub w/ provolone	1			-
+
+# run 12
+# C68 S179 · 2026-10-18 · T12 · run 12 (warm, RINU…) · 6 repro (run 11) + 30 new (unit abbreviations: T/t, c, pkg, ea, fl.oz, lbs., kgs, gr, sl, cn, btl, doz, unicode fractions) · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+a bowl of soup, i left most of it	1			-
+a burrito without beans	1			-
+a cheeseburger without cheese	1			-
+a muffin, ate the top only	1			-
+roughly a pound of grapes	1			-
+a sandwich, i gave half to my friend	1			-
+2 T peanut butter	1			-
+1 t honey	1			-
+3 c popcorn	1			-
+1 pkg instant ramen	1			-
+2 ea eggs, fried	1			-
+8 fl.oz whole milk	1			-
+250ml orange juice	1			-
+1.5 lbs. chicken thighs over two days	1			-
+16oz. ribeye	1			-
+2 kgs potatoes over the week	1			-
+30 gr walnuts	1			-
+1/2 c. cooked rice	1			-
+1 tbsp. olive oil	1			-
+2 tsp. sugar	1			-
+100g. greek yogurt	1			-
+3oz tuna (canned, drained)	1			-
+1 lg egg	1			-
+2 sm apples	1			-
+1 med baked potato	1			-
+4 pc chicken nuggets	1			-
+1 sl whole wheat bread	1			-
+2 sl cheddar	1			-
+1 cn black beans	1			-
+1 btl water	1			-
+1 doz eggs for the week, ate 2	1			-
+5 oz. salmon	1			-
+1 ½ cups milk	1			-
+¾ cup oats	1			-
+½ avocado	1			-
+⅓ cup almonds	1			-

@@ -1,0 +1,296 @@
+id	key	coldVerdict
+T001	rice white	EQUIVALENT
+T002	greek yogurt	DIFFERENT-OK
+T003	c4 cellucor pre workout	SAME
+T004	brown rice	SAME
+T005	avocado	KEY-MOVED
+T006	egg white	EQUIVALENT
+T007	cooked quinoa	SAME
+T008	apple	EQUIVALENT
+T009	capri sun	MISS
+T010	bar chip chocolate kirkland protein	SAME
+T011	cake rice	MISS
+T012	balance carb mission tortilla	EQUIVALENT
+T013	cinnamon ghost protein roll vegan	SAME
+T014	salt	EQUIVALENT
+T015	tuna	DIFFERENT-OK
+T016	7up	EQUIVALENT
+T017	m ms	DIFFERENT-OK
+T018	onion	MISS
+T019	quinoa	MISS
+T020	bean black	DIFFERENT-OK
+T021	cracker saltine	EQUIVALENT
+T022	cheese cottage	DIFFERENT-OK
+T023	protein yogurt	EQUIVALENT
+T024	carb low tortilla	EQUIVALENT
+T025	tofu	MISS
+T026	bread dave killer	MISS
+T027	caramel premier protein shake	EQUIVALENT
+T028	pre workout	MISS
+T029	cooked rice white	EQUIVALENT
+T030	chocolate milk muscle	MISS
+T031	bar protein pure	SAME
+T032	lemon	SAME
+T033	ribeye	EQUIVALENT
+T034	mayonnaise	DIFFERENT-OK
+T035	egg yolk	EQUIVALENT
+T036	jif	DIFFERENT-OK
+T037	sandwich turkey	SAME
+T038	coffee	SAME
+T039	cashew	DIFFERENT-OK
+T040	cucumber	MISS
+T041	c4 fruit pre punch workout	MISS
+T042	and company noodle pad thai	SAME
+T043	cooked rice	EQUIVALENT
+T044	capsicum	KEY-MOVED
+T045	rice	EQUIVALENT
+T046	toast wheat whole	MISS
+T047	milk whole	EQUIVALENT
+T048	bagel cheese cream with	KEY-MOVED
+T049	parmesan	EQUIVALENT
+T050	chicken salad	DIFFERENT-OK
+T051	bell pepper	DIFFERENT-OK
+T052	cinnamon	EQUIVALENT
+T053	tomato	EQUIVALENT
+T054	steak	DIFFERENT-OK
+T055	milk oat	DIFFERENT-OK
+T056	lamb	KEY-MOVED
+T057	arugula	MISS
+T058	ghost protein	EQUIVALENT
+T059	avocado bowl cava harissa	SAME
+T060	bang candy cotton	MISS
+T061	couscous	EQUIVALENT
+T062	pasta	KEY-MOVED
+T063	corn tortilla	EQUIVALENT
+T064	almond flour	DIFFERENT-OK
+T065	bread pita	EQUIVALENT
+T066	gochugaru	DIFFERENT-OK
+T067	lime	KEY-MOVED
+T068	mustard	DIFFERENT-OK
+T069	oreo	EQUIVALENT
+T070	bean pinto	MISS
+T071	chobani	DIFFERENT-OK
+T072	farro	DIFFERENT-OK
+T073	kernel seed sunflower	EQUIVALENT
+T074	tempeh	EQUIVALENT
+T075	bread sourdough	MISS
+T076	ginger	DIFFERENT-OK
+T077	broccoli floret	EQUIVALENT
+T078	goldfish	EQUIVALENT
+T079	sauce tomato	DIFFERENT-OK
+T080	bagel plain	DIFFERENT-OK
+T081	butternut squash	DIFFERENT-OK
+T082	lay	SAME
+T083	nutella	EQUIVALENT
+T084	energy monster	EQUIVALENT
+T085	coconut milk	KEY-MOVED
+T086	coke zero	EQUIVALENT
+T087	nori	MISS
+T088	salt table	MISS
+T089	roma tomato	MISS
+T090	nature valley	EQUIVALENT
+T091	starbuck	DIFFERENT-OK
+T092	celsius drink energy	EQUIVALENT
+T093	grilled salmon	MISS
+T094	canned pumpkin	EQUIVALENT
+T095	casein dymatize	SAME
+T096	green onion	KEY-MOVED
+T097	flour plain	SAME
+T098	prawn	MISS
+T099	mint	MISS
+T100	cinnamon roll	EQUIVALENT
+T101	fried rice	SAME
+T102	pumpkin	KEY-MOVED
+T103	chow express mein panda	MISS
+T104	latte matcha	DIFFERENT-OK
+T105	lemonade	KEY-MOVED
+T106	almond milk silk unsweetened	MISS
+T107	chicken joe orange trader	MISS
+T108	bell crunchwrap supreme taco	SAME
+T109	egg roll	MISS
+T110	noodle	EQUIVALENT
+T111	beef broccoli express panda	MISS
+T112	costco hotdog	DIFFERENT-OK
+T113	stuffing	DIFFERENT-OK
+T114	mojito	KEY-MOVED
+T115	bar kirkland protein	EQUIVALENT
+T116	bloody mary	SAME
+T117	chicken shawarma	MISS
+T118	cranberry juice	SAME
+T119	gumbo seafood	DIFFERENT-OK
+T120	iced latte	MISS
+T121	americano	KEY-MOVED
+T122	biryani	DIFFERENT-OK
+T123	butter peanut rxbar spread	MISS
+T124	cheesesteak philly	BOTH-WRONG
+T125	grain rice white	DIFFERENT-OK
+T126	jjigae kimchi	DIFFERENT-OK
+T127	jjigae sundubu	MISS
+T128	reuben sandwich	DIFFERENT-OK
+T129	sweet tea	EQUIVALENT
+T130	2% fairlife milk	EQUIVALENT
+T131	bass sea	DIFFERENT-OK
+T132	black dr pepper	KEY-MOVED
+T133	cashew milk	DIFFERENT-OK
+T134	chow mein	DIFFERENT-OK
+T135	club footlong subway	BOTH-WRONG
+T136	cone snow	DIFFERENT-OK
+T137	curry japanese	MISS
+T138	fruit gatorade punch	MISS
+T139	iced mocha	MISS
+T140	lasagna noodle stouffer	EQUIVALENT
+T141	moscow mule	DIFFERENT-OK
+T142	ramen shoyu	MISS
+T143	rice sticky	SAME
+T144	and later now	MISS
+T145	bar candy payday	MISS
+T146	bar kat kit	EQUIVALENT
+T147	blanco chipotle queso	MISS
+T148	butter movie popcorn theater	EQUIVALENT
+T149	buttered toast	MISS
+T150	cadbury creme egg	MISS
+T151	cheese cream philadelphia	MISS
+T152	chicken noodle restaurant soup	DIFFERENT-OK
+T153	chow mein restaurant	MISS
+T154	claw mango white	MISS
+T155	de pao queijo	EQUIVALENT
+T156	duck egg	SAME
+T157	green tea	DIFFERENT-OK
+T158	original red sauce tabasco	EQUIVALENT
+T159	pho	MISS
+T160	angus entree express panda steak	MISS
+T161	apple crisp	MISS
+T162	broccoli cheddar panera soup	SAME
+T163	chocolate jello pudding	MISS
+T164	claw white	DIFFERENT-OK
+T165	dressing italian wish-bone	MISS
+T166	extract milk silk soy vanilla	KEY-MOVED
+T167	sweet tamale	MISS
+T168	cinnamon crunch toast	MISS
+T169	dorito loco taco	MISS
+T170	baconator wendy	MISS
+T171	beef taco	DIFFERENT-OK
+T172	bell crunch taco wrap	MISS
+T173	cane chicken finger raising	DIFFERENT-OK
+T174	churro	DIFFERENT-OK
+T175	jalapeno	MISS
+T176	latte	DIFFERENT-OK
+T177	margarita	DIFFERENT-OK
+T178	a chick fil fry waffle	EQUIVALENT
+T179	and cream oat peach rolled	DIFFERENT-OK
+T180	bell blue extract homemade vanilla	KEY-MOVED
+T181	extract greek vanilla yogurt	MISS
+T182	horchata	DIFFERENT-OK
+T183	mcmuffin	KEY-MOVED
+T184	pancake protein	DIFFERENT-OK
+T185	alfredo chicken cuisine lean	SAME
+T186	beer light	EQUIVALENT
+T187	bibimbap	MISS
+T188	black tea	EQUIVALENT
+T189	elote	MISS
+T190	enchilada	DIFFERENT-OK
+T191	farm hillshire thin turkey ultra	SAME
+T192	frank hot red	MISS
+T193	iv lemon lime liquid	MISS
+T194	milkshake vanilla	DIFFERENT-OK
+T195	nutmeg	MISS
+T196	up	KEY-MOVED
+T197	and gravy mashed potato	KEY-MOVED
+T198	bar crunch	MISS
+T199	bloom green powder	SAME
+T200	bologna mayer oscar	MISS
+T201	bowl chicken chipotle	BOTH-WRONG
+T202	candy whopper	DIFFERENT-OK
+T203	capri cooler pacific sun	MISS
+T204	chicken general tso	DIFFERENT-OK
+T205	chicken sandwich spicy wendy	DIFFERENT-OK
+T206	cocoa pebble	MISS
+T207	dal	EQUIVALENT
+T208	debbie little roll swiss	EQUIVALENT
+T209	dressing garden italian olive	EQUIVALENT
+T210	fig	EQUIVALENT
+T211	girl mint scout thin	MISS
+T212	gold pretzel rold	SAME
+T213	goose	MISS
+T214	key lime pie	EQUIVALENT
+T215	lemon meringue pie	DIFFERENT-OK
+T216	oregano	MISS
+T217	pilaf rice	EQUIVALENT
+T218	rice spanish	MISS
+T219	roll	KEY-MOVED
+T220	soup tom yum	DIFFERENT-OK
+T221	sub subway turkey	MISS
+T222	2% fairlife filtered milk ultra	MISS
+T223	5% fage greek yogurt	EQUIVALENT
+T224	alfredo sauce	MISS
+T225	almond califia farm milk	EQUIVALENT
+T226	almond silk yogurt	SAME
+T227	bacon lightlife tempeh	EQUIVALENT
+T228	banquet brown n sausage serve	MISS
+T229	bar kodiak protein	DIFFERENT-OK
+T230	bcaa xtend	DIFFERENT-OK
+T231	beef corned	DIFFERENT-OK
+T232	beef liver	MISS
+T233	bell fire sauce taco	MISS
+T234	bender birch waffle	DIFFERENT-OK
+T235	biscuit buttermilk	EQUIVALENT
+T236	blood orange	MISS
+T237	breakfast dean jimmy sandwich	MISS
+T238	broccoli deli salad	MISS
+T239	brownie fudge	MISS
+T240	bulb fennel seed	MISS
+T241	bulgogi	DIFFERENT-OK
+T242	buttermilk eggo waffle	EQUIVALENT
+T243	butternut cube squash	KEY-MOVED
+T244	callender marie pie pot	MISS
+T245	castle slider white	MISS
+T246	cheese john papa pizza	DIFFERENT-OK
+T247	chester fry	EQUIVALENT
+T248	chicken fried korean	DIFFERENT-OK
+T249	chocolate cupcake	EQUIVALENT
+T250	chocolate milk slate	EQUIVALENT
+T251	cluster granola kind	MISS
+T252	cookie snickerdoodle	EQUIVALENT
+T253	cooky e fudge l	DIFFERENT-OK
+T254	cool whip	DIFFERENT-OK
+T255	cucumber slice	KEY-MOVED
+T256	dean jimmy patty sausage	MISS
+T257	energy hour	KEY-MOVED
+T258	entree kashi	MISS
+T259	filet mignon	KEY-MOVED
+T260	flounder	DIFFERENT-OK
+T261	fresh ginger	KEY-MOVED
+T262	frisee	MISS
+T263	fruit passion	EQUIVALENT
+T264	fruity pebble	EQUIVALENT
+T265	gainer mass serious	EQUIVALENT
+T266	habanero	DIFFERENT-OK
+T267	honeydew melon	SAME
+T268	ken ranch steakhouse	MISS
+T269	keto ratio yogurt	EQUIVALENT
+T270	latte vanilla	DIFFERENT-OK
+T271	lemon muffin poppy seed	EQUIVALENT
+T272	lmnt raspberry	SAME
+T273	macaroni	KEY-MOVED
+T274	meatball sub subway	MISS
+T275	milk oat yogurt	MISS
+T276	noodle pad thai	DIFFERENT-OK
+T277	nori sheet	KEY-MOVED
+T278	oatmeal	KEY-MOVED
+T279	orzo	DIFFERENT-OK
+T280	pasta penne	MISS
+T281	plantain	DIFFERENT-OK
+T282	plum	MISS
+T283	pomelo	MISS
+T284	potato purple sweet	DIFFERENT-OK
+T285	protein smoothie	DIFFERENT-OK
+T286	ragu sauce spaghetti	MISS
+T287	scallop	MISS
+T288	shawarma	SAME
+T289	skirt steak	DIFFERENT-OK
+T290	starfruit	DIFFERENT-OK
+T291	tabasco	MISS
+T292	tapatio	MISS
+T293	tomatillo	MISS
+T294	venison	MISS
+T295	whopper	DIFFERENT-OK

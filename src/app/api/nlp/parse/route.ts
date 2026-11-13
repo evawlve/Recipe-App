@@ -23,6 +23,9 @@ import {
   pruneRequestLog,
 } from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
+import { isPourOntoSecondFood, restoreLeadingPour } from '@/lib/parse/loose-measures';
+import { maskKeptDishNames } from '@/lib/nlp/kept-dish-names';
+import { cookingStateFor } from '@/lib/nlp/cooking-state';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
   MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
@@ -41,7 +44,7 @@ type ParsedInputItem = {
 };
 
 const MEAL_SUFFIX = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
-const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus|con|y)\b/i;
 
 /**
  * Short text with no list separators describes exactly one food item; the
@@ -62,7 +65,9 @@ function singleItemFromText(text: string): ParsedInputItem | null {
     rawText = trimmed.slice(0, mealMatch.index).trim();
   }
 
-  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(rawText)) return null;
+  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(maskKeptDishNames(rawText))) return null;
+  // S202 (cloud-35 F9): `a splash of syrup on pancakes` is two foods — let the segmenter split it.
+  if (isPourOntoSecondFood(rawText)) return null;
   if (rawText.split(/\s+/).length > 6) return null;
 
   return { rawText, mealType, brand: '', normalizedForm: '' };
@@ -250,12 +255,23 @@ export async function POST(req: NextRequest) {
     const { canonicalizeSegLine } = await import('@/lib/nlp/seg-line-key');
     const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
+    const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
+    const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
+    const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
+    const { foldModifierStutter } = await import('@/lib/nlp/modifier-stutter-fold');
+    const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
+    const { dropMeasuredRecipeHead } = await import('@/lib/nlp/measured-recipe-head-drop');
+    const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
+    const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
+    const { rewriteExtraPortions } = await import('@/lib/nlp/extra-portion');
+    const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const {
       resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
       isPer100gInconsistentWithBilled,
     } = await import('@/lib/nlp/resolve-payload');
+    const { applyComponentSubtraction } = await import('@/lib/nlp/component-subtraction');
     const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
 
@@ -344,6 +360,9 @@ export async function POST(req: NextRequest) {
       // SegmentationCache, false = AI segmentation ran, null = this request
       // never reached AI segmentation (item-form input / single-item fast path).
       let segCacheHit: boolean | null = null;
+      // The removal clause the solo fast path stripped (`without the egg`), or null. s447a: read by
+      // `buildParsedItem()` to subtract a carried generic component from the billed head.
+      let soloRemovedClause: string | null = null;
       // Which split ran, for the stream's `segments` frame (`ParseStreamSegmenter`).
       let segmenter: ParseStreamSegmenter = 'items';
 
@@ -367,6 +386,15 @@ export async function POST(req: NextRequest) {
         // return it unchanged after ~1-5s. Skip straight to mapping.
         items = [singleItemFromText(text)!];
         segmenter = 'single';
+        // S240 (MGR 17:30Z relay 3): the fast path never segments, so dropNegatedParts never sees
+        // `a cobb salad without the egg`; the removal clause is stripped here instead.
+        const solo = stripSoloRemoval(items[0].rawText);
+        if (solo) {
+          items = [{ ...items[0], rawText: solo.head }];
+          soloRemovedClause = solo.clause;
+          // audit: the stripped head keys the cache and MappingEventLog, so this line is the only record of the clause.
+          logger.audit('nlp_parse.solo_removal', { head: solo.head, clause: solo.clause });
+        }
       } else {
         // AI-first segmentation (prompt/model/schema live in
         // src/lib/nlp/ai-segmenter.ts, versioned by SEG_PARSER_VERSION): the
@@ -422,6 +450,99 @@ export async function POST(req: NextRequest) {
             // deliberately NOT cached.
             items = capSplit(forceSegmentText(text), 'heuristic');
           }
+        }
+
+        // A quantity written AFTER its food ("tuna salad, maybe a cup") folds onto that
+        // item. Runs on every split, keyed by lineKey, AFTER the cache write above: the
+        // cache keeps the unfolded LLM split, so no prompt edit or version bump is needed.
+        // A negated / removed / excluded part ("no bun", "i took off the bacon") is dropped BEFORE
+        // the fold: fold-first can rewrite a negated part into a billed one ("no bun, two of them"
+        // -> "2 no bun"). The cache write above keeps the undropped split.
+        // A homemade dish named with its parts ("a burrito bowl i made with rice, beans and chicken") bills the dish
+        // only; that pass runs after the negated drop and BEFORE the fold: "a homemade pizza with pepperoni and
+        // mushrooms, two slices" -> the fold can only attach "two slices" once the parts are gone.
+        // A spoken self-correction ("four pancakes, wait no, three pancakes") bills the corrected value only. It runs FIRST:
+        // a corrected quantity must exist before the fold reads it, and a restated item must be gone before the dish and
+        // drink passes count parts. The cache write above keeps the uncorrected split.
+        // S202 (cloud-35 F9): a pour onto/into a second food keeps its measure on the liquid.
+        const lp = restoreLeadingPour(lineKey, items);
+        items = lp.items;
+        if (lp.restored > 0) logger.info('nlp_parse.leading_pour_restore', { count: lp.restored });
+        const sc = resolveSelfCorrections(lineKey, items);
+        items = sc.items;
+        if (sc.corrections.length > 0) {
+          logger.info('nlp_parse.self_correction', {
+            count: sc.corrections.length,
+            kinds: sc.corrections.map(c => c.kind),
+          });
+        }
+        // s455 DS1: a stuttered modifier ("1 tablespoon of sugar sugar-free maple syrup") bills the sugar-free food, not a
+        // phantom sugar. The cache keeps the unfolded split.
+        const ms = foldModifierStutter(lineKey, items);
+        items = ms.items;
+        if (ms.folds.length > 0) logger.info('nlp_parse.modifier_stutter_fold', { count: ms.folds.length });
+        const np = dropNegatedParts(lineKey, items);
+        items = np.items;
+        if (np.drops.length > 0) {
+          logger.info('nlp_parse.negated_part_drop', {
+            count: np.drops.length,
+            kinds: np.drops.map(d => d.kind),
+          });
+        }
+        const dp = dropDishParts(lineKey, items);
+        items = dp.items;
+        if (dp.drops.length > 0) {
+          logger.info('nlp_parse.dish_part_drop', { count: dp.drops.length });
+        }
+        // s453 C3P: a dish named, then amounts for its ingredients, no homemade marker -> bill the ingredients, not the dish.
+        // The cache keeps the undropped split.
+        const mr = dropMeasuredRecipeHead(lineKey, items);
+        items = mr.items;
+        if (mr.drops.length > 0) {
+          logger.info('nlp_parse.measured_recipe_head_drop', { count: mr.drops.length });
+        }
+        // A milk named after a latte-type drink ("a matcha latte with almond milk") is the drink's variant, not a
+        // second billed item; after the dish drop, before the trailing-quantity fold. The cache keeps the unfolded split.
+        const dm = foldDrinkMilk(lineKey, items);
+        items = dm.items;
+        if (dm.folds.length > 0) {
+          logger.info('nlp_parse.drink_milk_fold', { count: dm.folds.length });
+        }
+        // A `with` part the host's own name already holds ("salad with chicken" + "chicken") is billed twice; dropped
+        // before the trailing-quantity fold so a following "2 cups" still joins the host. The cache keeps the undropped split.
+        // S240 (MGR 17:30Z relay 1): a split-off `double meat` reads as the host's protein, not a "Double Meat" record.
+        const ep = rewriteExtraPortions(lineKey, items);
+        items = ep.items;
+        if (ep.rewrites.length > 0) {
+          logger.info('nlp_parse.extra_portion', { count: ep.rewrites.length });
+        }
+        const se = dropSegmenterEchoes(lineKey, items);
+        items = se.items;
+        if (se.echoes.length > 0) {
+          logger.info('nlp_parse.segmenter_echo_drop', { count: se.echoes.length });
+        }
+        // S240 (MGR 18:44Z (2)): an item carrying its own personal `i made with` marker is the dish; retrieval reads its head. After the
+        // echo drop (which reads the host's full normalizedForm) and before the fold.
+        const mw = readMadeWithHeads(lineKey, items);
+        items = mw.items;
+        if (mw.heads.length > 0) {
+          logger.info('nlp_parse.made_with_head', { count: mw.heads.length });
+        }
+        const tq = foldTrailingQuantityClauses(lineKey, items);
+        items = tq.items;
+        if (tq.folds.length > 0) {
+          logger.info('nlp_parse.trailing_quantity_fold', {
+            count: tq.folds.length,
+            kinds: tq.folds.map(f => f.kind),
+          });
+        }
+        // A restaurant's brand on item 1 fills the later unbranded dishes. After the drop and the fold:
+        // the drop's guards skip a BRANDED item, so fill-first would bill "no pickles" under the chain.
+        // The cache write above keeps the unfilled split.
+        const bf = fillRestaurantBrand(items);
+        items = bf.items;
+        if (bf.fills > 0) {
+          logger.info('nlp_parse.restaurant_brand_fill', { count: bf.fills });
         }
       }
       // Per-line telemetry rows (MappingEventLog), written in one createMany
@@ -677,7 +798,29 @@ export async function POST(req: NextRequest) {
               ? (details.source as StandardSource)
               : 'ai_estimated';
 
+        // s447a: solo-path removal clause -> subtract ONE fixed portion of a CARRIED generic component.
+        // Absent unless the dish carries it; `foodName`, `foodId`, `grams` are untouched.
+        let sub: Extract<ReturnType<typeof applyComponentSubtraction>, { adjustments: unknown }> | null = null;
+        if (soloRemovedClause) {
+          const r = applyComponentSubtraction({
+            nutrition, grams: mapped.grams, foodName: mapped.foodName, standardSource,
+            head: rawText, clause: soloRemovedClause, parsed,
+          });
+          sub = 'adjustments' in r ? r : null;
+          logger.audit('nlp_parse.solo_subtraction', {
+            head: rawText,
+            clause: soloRemovedClause,
+            subtracted: sub ? sub.adjustments.map(a => a.component) : [],
+            partSkips: sub?.partSkips ?? [],
+            skipped: 'skipped' in r ? r.skipped : null,
+          });
+        }
+
         const portionProvenance = portionProvenanceForTier(mapped.servingTier);
+        const cookingState = cookingStateFor({
+          rawText, foodName: mapped.foodName, source: standardSource,
+          kcal100: nutritionPer100g.kcal100, brandName: mapped.brandName ?? null,
+        });
 
         return {
           rawText,
@@ -692,8 +835,9 @@ export async function POST(req: NextRequest) {
           quantity: qty,
           unit,
           grams: mapped.grams,
-          nutrition,
-          nutritionPer100g,
+          nutrition: sub ? sub.nutrition : nutrition,
+          nutritionPer100g: sub ? sub.nutritionPer100g : nutritionPer100g,
+          ...(sub ? { adjustments: sub.adjustments } : {}),
           servingOptions: details.servingOptions,
           // TRUE when `grams` above is a placeholder, not a weight — so `nutritionPer100g`
           // is that placeholder read back rather than a density, and every gram- or
@@ -735,6 +879,7 @@ export async function POST(req: NextRequest) {
           // Owner: sync-docs/reports/2026-08-17_can-the-badge-be-aimed.md §6 (mobile),
           // and the plan that named the field, 2026-08-17_ultracode-execution-plan-2.md Lane D.
           ...(portionProvenance ? { portionProvenance } : {}),
+          ...(cookingState ? { cookingState } : {}),
           // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
           // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
           // funnel outcome straight off the response instead of re-deriving it

@@ -1,0 +1,12 @@
+# 2026-10-30 post-deploy-8 re-read (C68 s399): verbatim s393 run-1 BAD lines + 4 dry controls; 7 BAD, 4 OK. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrand
+half a cup of cooked rolled oats	1	BAD		-
+a cup of cooked oatmeal	1	BAD		-
+a bowl of porridge	1	BAD		-
+a cup of cooked teff	1	BAD		-
+a cup of cooked split peas	1	BAD		-
+a cup of cooked orzo	1	BAD		-
+a cup of cooked basmati rice	1	BAD		-
+a cup of dry rolled oats	1	OK		-
+100 g uncooked rice	1	OK		-
+a cup of dry quinoa	1	OK		-
+half a cup of dry lentils	1	OK		-

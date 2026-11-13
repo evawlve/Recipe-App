@@ -56,12 +56,12 @@ describe('controls: a size word or a non-measure after the article is untouched'
     expect(parsed('a cup and a half of teriyaki chicken')).toEqual({ qty: 1.5, unit: 'cup', name: 'teriyaki chicken' });
   });
 
-  // Values identical to master (21203f56): `and` is not a measure, so the rule
-  // never fires. (Bare "half and half" -> 0.5 "and half" is a pre-existing shape
-  // this rule does not own.)
+  // `and` is not a measure, so this rule never fires. A leading "half and half"
+  // is the food's name (halfAndHalfCursor() in ingredient-line.ts), so
+  // "one half and half" keeps the quantity 1 and the three words as the name.
   test.each([
     ['a half and half creamer', { qty: 1, unit: null, name: 'a half and half creamer' }],
-    ['one half and half', { qty: 1, unit: null, name: 'and half' }],
+    ['one half and half', { qty: 1, unit: null, name: 'half and half' }],
     ['a quarter pounder with cheese', { qty: 1, unit: null, name: 'a quarter pounder with cheese' }],
   ])('%s is unchanged from master', (line, expected) => {
     expect(parsed(line)).toEqual(expected);

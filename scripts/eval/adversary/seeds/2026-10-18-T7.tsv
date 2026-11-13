@@ -1,0 +1,128 @@
+# run 1
+# C68 S179 · 2026-10-18 · T7 · run 1 (cold) · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (5th ignored by the CLI)
+stress ate a whole sleeve of cinnamon raisin bread toast, like three slices	1			-
+sorry forgot to log breakfast, it was two tbsp of peanut butter on a bagel	2			-;-
+update: lunch was a turkey sandwich with one slice of swiss	1			-
+tbh just had a side of mac n cheese for dinner	1			-
+ngl i had two slices of chicago deep dish pizza	1			-
+lowkey ate a whole bag of cheetos watching tv	1			-
+the usual for breakfast, one cup of almond milk with granola	2			-;-
+again for lunch, a can of tomato soup	1			-
+for the second time today i had a protein bar, cookies and cream	1			-
+um so dinner was like grilled salmon and uh some rice	2			-;-
+you know, just a glass of white wine with dinner	1			-
+literally just coffee with a tablespoon of cream all morning	1			-
+basically a handful of almonds and that's it until dinner	1			-
+i was starving so i had two cheeseburgers	1			-
+felt sick so only some saltines and ginger ale	2			-;-
+celebrating so i had a slice of birthday cake and a glass of champagne	2			-;-
+hungover breakfast was a bacon egg and cheese on a roll	1			-
+before my run i had half a banana	1			-
+at my desk i ate trader joe's unexpected cheddar, about an ounce	1			trader joe's
+dinner out was a steak and a baked potato	2			-;-
+in the car i snacked on beef jerky	1			-
+at the farmers market i got a peach and ate it	1			-
+watching the game i had six chicken wings and some celery	2			-;-
+on my break i had a cup of instant noodles	1			-
+after dinner dessert was 60 g of mixed berries with whipped cream	2			-;-
+mid morning snack, one hard boiled egg	1			-
+late lunch around 3, a chicken caesar salad	1			-
+first meal after fasting, two eggs and an avocado	2			-;-
+last thing i ate today was a cup of chamomile tea	1			-
+brunch with friends, i had a waffle and some fruit	2			-;-
+nothing for breakfast but lunch was a big burrito	1			-
+dinner was whatever was left, some rice and beans	2			-;-
+same thing as monday, oatmeal with peanut butter	1			-
+kid's leftovers again, half a grilled cheese	1			-
+work lunch they ordered pizza and i had one slice	1			-
+at the bbq i had a burger and a hot dog	2			-;-
+so yeah breakfast was yogurt	1			-
+ok so dinner, chicken stir fry	1			-
+for real only a smoothie today	1			-
+just finished a bowl of cereal with whole milk	2			-;-
+
+# run 7
+# C68 S179 · 2026-10-18 · T7 · run 7 (warm, RINU…) · 3 repro (run 6) + 37 new · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+bf: oatmeal, lunch: salad, din: salmon	3			-;-;-
+apple + PB (2 tbsp)	2			-;-
+PB banana toast x1	1			-
+was it two eggs? yeah two eggs and toast	2			-;-
+fyi lunch was a chicken wrap	1			-
+note: had a protein bar after the gym	1			-
+btw i also had a banana	1			-
+7:30 - oatmeal with raisins	1			-
+11am snack: string cheese	1			-
+• two eggs • toast • coffee	3			-;-;-
+dinner -> pork chops and green beans	2			-;-
+breakfast = greek yogurt	1			-
+i think i had like maybe a cup of rice	1			-
+i guess around two slices of pizza	1			-
+probably a handful of pretzels, idk	1			-
+not sure, maybe 6 oz of chicken	1			-
+pretty sure it was a turkey sandwich	1			-
+lunch (late) - leftover chili	1			-
+at costco i ate a few samples, a mini pizza and a meatball	2			-;-
+for the record, dinner was spaghetti	1			-
+ate this at 3am: a bowl of cereal	1			-
+my wife made me a grilled cheese and tomato soup	2			-;-
+roommate's birthday so i had a cupcake	1			-
+got takeout: orange chicken and fried rice	2			-;-
+ordered in: a large pepperoni pizza, ate 3 slices	1			-
+between meetings grabbed a granola bar	1			-
+cheat day, a double cheeseburger and a shake	2			-;-
+meal 1: eggs and toast. meal 2: chicken and rice	4			-;-;-;-
+breakfast was 2 pancakes. lunch was a salad.	2			-;-
+forgot yesterday: a slice of cheesecake	1			-
+today so far: coffee, a banana and a yogurt	3			-;-;-
+on the way home: a soft pretzel	1			-
+evening: a glass of wine and some cheese	2			-;-
+supper tonight was beef stew	1			-
+brekkie was beans on toast	1			-
+after school snack, goldfish crackers	1			goldfish
+lunch break burrito	1			-
+before bed a mug of warm milk	1			-
+tonight: tacos, three of them	1			-
+grabbed a coffee and a croissant at the airport	2			-;-
+
+# run 13
+# C68 S179 · 2026-10-18 · T7 · run 13 (warm, RINU…) · 8 repro (run 12) + 32 new (regional English meal words and dishes: UK/AU/US) · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+3 c popcorn	1			-
+1 t honey	1			-
+2 kgs potatoes over the week	1			-
+1 cn black beans	1			-
+1 btl water	1			-
+1 doz eggs for the week, ate 2	1			-
+250ml orange juice	1			-
+⅓ cup almonds	1			-
+for tea i had fish fingers and peas	2			-;-
+smoko was a meat pie	1			-
+arvo snack: a cuppa and two bickies	2			-;-
+a bacon butty for breakfast	1			-
+a full english fry up	1			-
+a cheese toastie for lunch	1			-
+a packet of crisps at lunch	1			-
+a jacket potato with beans and cheese	1			-
+dinner (the midday meal) was roast chicken	1			-
+supper was cheese on toast	1			-
+a grinder with salami and provolone	1			-
+a shrimp po boy	1			-
+a can of pop with lunch	1			-
+a sausage roll from the bakery	1			-
+a scotch egg	1			-
+a cornish pasty	1			-
+a fries sandwich on white bread	1			-
+bangers and mash for tea	1			-
+a cuppa with milk and one sugar	1			-
+a slice of victoria sponge	1			-
+a hot cross bun with butter	2			-;-
+a crumpet with jam	2			-;-
+a bowl of porridge with golden syrup	1			-
+cheese, crackers and an apple for lunch	3			-;-;-
+a lamington with my tea	1			-
+a hot dog in a bun from a bbq	1			-
+a slice of sponge cake	1			-
+vegemite on toast	1			-
+a flat white and a banana bread slice	2			-;-
+a hoagie with turkey and cheese	1			-
+chicken parmy and chips	2			-;-
+a bag of chips (crisps) and a soda	2			-;-

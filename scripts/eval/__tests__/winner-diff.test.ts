@@ -65,6 +65,7 @@ import {
     isSkippedHashDir,
     HASHED_EXTRA_FILES,
 } from '../winner-diff-screens';
+import { maskKeptDishNames } from '../../../src/lib/nlp/kept-dish-names';
 import {
     GuardParams,
     MUTATING,
@@ -542,14 +543,23 @@ describe('parseGoldenSet', () => {
         // other). n-p2-02 and n-cn-01 DO carry grams, because on those two the identity was
         // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
         // 12 wings at the 100 g no-serving default vs at the 34 g seed.
-        expect(all.length).toBe(300);
+        // 310 / 177 / 144 since 2026-10-18: n-r3-01..10 (S202 round-3 pins) — ten `text` lines; six grams bands (02-07); three kcal100 bands (04, 05, 10); two forbidName (01, 10); no total, no expectItems.
+        // 311 since 2026-10-25: n-qty-10 `2 eggs x2` — one grams band, one expectItems.
+        // 325 since 2026-11-03: n-s424-01..06 + n-s429-01..08 (knownIssue pins, MGR s438), every one with expectName.
+        // 328 since 2026-11-04: n-s445-02..04 (s445a removal-clause pins) — three `text` lines, three total bands, three forbidName, three expectName.
+        // 329 since 2026-11-05: n-s448-01 (s448a).
+        // 332 since 2026-11-05: n-s448-02..04 (MGR s448 knownIssue nominations) — three `text` lines, three forbidName, three expectName, no band.
+        expect(all.length).toBe(332);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(300);
+        expect(n(c => c.expectName.length > 0)).toBe(332); // 329 since 2026-11-05: n-s448-01 (s448a); 332 with n-s448-02..04
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
         // 171 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two of six new cases
         // where identity held on both arms and only the count moved.
-        expect(n(c => !!c.grams)).toBe(171);              // the majority assertion
+        // 177 since 2026-10-18: n-r3-02..07 (S202 round-3 pins).
+        // 178 since 2026-10-25: n-qty-10.
+        // 189 since 2026-11-03: n-s424-01..04, n-s424-06, n-s429-01..04, n-s429-07..08 (MGR s438).
+        expect(n(c => !!c.grams)).toBe(189);              // the majority assertion
         // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
         // (n-prose-01 protein100/fat100, n-prose-03 and n-prose-10 kcal100 as the
         // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
@@ -565,10 +575,14 @@ describe('parseGoldenSet', () => {
         // degrade reading is retired (the "fake brand" is G Hughes and the accepted generic
         // was the FULL-SUGAR product at 167-467 kcal/100 g); expectName now also names the
         // brand, and the band is what keeps the case gated whichever G Hughes row wins.
-        expect(n(c => !!c.macros)).toBe(95);
+        // 98 since 2026-10-18: n-r3-04, 05, 10 kcal100 bands (S202 round-3 pins).
+        // 100 since 2026-11-03: n-s424-02 and n-s429-07 kcal100 bands (MGR s438).
+        expect(n(c => !!c.macros)).toBe(100);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
-        expect(n(c => typeof c.expectItems === 'number')).toBe(63);
+        // 64 since 2026-10-25: n-qty-10.
+        // 67 since 2026-11-03: n-s424-05, n-s429-05, n-s429-06 (MGR s438).
+        expect(n(c => typeof c.expectItems === 'number')).toBe(67);
         // 36 since 2026-08-04: n-cook-03 gained a total band, because its scale-free
         // kcal100/carbs100 were passing on a 240 g / 295 kcal bill against USDA's
         // 172 g / 227 kcal. Adding one here also adds one to the `total` blind count
@@ -591,7 +605,10 @@ describe('parseGoldenSet', () => {
         // 58 since 2026-08-26: n-k2-03 `wendys biggie fries`, banded on the observed
         // record's own 450 kcal serving +-35% because Biggie Bites and Baconator Fries
         // are both exactly 200 kcal/100 g and only the billed total separates them.
-        expect(n(c => !!c.total)).toBe(58);
+        // 60 since 2026-11-03: n-s424-06 and n-s429-01 total.calories bands (MGR s438).
+        // 63 since 2026-11-04: n-s445-02..04 total.calories bands (s445a).
+        // 64 since 2026-11-05: n-s448-01 total band (s448a).
+        expect(n(c => !!c.total)).toBe(64);
         // 3 since 2026-08-25 (n-n1-01..03, A8 row 3 N1) — the FIRST live users of
         // `forbidName` in the nlp corpus. It was documented in _readme on 2026-07-25 and
         // implemented in run-eval, and this pin read 0 for a month: the parser was carrying
@@ -608,7 +625,12 @@ describe('parseGoldenSet', () => {
         // sandwich chain's fountain listing, once `leaf` was gone) and `fries` (Fries,
         // Little, once `five` had been read as a count). n-p2-02 and n-cn-01 carry
         // grams bands instead, because there the identity never moved.
-        expect(n(c => !!c.forbidName)).toBe(10);
+        // 12 since 2026-10-18: n-r3-01 and n-r3-10 (S202 round-3 pins).
+        // 13 since 2026-11-03: n-s424-03 forbids the raw-leaves record (MGR s438).
+        // 16 since 2026-11-04: n-s445-02..04 forbid the wrong-base record (s445a).
+        // 17 since 2026-11-05: n-s448-01 forbids cheese (s448a).
+        // 20 since 2026-11-05: n-s448-02..04 forbid ground beef / the dried-fruit record (MGR s448).
+        expect(n(c => !!c.forbidName)).toBe(20);
         expect(n(c => c.expectAbstain === true)).toBe(0);
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
@@ -628,7 +650,10 @@ describe('parseGoldenSet', () => {
         // inverted on density -- Breakfast Jack 202 vs Jumbo Jack 104 kcal/100 g, two
         // Pure Leaf teas at ~29 and ~31 -- so forbidName is the only honest
         // discriminator, and on n-p2-01 the serving residue is still wrong post-fix.
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(45);
+        // 48 since 2026-10-18: n-r3-01, 08, 09 carry no grams/total/macros band (derived from the seat deltas: 10 cases - union of grams 02-07 and macros 04, 05, 10).
+        // 51 since 2026-11-03: n-s424-05 (maxItems), n-s429-05, n-s429-06 (expectItems) carry no band (MGR s438).
+        // 54 since 2026-11-05: n-s448-02..04 are identity-only (forbidName), no band (MGR s448).
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(54);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
@@ -652,7 +677,12 @@ describe('parseGoldenSet', () => {
         // text 134 since 2026-08-26: all six A8 row 5 cases are `text`, because the
         // defect is in the PARSER and an item-shaped case supplies name/qty/unit
         // directly — it would bypass the very code under test.
-        expect([item.length, text.length]).toEqual([166, 134]);
+        // text 145 since 2026-10-25: n-qty-10 `2 eggs x2` is text-shaped (the defect is in the parser).
+        // 166 / 159 since 2026-11-03: the fourteen s424/s429 pins are all `text` lines (MGR s438).
+        // 166 / 162 since 2026-11-04: n-s445-02..04 are `text` lines (s445a).
+        // 166 / 163 since 2026-11-05: n-s448-01 is a `text` line (s448a).
+        // 166 / 166 since 2026-11-05: n-s448-02..04 are `text` lines (MGR s448).
+        expect([item.length, text.length]).toEqual([166, 166]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -662,12 +692,18 @@ describe('parseGoldenSet', () => {
         // 47 since 2026-08-24: n-grd-06 `4 oz ground chicken` is text-shaped with a grams band.
         // 52 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two text-shaped
         // cases whose identity held on both arms, so grams is the discriminator.
-        expect(text.filter(c => c.grams).length).toBe(52);
+        // 58 since 2026-10-18: n-r3-02..07 are text-shaped grams bands (S202 round-3 pins).
+        // 59 since 2026-10-25: n-qty-10.
+        // 70 since 2026-11-03: eleven grams bands among the s424/s429 pins (MGR s438).
+        expect(text.filter(c => c.grams).length).toBe(70);
         // 35 since 2026-08-25: n-k3-01..03 band total.calories and nothing else.
         // 36 since 2026-08-25 (N1): n-n1-01 adds one; n-n1-02/03 band kcal100 instead.
         // 37 since 2026-08-26 (K2): n-k2-03 adds one; n-k2-01/02 band kcal100 instead.
-        expect(text.filter(c => c.total).length).toBe(37);
-        expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(63);
+        // 39 since 2026-11-03: n-s424-06, n-s429-01 (MGR s438).
+        // 43 since 2026-11-05: n-s448-01 (s448a).
+        expect(text.filter(c => c.total).length).toBe(43);
+        // 67 since 2026-11-03: n-s424-05, n-s429-05, n-s429-06 (MGR s438).
+        expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(67);
 
         // and the individual bands survive the round-trip
         expect(all.find(c => c.id === 'n-qty-04')!.grams).toEqual([24, 120]);
@@ -685,11 +721,17 @@ describe('parseGoldenSet', () => {
  * `text`-shaped, so a blanket skip would have hidden them a second time.
  */
 describe('isDeterministicSingleItemText (mirror of route.ts singleItemFromText)', () => {
+    it('mirrors the S202 F9 pour rule: a pour onto a second food is not a single item', () => {
+        expect(isDeterministicSingleItemText('a splash of syrup on pancakes')).toBe(false);
+        expect(isDeterministicSingleItemText('a splash of milk')).toBe(true);
+    });
+
     it('accepts the short separator-free lines the route maps WITHOUT the segmenter', () => {
         expect(isDeterministicSingleItemText('7up')).toBe(true);
         expect(isDeterministicSingleItemText('2 7up')).toBe(true);
         expect(isDeterministicSingleItemText('three slices of bacon')).toBe(true);
         expect(isDeterministicSingleItemText('chicken breast for lunch')).toBe(true);  // meal suffix stripped
+        for (const t of ['conch fritters', 'huevos rancheros', 'yogurt', 'mayo', 'chili con carne', 'arroz con pollo', 'una taza de arroz con pollo', 'un café con leche']) expect(isDeterministicSingleItemText(t)).toBe(true); // con/y inside a word
     });
 
     it('rejects everything the route hands to the LLM segmenter', () => {
@@ -699,6 +741,10 @@ describe('isDeterministicSingleItemText (mirror of route.ts singleItemFromText)'
         expect(isDeterministicSingleItemText('x'.repeat(61))).toBe(false);       // > 60 chars
         expect(isDeterministicSingleItemText('   ')).toBe(false);
         expect(isDeterministicSingleItemText('for lunch')).toBe(false);          // nothing left after the suffix
+        expect(isDeterministicSingleItemText('pollo y arroz')).toBe(false);      // Spanish "y"
+        expect(isDeterministicSingleItemText('arroz con frijoles')).toBe(false); // Spanish "con"
+        expect(isDeterministicSingleItemText('arroz con pollo y frijoles')).toBe(false); // kept dish plus a second food
+        expect(isDeterministicSingleItemText('una taza grande de arroz con pollo')).toBe(false); // kept dish over six words
     });
 
     it('agrees with the corpus: every item-shaped case is single-item by construction', () => {
@@ -914,18 +960,24 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // together, and both were gated on locally-served builds (K2's frozen-pool gate
         // is in the k2-gate-2026-08-25 artifacts; the live pair is 3/3 red on
         // Gp4AsbVJN027dnQaPgn6C, 3/3 green on g0Wf3qBUpQkLOSTV2me4G).
-        expect(cov.cases).toBe(300);
-        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 171, blind: 171 });
+        // 310 / 177 since 2026-10-18: n-r3-01..10 (S202 round-3 pins), six grams bands.
+        // 311 / 178 / 64 since 2026-10-25: n-qty-10 `2 eggs x2`, one grams band and one expectItems.
+        // 325 / 189 / 67 since 2026-11-03: n-s424-01..06 + n-s429-01..08 — eleven grams bands, two total bands, three expectItems.
+        // 328 / 63 since 2026-11-04: n-s445-02..04 (s445a) — three total bands.
+        // 329 / 64 since 2026-11-05: n-s448-01 (s448a) — one total band.
+        // 332 / 64 since 2026-11-05: n-s448-02..04 (MGR s448) — no band.
+        expect(cov.cases).toBe(332);
+        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 189, blind: 189 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 58, blind: 58 });
-        expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 64, blind: 64 });
+        expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 67, blind: 67 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(300);
+        expect(en.asserted).toBe(332); // 329 since 2026-11-05: n-s448-01 (s448a); 332 with n-s448-02..04
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...
-        expect(cov.gramsCases).toBe(171);
+        expect(cov.gramsCases).toBe(189);
         // ...and only a handful would be record-INdependent even with a resolver,
         // i.e. the blindness sits exactly where a winner change moves the answer.
         expect(cov.gramsRecordIndependent).toBeLessThanOrEqual(5);
@@ -2466,7 +2518,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     }
 
     /** Re-pin ONLY after reconciling isDeterministicSingleItemText with the route. */
-    const PINNED_ROUTE_RULE_HASH = '80719c0439bca3d4';
+    const PINNED_ROUTE_RULE_HASH = '5ade9cf97f8a8244';
 
     it('has not drifted from the transcription in winner-diff-screens.ts', () => {
         const actual = createHash('sha256').update(routeRuleSource()).digest('hex').slice(0, 16);
@@ -2482,7 +2534,8 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     it('carries the two separator rules the mirror restates verbatim', () => {
         const src = routeRuleSource();
         expect(src).toContain('/\\s*(?:for|at|as)\\s+(breakfast|lunch|dinner|snacks?)\\s*\\.?\\s*$/i');
-        expect(src).toContain('/[,;\\n+&]|\\b(?:and|with|plus)\\b/i');
+        expect(src).toContain('/[,;\\n+&]|\\b(?:and|with|plus|con|y)\\b/i');
+        expect(src).toContain('MULTI_ITEM_SIGNALS.test(maskKeptDishNames(rawText))');
         expect(src).toContain('trimmed.length > 60');
         expect(src).toContain("rawText.split(/\\s+/).length > 6");
     });
@@ -2496,7 +2549,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     it('agrees with the mirror on the boundary cases the route decides', () => {
         const src = routeRuleSource();
         const mealRe = new RegExp(/\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/, 'i');
-        const multiRe = new RegExp(/[,;\n+&]|\b(?:and|with|plus)\b/, 'i');
+        const multiRe = new RegExp(/[,;\n+&]|\b(?:and|with|plus|con|y)\b/, 'i');
         // guard: the literals above are only a faithful stand-in while they are the
         // ones the route actually ships, which the previous case has just asserted.
         expect(src).toContain(mealRe.source);
@@ -2508,7 +2561,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
             let rawText = trimmed;
             const m = trimmed.match(mealRe);
             if (m) rawText = trimmed.slice(0, m.index).trim();
-            if (rawText.length === 0 || multiRe.test(rawText)) return false;
+            if (rawText.length === 0 || multiRe.test(maskKeptDishNames(rawText))) return false;
             return rawText.split(/\s+/).length <= 6;
         };
 
@@ -2517,6 +2570,9 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
             '2 eggs and toast', 'coffee, bagel', 'a b c d e f g', 'x'.repeat(61),
             '   ', 'for lunch', 'toast with peanut butter', 'burger + fries',
             'noodles and company buttered noodles', 'grilled chicken at dinner',
+            'pollo y arroz', 'arroz con frijoles', 'chili con carne', 'conch fritters',
+            'arroz con pollo', 'una taza de arroz con pollo', 'un café con leche',
+            'arroz con pollo y frijoles', 'una taza grande de arroz con pollo',
         ]) {
             expect({ t, mirror: isDeterministicSingleItemText(t) })
                 .toEqual({ t, mirror: routeSaysSingleItem(t) });

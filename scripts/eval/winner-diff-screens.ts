@@ -28,6 +28,9 @@
  */
 
 import { matchesAlt, textOf } from './assertions';
+// Relative, not '@/': loose-measures.ts has no imports, so this file stays I/O-free.
+import { isPourOntoSecondFood } from '../../src/lib/parse/loose-measures';
+import { maskKeptDishNames } from '../../src/lib/nlp/kept-dish-names';
 
 // ============================================================
 // 1. Wire types — shared with winner-diff.ts, kept here so tests need no runner
@@ -1017,7 +1020,7 @@ export interface GoldenCase {
 }
 
 const MEAL_SUFFIX_RE = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
-const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus|con|y)\b/i;
 
 /**
  * Byte-for-byte mirror of `singleItemFromText()` in src/app/api/nlp/parse/route.ts,
@@ -1030,6 +1033,9 @@ const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
  * single-query replay, while "2 eggs and toast" is not. Blanket-marking every
  * `text` case unevaluable would be as dishonest in the other direction as the
  * silent pass this file exists to remove.
+ *
+ * The route's S202 F9 pour rule (a pour onto a second food is not a single item) is mirrored by calling the same
+ * pure predicate, not a transcription.
  *
  * IF THE ROUTE'S RULE CHANGES, THIS MUST CHANGE WITH IT — and that is now enforced
  * rather than requested. `__tests__/winner-diff.test.ts` hashes the route's own source
@@ -1047,7 +1053,8 @@ export function isDeterministicSingleItemText(text: string): boolean {
     let rawText = trimmed;
     const mealMatch = trimmed.match(MEAL_SUFFIX_RE);
     if (mealMatch) rawText = trimmed.slice(0, mealMatch.index).trim();
-    if (rawText.length === 0 || MULTI_ITEM_SIGNALS_RE.test(rawText)) return false;
+    if (rawText.length === 0 || MULTI_ITEM_SIGNALS_RE.test(maskKeptDishNames(rawText))) return false;
+    if (isPourOntoSecondFood(rawText)) return false;
     if (rawText.split(/\s+/).length > 6) return false;
     return true;
 }

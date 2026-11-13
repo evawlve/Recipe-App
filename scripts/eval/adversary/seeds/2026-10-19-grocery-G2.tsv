@@ -1,0 +1,42 @@
+# MGR (S242) pre-digest seeds, 2026-10-19, theme GROCERY run 2 of 2 (Mode G caps a run at 40 lines): store private label, deli/bakery counter, Costco food court. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (';' per item, '-' none; the CLI ignores col 5)
+# CONTROLS: the last 6 lines are bare generics; expectBrands '-' means a winner carrying a store/retailer brand (kirkland, trader joe's, aldi, great value, 365, good & gather, member's mark, kroger) is a finding, not a pass.
+a croissant from costco	1			costco
+2 kirkland croissants	1			kirkland
+a slice of publix sheet cake	1			publix
+a grocery store sushi roll	1		portion	-
+a california roll from whole foods	1			whole foods
+half a spicy tuna roll from the grocery store	1		portion	-
+half a publix chicken tender sub	1			publix
+trader joe's mandarin orange chicken	1			trader joe's
+a cup of trader joes mandarin orange chicken	1			trader joe's
+half a bag of trader joe's cauliflower gnocchi	1		portion	trader joe's
+3 trader joes joe joes	1			trader joe's
+an ounce of trader joe's unexpected cheddar	1			trader joe's
+a teaspoon of everything but the bagel seasoning	1			trader joe's
+tj's orange chicken	1			trader joe's
+trader joes orange chicken with a cup of white rice	2			trader joe's;-
+a kirkland protein bar	1			kirkland
+kirkland signature chocolate chip protein bar	1			kirkland
+a handful of kirkland almonds	1			kirkland
+2 slices of kirkland bacon	1			kirkland
+a cup of kirkland greek yogurt	1			kirkland
+a quarter cup of costco's kirkland trail mix	1			kirkland
+2 tbsp great value peanut butter	1			great value
+2 slices of great value white bread	1			great value
+a cup of great value 2% milk	1			great value
+a cup of good & gather greek yogurt	1			good & gather
+2 tbsp good and gather hummus	1			good & gather
+a cup of 365 almond milk	1			365
+365 everyday value peanut butter and a banana	2			365;-
+aldi friendly farms greek yogurt	1			friendly farms
+a slice of aldi brioche	1			aldi
+members mark greek yogurt	1			member's mark
+a quarter cup of kroger shredded cheddar	1			kroger
+2 heb flour tortillas	1			h-e-b
+2 pieces of publix fried chicken	1			publix
+2 tbsp peanut butter	1			-
+a tbsp of olive oil	1			-
+2 slices of bread	1			-
+an ounce of cheddar cheese	1			-
+6 oz salmon	1			-
+a cup of fat free milk	1			-

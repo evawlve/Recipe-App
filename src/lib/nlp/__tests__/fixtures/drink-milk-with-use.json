@@ -1,0 +1,1614 @@
+[
+ {
+  "src": "seat",
+  "line": "a latte and milk with cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cereal"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk for cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cereal"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk with cookies",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cookies"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk with sugar",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and oat milk with a muffin",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "a muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "oat milk",
+   "a muffin"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk with ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a coffee and milk with breakfast",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "a coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a coffee",
+   "milk"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a latte and milk with my cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "a latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cereal"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "seat",
+  "line": "a mocha and whole milk with oreos",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "a mocha",
+    "brand": ""
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oreos",
+    "normalizedForm": "oreos",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a mocha",
+   "whole milk",
+   "oreos"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cereal"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with cookies",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cookies",
+    "normalizedForm": "cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cookies"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with granola",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "granola"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with oatmeal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "oatmeal"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a cappuccino and skim milk with cheerios",
+  "input": [
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino",
+    "brand": ""
+   },
+   {
+    "rawText": "skim milk",
+    "normalizedForm": "skim milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cheerios",
+    "normalizedForm": "cheerios",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a cappuccino",
+   "skim milk",
+   "cheerios"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with sugar",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "sugar"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with honey",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "honey",
+    "normalizedForm": "honey",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "honey"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with whipped cream",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "whipped cream"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a mocha and oat milk with whipped cream",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a mocha",
+   "whipped cream"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with cinnamon",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cinnamon",
+    "normalizedForm": "cinnamon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cinnamon"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with caramel",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "caramel",
+    "normalizedForm": "caramel",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "caramel"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with vanilla syrup",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "vanilla syrup"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with a shot of vanilla",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a shot of vanilla",
+    "normalizedForm": "shot of vanilla",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "a shot of vanilla"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with an extra shot",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "an extra shot",
+    "normalizedForm": "extra shot",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "an extra shot"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with extra foam",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "extra foam",
+    "normalizedForm": "extra foam",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "extra foam"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with stevia",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "stevia",
+    "normalizedForm": "stevia",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "stevia"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with 2 sugars",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "2 sugars",
+    "normalizedForm": "2 sugars",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "2 sugars"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with sugar free vanilla",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "sugar free vanilla",
+    "normalizedForm": "sugar free vanilla",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "sugar free vanilla"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and almond milk with sweetener",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   },
+   {
+    "rawText": "sweetener",
+    "normalizedForm": "sweetener",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "sweetener"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with breakfast",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with breakfast",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "breakfast",
+    "normalizedForm": "breakfast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "breakfast"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with my breakfast",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "breakfast",
+    "normalizedForm": "breakfast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "breakfast"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with lunch",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "lunch",
+    "normalizedForm": "lunch",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "lunch"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with dinner",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "dinner",
+    "normalizedForm": "dinner",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "dinner"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with a coffee",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "a coffee"
+  ],
+  "expectKinds": [],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with coffee",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "coffee"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with espresso",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "espresso",
+    "normalizedForm": "espresso",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "espresso"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with tea",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "tea",
+    "normalizedForm": "tea",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "tea"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk in it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with it",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "lattes and milk in them",
+  "input": [
+   {
+    "rawText": "lattes",
+    "normalizedForm": "lattes",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "lattes"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk for me",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with some ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "some ice",
+    "normalizedForm": "ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk"
+  ],
+  "expectKinds": [
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with crushed ice",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "crushed ice",
+    "normalizedForm": "crushed ice",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with ice cubes",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice cubes",
+    "normalizedForm": "ice cubes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte"
+  ],
+  "expectKinds": [
+   "fold",
+   "ice"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with ice cream",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "ice cream"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte made with oat milk",
+  "input": [
+   {
+    "rawText": "a latte made with oat milk",
+    "normalizedForm": "latte made with oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte made with oat milk"
+  ],
+  "expectKinds": [
+   "duplicate"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte made with oat milk and cereal",
+  "input": [
+   {
+    "rawText": "a latte made with oat milk",
+    "normalizedForm": "latte made with oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte made with oat milk",
+   "cereal"
+  ],
+  "expectKinds": [
+   "duplicate"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk, with cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cereal"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte and milk with toast and cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "toast",
+   "cereal"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk",
+  "line": "a latte with milk with cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cereal"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with cream of wheat",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cream of wheat",
+    "normalizedForm": "cream of wheat",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cream of wheat"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with honey nut cheerios",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "honey nut cheerios",
+    "normalizedForm": "honey nut cheerios",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "honey nut cheerios"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with cinnamon toast crunch",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cinnamon toast crunch",
+    "normalizedForm": "cinnamon toast crunch",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "cinnamon toast crunch"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with chocolate chip cookies",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "chocolate chip cookies",
+    "normalizedForm": "chocolate chip cookies",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "chocolate chip cookies"
+  ],
+  "expectKinds": [],
+  "changed": true
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with cookies and cream",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "cookies and cream",
+    "normalizedForm": "cookies and cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "cookies and cream"
+  ],
+  "expectKinds": [
+   "fold"
+  ],
+  "changed": false
+ },
+ {
+  "src": "refute-r1 atk2",
+  "line": "a latte and milk with frosted flakes",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "frosted flakes",
+    "normalizedForm": "frosted flakes",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a latte",
+   "milk",
+   "frosted flakes"
+  ],
+  "expectKinds": [],
+  "changed": true
+ }
+]

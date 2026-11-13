@@ -7,7 +7,8 @@
 
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
-import { detectGrainCookingContext } from './filter-candidates';
+import { COVERAGE_SPELLING_FOLD, detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
+import { DRY_GRAIN_PANEL_MIN_KCAL_PER_100G } from './estimate-state-guard';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
@@ -301,9 +302,10 @@ function normalizeCandidateNameForScoring(candidateName: string, query: string):
 // NEVER stripped — they change what the food IS, not how it's prepared.
 
 /** Prep words that describe physical cutting/shape — safe to strip */
+// NOT 'mashed' (C70 S239, cloud-36 C8): "mashed potatoes" is a dish, not raw potatoes (#509's normalization twin).
 const PREP_CUTTING_WORDS = new Set([
     'cut', 'diced', 'chopped', 'minced', 'sliced', 'julienned', 'cubed',
-    'halved', 'quartered', 'shredded', 'grated', 'mashed', 'torn',
+    'halved', 'quartered', 'shredded', 'grated', 'torn',
     'strips', 'chunks', 'pieces', 'rings', 'wedges',
 ]);
 
@@ -808,6 +810,8 @@ function tokenize(text: string): string[] {
 /** Check if two tokens match (including synonyms) */
 function tokensMatch(queryToken: string, candidateToken: string): boolean {
     if (queryToken === candidateToken) return true;
+    // s456 BB: the admission layer's spelling folds, both directions, so a requested `barbecue` is not charged VARIANT_QUALIFIER_PENALTY on `BBQ` (ASC rows 28/29). Every tokensMatch() caller inherits it; getWordCoverageBonus() folds separately, through coverageSpellingMatch() (s457 R2).
+    if ((COVERAGE_SPELLING_FOLD[queryToken] ?? queryToken) === (COVERAGE_SPELLING_FOLD[candidateToken] ?? candidateToken)) return true;
     const synonyms = SYNONYMS[queryToken];
     return synonyms ? synonyms.includes(candidateToken) : false;
 }
@@ -955,6 +959,16 @@ function getModifierMatchBoost(query: string, candidateName: string): number {
     return matchRatio * WEIGHTS.MODIFIER_MATCH_BOOST;
 }
 
+// s457 R2: getWordCoverageBonus() honours the admission layer's spelling folds (bbq<->barbecue, doughnut<->donut, ...), plural-
+// tolerant. ADDITIVE and fold-only: it fires only when at least one word IS a fold spelling, so it never takes coverage away and
+// never adds a plain plural match (`berries`/`berry`) the predicate below does not already make.
+function coverageSpellingMatch(queryWord: string, candidateWord: string): boolean {
+    const fq = COVERAGE_SPELLING_FOLD[queryWord] ?? COVERAGE_SPELLING_FOLD[stem(queryWord)];
+    const fc = COVERAGE_SPELLING_FOLD[candidateWord] ?? COVERAGE_SPELLING_FOLD[stem(candidateWord)];
+    if (fq === undefined && fc === undefined) return false;
+    return (fq ?? stem(queryWord)) === (fc ?? stem(candidateWord));
+}
+
 /**
  * Calculate bonus for candidates where ALL query words appear in order.
  * 
@@ -996,7 +1010,8 @@ function getWordCoverageBonus(query: string, candidateName: string): number {
                 qWord === cWord + 's' ||
                 qWord === cWord + 'es' ||
                 cWord.startsWith(qWord) ||
-                qWord.startsWith(cWord)
+                qWord.startsWith(cWord) ||
+                coverageSpellingMatch(qWord, cWord)
             )
         );
 
@@ -1321,7 +1336,15 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
 
         // Check if query effectively IS the brand or contains it clearly
         // e.g. query "egg beaters" matches brand "egg beaters"
-        const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower);
+        // The third arm folds the period out of both sides (foldBrandPunct) so
+        // brand "Dr. Pepper" is contained in the line "diet dr pepper". It is a
+        // whole-token test, padded with spaces, because a folded initialism is
+        // short ("U.S." -> "us" would otherwise match "hummus"); an empty fold
+        // (a brand that is only punctuation) never matches.
+        const foldedBrand = foldBrandPunct(brandLower);
+        const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower)
+            || (foldedBrand.length > 0
+                && (' ' + foldBrandPunct(queryLower) + ' ').includes(' ' + foldedBrand + ' '));
 
         if (queryContainsBrand) {
             // User asked for this brand - give a positive bonus (not just zero penalty).
@@ -1556,6 +1579,27 @@ function foldApostrophes(token: string): string {
 }
 
 /**
+ * The same defect as foldApostrophes(), with a period. The tokenizer keeps `.`
+ * glued inside its token, so a record branded "Dr. Pepper" yields `dr.` while
+ * the line (and the detector's brand) say `dr pepper`. Measured 2026-10-25 on
+ * the gate snapshot (DEBUG_RERANK_SCORES): for `diet dr pepper`, fs_51053
+ * "Diet Dr. Pepper" [Dr. Pepper] lost DECISIVE_BRAND_BOOST and the brand bonus
+ * to Arby's fs_127590169 "Diet Dr Pepper", which matches through its NAME
+ * token `dr` (1.445 vs 1.045). Population (box, 2026-10-25):
+ *   select count(*), count(distinct "brandName") from "FatSecretFood"
+ *   where "brandName" like '%.%';   -- 108 | 44  (OffFood: 26248 | 7075)
+ *
+ * A period is removed unless a digit sits on BOTH sides, so `dr.` -> `dr`,
+ * `a.1.` -> `a1`, and a decimal `1.5` is left alone. Admit-only in the same
+ * sense as the apostrophe fold: dropping a character can only merge token
+ * forms. Initialisms fold short ("U.S." -> `us`), which is why the
+ * computeSimpleScore() use is a whole-token test and never a bare substring.
+ */
+export function foldBrandPunct(s: string): string {
+    return s.replace(/(?<!\d)\.|\.(?!\d)/g, '');
+}
+
+/**
  * Connector words carried by brand names ("Ben & Jerry's", "Good & Gather",
  * "dietz and watson"). Dropped from BOTH sides before the adjacency test, which
  * is what makes the `&`-vs-`and` spelling irrelevant. `&` needs no entry: it is
@@ -1630,15 +1674,17 @@ function brandPhrasePresentInText(text: string, targetBrand: string): boolean {
  *
  * Comparison is apostrophe-insensitive on both sides (see foldApostrophes) so
  * "Member's Mark" / "members mark" / "Members Mark" are one brand, not three.
+ * It is period-insensitive the same way (see foldBrandPunct), so "Dr. Pepper"
+ * and "dr pepper" are one brand.
  */
 export function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
-    const target = foldApostrophes(brandTokens[0]);
+    const target = foldBrandPunct(foldApostrophes(brandTokens[0]));
     if (target.length === 0) return false;
     const candTokens = `${candidateName} ${brandName ?? ''}`.toLowerCase()
         .split(/[\s,()[\]{}]+/)
-        .map(foldApostrophes)
+        .map(t => foldBrandPunct(foldApostrophes(t)))
         .filter(Boolean);
     return candTokens.includes(target);
 }
@@ -1981,6 +2027,18 @@ function shortCircuitOutcome(
     };
 }
 
+// Word-level query/name tokens for the brand macro-consensus pass. tokenize()
+// stems, so wings/wing and cookies/cookie match.
+function consensusQueryTokens(query: string, targetBrand: string): string[] {
+    const brand = new Set(tokenize(targetBrand));
+    return [...new Set(tokenize(query))]
+        .filter(t => t.length > 2 && !brand.has(t) && !VARIANT_STOPWORDS.has(t));
+}
+function consensusNameTokens(name: string, targetBrand: string): Set<string> {
+    const brand = new Set(tokenize(targetBrand));
+    return new Set(tokenize(name).filter(t => t.length > 2 && !brand.has(t) && !VARIANT_STOPWORDS.has(t)));
+}
+
 export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
@@ -2084,19 +2142,23 @@ export function simpleRerank(
     // ("white rice" → "rice"), so check the RAW line — "1 cup white rice" must
     // not partition up "cooked wild rice" over a cooked white-rice record.
     const grainSoftCooked = !!detectGrainCookingContext(rawLine || query, query).softCooked;
+    // Explicit-cooked twin (C6970 s396, 2026-10-27): "1 cup cooked oats" gets the same
+    // preference as "1 cup oats" — see isExplicitCookedGrainVolumeLine(). Parity inside
+    // simpleRerank() only; the mapper's softCooked reads are unchanged.
+    const grainCookedPreference = grainSoftCooked || isExplicitCookedGrainVolumeLine(rawLine || query, query);
     const GRAIN_VARIETY_TOKENS = ['white', 'brown', 'wild', 'jasmine', 'basmati', 'black', 'red', 'glutinous', 'sticky'];
     const rawLower = (rawLine || query).toLowerCase();
-    const queryVarieties = grainSoftCooked
+    const queryVarieties = grainCookedPreference
         ? GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(rawLower))
         : [];
     // Raw-line food tokens for the within-partition tiebreak ("white rice
     // cooked" covers 2 of {white, rice}; "cream of rice cooked" covers 1).
     const GRAIN_LINE_NOISE = new Set(['cup', 'cups', 'bowl', 'bowls', 'serving', 'servings', 'one', 'two', 'three', 'and', 'with', 'the']);
-    const rawFoodTokens = grainSoftCooked
+    const rawFoodTokens = grainCookedPreference
         ? rawLower.split(/[^a-z]+/).filter(t => t.length > 2 && !GRAIN_LINE_NOISE.has(t))
         : [];
     const isCookedGrainCandidate = (c: RerankCandidate): boolean => {
-        if (!grainSoftCooked) return false;
+        if (!grainCookedPreference) return false;
         // Nutrition window: cooked grains run ~97-170 kcal with carbs >= ~20;
         // dry grains ~330-380. The carbs floor keeps low-kcal NON-grain rows
         // (rice milk at 47 kcal / 9g carbs) out of the partition.
@@ -2105,6 +2167,11 @@ export function simpleRerank(
                 && c.nutrition.kcal > 60 && c.nutrition.kcal <= 250
                 && c.nutrition.carbs >= 12);
         if (!looksCooked) return false;
+        // Dry-panel veto (C6970 s410): a record NAMED cooked whose per-100 g panel is dry is not a
+        // cooked record. Mechanism: OFF off_20720155 "Basmati rice (cooked)" is labelled per 100 g RAW
+        // (369 kcal) and won `a cup of cooked basmati rice` over cooked basmati records at 121-153 kcal.
+        // Re-derive: cooked-name-dry-panel-veto.test.ts. A missing panel (or per100g false) is not dry.
+        if (c.nutrition?.per100g === true && c.nutrition.kcal >= DRY_GRAIN_PANEL_MIN_KCAL_PER_100G) return false;
         if (queryVarieties.length > 0) {
             const nameLower = c.name.toLowerCase();
             const candVarieties = GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(nameLower));
@@ -2136,7 +2203,7 @@ export function simpleRerank(
         if (isDenylistedOffRecord(c.id)) return true;
         // No per-100g nutrition → nothing to assess → not flagged.
         if (!c.nutrition?.per100g) return false;
-        return assessRankTimePlausibility(query, c.name, c.nutrition).floorHit;
+        return assessRankTimePlausibility(query, c.name, c.nutrition, rawLine).floorHit;
     };
 
     // Same-brand variant precision (restaurant/QSR fix, Jul 2026): honor the
@@ -2292,6 +2359,35 @@ export function simpleRerank(
             const kcalOutliers = outliersOf(
                 siblings.map(s => s.candidate.nutrition!.kcal),
                 CONSENSUS_MIN_KCAL_MEDIAN, CONSENSUS_KCAL_OUTLIER_DEV);
+            const proteinVals = siblings.map(s => s.candidate.nutrition!.protein ?? 0);
+            const kcalVals = siblings.map(s => s.candidate.nutrition!.kcal);
+            const agreeIdx = (values: number[]): number[] => {
+                const med = median(values);
+                if (med <= 0) return [];
+                return values.map((v, i) => [v, i] as const)
+                    .filter(([v]) => Math.abs(v - med) / med <= CONSENSUS_AGREE_TOLERANCE)
+                    .map(([, i]) => i);
+            };
+            const qT = consensusQueryTokens(query, targetBrand!);
+            const nameT = siblings.map(s => new Set(tokenize(s.candidate.name)));
+            // Exempt a flagged outlier only when the agreeing majority is
+            // demonstrably a DIFFERENT named variant: the outlier names a query
+            // token no majority record names, AND every majority record names a
+            // token that neither the query nor the outlier names.
+            const qSet = new Set(tokenize(query));
+            const exemptDifferentVariant = (flagged: Set<number>, values: number[]): void => {
+                const ag = agreeIdx(values);
+                if (ag.length === 0) return;
+                for (const i of [...flagged]) {
+                    const own = qT.filter(t => nameT[i].has(t));
+                    const outlierNamesUnshared = own.some(t => ag.every(j => !nameT[j].has(t)));
+                    const majorityIsOtherVariant = ag.every(j => [...consensusNameTokens(siblings[j].candidate.name, targetBrand!)]
+                        .some(t => !qSet.has(t) && !nameT[i].has(t)));
+                    if (outlierNamesUnshared && majorityIsOtherVariant) flagged.delete(i);
+                }
+            };
+            exemptDifferentVariant(proteinOutliers, proteinVals);
+            exemptDifferentVariant(kcalOutliers, kcalVals);
             siblings.forEach((s, i) => {
                 if (proteinOutliers.has(i) || kcalOutliers.has(i)) {
                     s.score -= WEIGHTS.CONSENSUS_OUTLIER_PENALTY;
@@ -2330,7 +2426,7 @@ export function simpleRerank(
         // partition, prefer candidates covering more raw-line food tokens
         // ("white rice cooked" over "cream of rice cooked" for "white rice"),
         // then fall through to score order.
-        if (grainSoftCooked) {
+        if (grainCookedPreference) {
             const aCooked = a.grainCookedBoost > 0 ? 1 : 0;
             const bCooked = b.grainCookedBoost > 0 ? 1 : 0;
             if (aCooked !== bCooked) return bCooked - aCooked;
@@ -2514,7 +2610,11 @@ export function simpleRerank(
     // "rice" vs "white medium-grain cooked unenriched rice") — floor its
     // confidence so the deliberate cooked preference isn't discarded by the
     // minimum-confidence rejection below and re-replaced with the dry top1.
-    if (grainSoftCooked && top.grainCookedBoost > 0) {
+    // Since 2026-10-27 this also covers explicit-cooked grain volume lines
+    // (grainCookedPreference): `1 cup cooked oats` with the dry 389 kcal estimate read
+    // 0.596 and declined; it now reads 0.771 here. Re-derive:
+    // src/lib/mapping/__tests__/explicit-cooked-grain-floor.test.ts.
+    if (grainCookedPreference && top.grainCookedBoost > 0) {
         confidence = Math.max(confidence, 0.75);
         reason = 'cooked_grain_preference';
     }

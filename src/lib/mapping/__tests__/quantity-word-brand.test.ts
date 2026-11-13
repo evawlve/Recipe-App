@@ -678,3 +678,27 @@ describe('punch #167 fix-forward — a one-word brand the line spells as two wor
         })).toEqual({ baseName: 'SunChips sun chips harvest cheddar', applied: true, declined: null });
     });
 });
+
+describe('brandReassertEvidence: the restaurant_chain evidence (s453 row C, no segmenter brand)', () => {
+    it.each([
+        ['a small frosty from wendys', 'wendys'],
+        ['a biscuit from popeyes', 'popeyes'],
+        ['subway 6 inch meatball marinara', 'subway'],
+        ['medium waffle fries from chick-fil-a', 'chick-fil-a'],
+        ['kfc 3 extra crispy tenders', 'kfc'],
+    ])('grants `%s` / `%s`', (rawLine, targetBrand) => {
+        expect(brandReassertEvidence({ rawLine, targetBrand, segmenterBrand: undefined, parsed: null }))
+            .toBe('restaurant_chain');
+    });
+
+    it.each([
+        ['bell pepper', 'bell'],
+        ['one slice of swiss cheese', 'one'],
+        ["a giant jersey mike's italian", 'giant'],
+        ['celsius sparkling orange 12 oz can', 'celsius'],
+        ['2 bacon gruyere egg bites starbucks', 'starbucks'],
+    ])('refuses `%s` / `%s`', (rawLine, targetBrand) => {
+        expect(brandReassertEvidence({ rawLine, targetBrand, segmenterBrand: undefined, parsed: null }))
+            .toBeNull();
+    });
+});

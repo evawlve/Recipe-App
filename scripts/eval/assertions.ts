@@ -80,6 +80,12 @@ export function isAbstention(it: any): boolean {
  */
 export interface NlpCaseSpec {
     expectItems?: number;
+    /**
+     * Upper bound on items[] — the composite-plus-its-own-components class
+     * (n-s424-05: a bento box billed as the box AND rice, chicken, broccoli).
+     * `expectItems` is a floor only, so without this key a double-bill passes.
+     */
+    maxItems?: number;
     expectName?: string[][];
     forbidName?: string[][];
     expectAbstain?: boolean;
@@ -135,6 +141,9 @@ export function scoreNlpCase(c: NlpCaseSpec, items: unknown): string[] {
 
     if (c.expectItems && items.length < c.expectItems) {
         failures.push(`expected >=${c.expectItems} items, got ${items.length}`);
+    }
+    if (c.maxItems && items.length > c.maxItems) {
+        failures.push(`expected <=${c.maxItems} items, got ${items.length}`);
     }
 
     // Name check: for single-item cases the one item must match; for segmentation

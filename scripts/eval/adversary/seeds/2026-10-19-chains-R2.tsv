@@ -1,0 +1,45 @@
+# MGR S242 pre-digest chain seeds, 2026-10-19, part 2 of 2 (Mode G caps a run at 40). line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (';' per item, '-' none; the CLI ignores col 5)
+# Single-item heavy, chains the 10-09/10-10 T1/T2 seeds do not cover (wendy's, subway, five guys, domino's, shake shack, sweetgreen, jersey mike's,
+# cheesecake factory, burger king, kfc, dunkin, krispy kreme, pizza hut, sonic, dairy queen, jimmy john's, whataburger, arby's, culver's, qdoba, ...),
+# plus typos (mcdonals, chipolte, dominoes, popeys, chik fil a, chickfila), possessives, size words, mods and quantities placed AFTER the brand.
+# expect is left blank (as in T1/T2); axis names what the line is built to stress: identity | portion | parse (quantity or name mangled before retrieval).
+arbys classic roast beef and curly fries	2		identity	arby's;arby's
+culvers double butterburger with cheese	1		identity	culver's
+qdoba chicken burrito	1		identity	qdoba
+half order of applebees boneless wings	1		portion	applebee's
+ihop 3 buttermilk pancakes	1		portion	ihop
+dennys grand slam	1		identity	denny's
+10 bww traditional wings	1		parse	buffalo wild wings
+papa johns 2 slices pepperoni	1		parse	papa john's
+little caesars 3 slices pepperoni	1		parse	little caesars
+2 jack in the box tacos	1		portion	jack in the box
+zaxbys chicken fingerz plate	1		identity	zaxby's
+2 texas roadhouse rolls with cinnamon butter	1		portion	texas roadhouse
+a mcdonalds hamburger and small fries	2		portion	mcdonald's;mcdonald's
+medium fries from mcdonals	1		portion	mcdonald's
+a mcd's mcchicken	1		identity	mcdonald's
+20 piece mcnuggets	1		parse	mcdonald's
+mcdonald’s oreo mcflurry regular	1		identity	mcdonald's
+an egg mcmuffin no butter	1		identity	mcdonald's
+chik fil a spicy deluxe	1		identity	chick-fil-a
+chickfila 8 count nuggets with polynesian sauce	2		portion	chick-fil-a;chick-fil-a
+medium waffle fries from chick-fil-a	1		portion	chick-fil-a
+a large frosted lemonade from chick fil a	1		portion	chick-fil-a
+half a chipolte bowl	1		portion	chipotle
+chipotle chicken burrito with white rice black beans cheese and sour cream	1		identity	chipotle
+chipotle chips and guac	1		identity	chipotle
+a side of chipotle queso	1		identity	chipotle
+crunchwrap supreme	1		identity	taco bell
+3 doritos locos tacos	1		portion	taco bell
+taco bell cheesy gordita crunch no sauce	1		identity	taco bell
+a mexican pizza from taco bell	1		identity	taco bell
+a grande caramel frappuccino with whip	1		portion	starbucks
+venti iced caramel macchiato w oat milk	1		portion	starbucks
+starbuck's bacon gouda sandwich	1		identity	starbucks
+2 bacon gruyere egg bites starbucks	1		portion	starbucks
+panda express bigger plate orange chicken chow mein and beijing beef	3		portion	panda express;panda express;panda express
+panda orange chicken	1		identity	panda express
+panera broccoli cheddar soup bread bowl	1		identity	panera
+a cup of panera broccoli cheddar	1		portion	panera
+olive garden 2 breadsticks	1		parse	olive garden
+popeys 3 pc tenders spicy	1		parse	popeyes

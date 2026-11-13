@@ -31,6 +31,8 @@ const MIN_PRODUCTS = parseInt(argValue('--min') ?? '50', 10);
 // Generic food words / descriptors that appear as OFF "brands" but must never be
 // treated as brand signals (they would flag ordinary queries as branded).
 const STOPLIST = new Set<string>([
+    // an OFF brand string that is a preparation descriptor, not a brand — S202
+    'homemade',
     'milk', 'water', 'juice', 'bread', 'cheese', 'yogurt', 'yoghurt', 'butter',
     'oil', 'sugar', 'salt', 'flour', 'rice', 'pasta', 'honey', 'coffee', 'tea',
     'chocolate', 'cocoa', 'organic', 'natural', 'classic', 'original', 'fresh',

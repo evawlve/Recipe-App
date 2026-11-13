@@ -40,8 +40,8 @@
 
 // ---------------------------------------------------------------------------
 // 1. Credential-gated providers.
-// `getProviderChain()` in src/lib/ai/structured-client.ts pushes an OpenRouter or
-// OpenAI entry only when the corresponding key is truthy, so '' removes both from
+// `getProviderChain()` in src/lib/ai/structured-client.ts pushes an Anthropic, OpenRouter
+// or OpenAI entry only when the corresponding key is truthy, so '' removes all three from
 // every chain. OPENAI_API_KEY additionally disarms the four modules that bypass
 // callStructuredLlm() and fetch `${OPENAI_API_BASE_URL}/chat/completions` directly:
 // aiRerankCandidates() in src/lib/mapping/ai-rerank.ts, the refine call in
@@ -50,6 +50,8 @@
 // ---------------------------------------------------------------------------
 process.env.OPENROUTER_API_KEY = '';
 process.env.OPENAI_API_KEY = '';
+// Anthropic Messages leg (head of the structured chain); assigned '', never deleted, like the rest.
+process.env.ANTHROPIC_API_KEY = '';
 
 // ---------------------------------------------------------------------------
 // 2. The provider that needs no credential.
@@ -67,7 +69,8 @@ process.env.OLLAMA_ENABLED = 'false';
 // 3. Base URLs — defence in depth, not the primary gate.
 // Sections 1 and 2 are enumerations of today's provider list; a provider added later
 // without a key guard would walk straight past them. Every LLM request in this repo
-// is built as `${<one of these>}/chat/completions`, so pointing them at a closed port
+// is built as `${<one of these>}/chat/completions` (or `${ANTHROPIC_API_BASE_URL}/messages` for the
+// Anthropic leg), so pointing them at a closed port
 // converts that class of leak from a silent live call into an immediate
 // ECONNREFUSED naming this gate. `??` in config.ts falls back only on null/undefined,
 // so an explicitly assigned value survives. Port 1 is reserved and never listening:
@@ -77,15 +80,16 @@ const BLACKHOLE = 'http://127.0.0.1:1/jest-no-llm-gate';
 process.env.OPENROUTER_BASE_URL = BLACKHOLE;
 process.env.OPENAI_API_BASE_URL = BLACKHOLE;
 process.env.OLLAMA_BASE_URL = BLACKHOLE;
+process.env.ANTHROPIC_API_BASE_URL = BLACKHOLE;
 
 // ---------------------------------------------------------------------------
 // 4. Deliberately NOT provided: an escape hatch such as JEST_ALLOW_LIVE_LLM. There is
 // still no way to switch this gate off, and no test in this repo asserts real provider
 // behaviour.
 //
-// THREE test files name a provider credential, and none of them is a hole (re-derive:
-// `grep -rln "OPENROUTER_API_KEY\|OPENAI_API_KEY\|OLLAMA" --include="*.test.ts" src
-// scripts` -> 3, measured 2026-08-04):
+// FOUR test files name a provider credential, and none of them is a hole (re-derive:
+// `grep -rln "OPENROUTER_API_KEY\|OPENAI_API_KEY\|ANTHROPIC_API_KEY\|OLLAMA" --include="*.test.ts"
+// src scripts` -> 4, measured 2026-11-02):
 //   - src/lib/ai/__tests__/no-live-llm-egress.test.ts ASSERTS this file's invariants —
 //     it loads `dotenv/config` itself and then requires the provider chain to still be
 //     empty. It is the gate's own test.
@@ -98,6 +102,9 @@ process.env.OLLAMA_BASE_URL = BLACKHOLE;
 //     for every test and leave the blackhole base URLs from section 3 in place, so a
 //     request cannot leave the process even if the mock were forgotten. `setupFiles`
 //     re-runs per test file, so neither assignment can leak into another suite.
+//   - src/lib/ai/__tests__/structured-client-anthropic-leg.test.ts (2026-11-02) assigns fake
+//     `ANTHROPIC_API_KEY` and `OPENROUTER_API_KEY` (a next leg must exist for the fall-through
+//     tests), replaces `global.fetch` with a mock, and never assigns a base URL.
 // The invariant that keeps that safe — every credential-assigning test file also mocks
 // `global.fetch` — is checked by the doc-check claim
 // `test-provider-keys-are-fake-and-fetch-mocked`, not by prose here.
