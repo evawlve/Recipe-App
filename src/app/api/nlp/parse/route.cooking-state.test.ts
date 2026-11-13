@@ -7,6 +7,10 @@
  * silent (fatsecret/fdc/ai) or out of scope (an apple). The streamed `item`
  * frame carries it too (one builder feeds both wires).
  *
+ * s457 P1 adds three cases: the route passes the billed panel's kcal/100 g and the record's
+ * brand, so a generic FatSecret cut with a cooked-level panel reads 'cooked', a branded one
+ * reads nothing, and an OFF record whose panel no raw form of its cut reaches reads nothing.
+ *
  * The last case pins that the route reads the RESOLVED record's source, not the
  * mapper's stage: a cache hit reports `source: 'early_cache'` but the record is
  * still the OFF row. The mapper is mocked, so it proves nothing about the cache
@@ -40,14 +44,14 @@ jest.mock('@/lib/logger', () => ({
 const { mapIngredientWithFallback } = require('@/lib/mapping/map-ingredient-with-fallback');
 const { resolveFoodDetails } = require('@/lib/nlp/resolve-payload');
 
-function rec(foodId: string, foodName: string, source: string) {
+function rec(foodId: string, foodName: string, source: string, kcal100 = 205, brandName: string | null = null) {
   mapIngredientWithFallback.mockResolvedValue({
-    foodId, foodName, brandName: null, source: 'full_pipeline', confidence: 0.9,
-    servingDescription: '100 g', grams: 230, kcal: 472, protein: 40, carbs: 0, fat: 30, servingTier: 'weight_unit',
+    foodId, foodName, brandName, source: 'full_pipeline', confidence: 0.9,
+    servingDescription: '100 g', grams: 230, kcal: kcal100 * 2.3, protein: 40, carbs: 0, fat: 30, servingTier: 'weight_unit',
   });
   resolveFoodDetails.mockResolvedValue({
-    name: foodName, brandName: null, source,
-    nutritionPer100g: { kcal100: 205, protein100: 17.4, carbs100: 0, fat100: 13, fiber100: null, sugar100: null, sodium100: null },
+    name: foodName, brandName, source,
+    nutritionPer100g: { kcal100, protein100: 17.4, carbs100: 0, fat100: 13, fiber100: null, sugar100: null, sodium100: null },
     servingOptions: [{ label: '100 g', grams: 100, type: 'weight', isDefault: true }],
   });
 }
@@ -81,9 +85,31 @@ describe('cookingState trial', () => {
     rec('fdc_171688', 'Apples, raw, with skin', 'fdc');
     expect('cookingState' in (await one('an apple'))).toBe(false);
   });
-  test('fs silent -> absent', async () => {
-    rec('fs_1641', 'Chicken Breast', 'fatsecret');
+  test('fs silent, panel under the raw ceiling -> absent', async () => {
+    rec('fs_1641', 'Chicken Breast', 'fatsecret', 150);
     expect('cookingState' in (await one('100g chicken breast'))).toBe(false);
+  });
+  // s457 P1: the route hands cookingStateFor() the billed panel's kcal/100 g and the record's brand.
+  test('fs generic, cooked-level panel -> cooked', async () => {
+    rec('fs_1695', 'Chicken Thigh', 'fatsecret', 245);
+    expect((await one('100g chicken thigh')).cookingState).toBe('cooked');
+  });
+  test('fs branded, same panel -> absent', async () => {
+    rec('fs_32931817', 'Chicken Leg Quarter', 'fatsecret', 241, 'Perdue');
+    expect('cookingState' in (await one('a chicken leg quarter'))).toBe(false);
+  });
+  test('off silent, panel no raw cut reaches -> absent', async () => {
+    rec('off_0732153125377', 'Venison', 'openfoodfacts', 351, 'Epic');
+    expect('cookingState' in (await one('venison'))).toBe(false);
+  });
+  test('fs generic, record row not there yet: kcal100 from the billed macros -> cooked', async () => {
+    rec('fs_1741', 'Turkey', 'fatsecret', 186); // not in FatSecretFood: the merged block is the billed macros
+    resolveFoodDetails.mockResolvedValue({
+      name: 'Turkey', brandName: null, source: 'fatsecret',
+      nutritionPer100g: { kcal100: 0, protein100: 0, carbs100: 0, fat100: 0, fiber100: null, sugar100: null, sodium100: null },
+      servingOptions: [],
+    });
+    expect((await one('100g turkey')).cookingState).toBe('cooked');
   });
   test('stream item carries it', async () => {
     rec('off_0211585214243', 'Beef Chuck', 'openfoodfacts');
