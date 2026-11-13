@@ -150,3 +150,46 @@ describe('label_piece_estimate — CONTROLS (estimator not called)', () => {
         expect(r?.servingTier).not.toBe('label_piece_estimate');
     });
 });
+
+describe('label_piece_estimate — a label that states ONE whole unit is never split (s457 CB)', () => {
+    const blocked: Array<[string, string, string, number, number, number]> = [
+        ['2 snickers', 'SNICKERS', '1 bar (44 g)', 44, 8.8, 88],
+        ['2 butterfingers', 'Butterfinger', '1 bar (53.8 g)', 53.8, 10, 107.6],
+        ['2 uncrustables', 'Uncrustables', '1 sandwich (58 g)', 58, 15, 116],
+        ['2 red bulls', 'Red bull', '1 small can (250 ml)', 250, 50, 500],
+        ['3 tamales', 'Tamales', '1 TAMAL, ABOUT (113 g)', 113, 20, 339],
+    ];
+    it.each(blocked)('%s on "%s" %s -> label_serving_default, estimator not called', async (line, name, size, g, p, want) => {
+        const r = await runP(line, name, size, g, p);
+        expect(r?.servingTier).toBe('label_serving_default');
+        expect(r?.grams).toBeCloseTo(want, 0);
+        expect(getOrCreateAmbiguousServing).not.toHaveBeenCalled();
+    });
+    const stillFires: Array<[string, string, string, number, number, number]> = [
+        ['10 cheez its', 'Cheez Its', '27 crackers (30 g)', 30, 1.15, 11.54],
+        ['3 widgets', 'Widgets', '1 z (60 g)', 60, 20, 60],
+        ['6 widgets', 'Widgets', '1 ONZ (28 g)', 28, 4, 24],
+        ['8 widgets', 'Widgets', '1 serving (100 g)', 100, 12.5, 100],
+        // CONTAINER words still split (rf-cb): a pack / can holds pieces.
+        ['10 doritos', 'Doritos', '1 pack (30 g)', 30, 1.875, 18.75],
+        ['12 pringles', 'pringles', '1 can (40 g)', 40, 1.8, 21.82],
+        // KNOWN RESIDUAL: a Kit Kat "package" is one bar; the 'pieces' sibling borrow is the cause (design row).
+        ['2 kit kats', 'Kit Kat', '1 package (42 g)', 42, 8.4, 16.8],
+    ];
+    it.each(stillFires)('%s on "%s" %s -> label_piece_estimate', async (line, name, size, g, p, want) => {
+        const r = await runP(line, name, size, g, p);
+        expect(r?.servingTier).toBe('label_piece_estimate');
+        expect(r?.grams).toBeCloseTo(want, 1);
+    });
+});
+
+describe('label_piece_estimate — every measure and container word still splits (rf-cb set pins)', () => {
+    const words = ['serving', 'serve', 'portion', 'gram', 'onz', 'ounce', 'cup', 'tbsp', 'tsp', 'tablespoon', 'teaspoon',
+        'scoop', 'tasse', 'mesure', 'package', 'pack', 'pkg', 'packet', 'pouch', 'bag', 'box', 'can', 'container',
+        'carton', 'sachet', 'tube', 'roll', 'sleeve', 'tray', 'tub', 'bottle', 'jar', 'pot'];
+    it.each(words)('"1 %s (60 g)" -> label_piece_estimate', async (w) => {
+        const r = await runP('6 widgets', 'Widgets', `1 ${w} (60 g)`, 60, 10);
+        expect(r?.servingTier).toBe('label_piece_estimate');
+        expect(r?.grams).toBeCloseTo(60, 1);
+    });
+});
