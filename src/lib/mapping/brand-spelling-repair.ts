@@ -137,3 +137,61 @@ export function findBrandSpellingRepair(
 export function applyBrandSpellingRepair(text: string, repair: BrandSpellingRepair): string {
     return text.replace(new RegExp(`\\b${repair.from}\\b`, 'gi'), repair.to);
 }
+
+/*
+ * BRAND INITIALISM (s453 row A, 2026-11-08) — `dq` for Dairy Queen, `bk` for Burger King.
+ *
+ * Retrieval finds the chain's records; the rerank credits a brand only when the query
+ * contains the record's brand string, so an initialism earns the right records nothing
+ * (`bk chicken fries 9 piece`: FatSecret "Chicken Fries - 8 Pieces" [Burger King] 0.229
+ * lost to brandless OFF "Chicken fries" 0.366). A query token is read as a brand's
+ * initialism only when ALL hold:
+ *   1. 2-4 letters, [a-z] only;
+ *   2. ORPHAN: no candidate name or brand word equals it (plural folded);
+ *   3. exactly ONE distinct pool brand of 2-4 words has first letters spelling the token;
+ *   4. that brand phrase IS a lexicon brand, whole (a phrase that merely CONTAINS a
+ *      lexicon word, `be kind` -> `kind`, does not anchor).
+ * Same call site and same scope as the spelling repair: inside simpleRerank() only.
+ */
+export interface BrandInitialismRepair {
+    /** The user's token, lowercased. */
+    from: string;
+    /** The brand phrase, lowercased, words joined by one space. */
+    to: string;
+    /** The first candidate (in pool order) carrying that brand. */
+    anchorId: string;
+}
+
+export function findBrandInitialismRepair(
+    query: string,
+    candidates: ReadonlyArray<{ id: string; name: string; brandName?: string | null }>,
+): BrandInitialismRepair | null {
+    const vocabulary = new Set<string>();
+    for (const c of candidates) {
+        for (const w of [...words(c.name), ...words(c.brandName)]) vocabulary.add(singular(w));
+    }
+    for (const token of words(query)) {
+        if (token.length < 2 || token.length > 4 || !/^[a-z]+$/.test(token)) continue;   // 1
+        if (vocabulary.has(singular(token))) continue;                                   // 2
+        const anchors = new Map<string, string>();
+        for (const c of candidates) {
+            const bw = words(c.brandName);
+            if (bw.length < 2 || bw.length > 4 || bw.length !== token.length) continue;  // 3
+            if (bw.map((w) => w[0]).join('') !== token) continue;
+            const phrase = bw.join(' ');
+            if (anchors.has(phrase)) continue;
+            if (detectBrandInQuery(phrase).matchedBrand?.toLowerCase() !== phrase) continue; // 4
+            anchors.set(phrase, c.id);
+        }
+        if (anchors.size === 1) {
+            const [[to, anchorId]] = [...anchors];
+            return { from: token, to, anchorId };
+        }
+    }
+    return null;
+}
+
+/** Rewrite every whole-word occurrence of the initialism, case-insensitively. */
+export function applyBrandInitialismRepair(text: string, repair: BrandInitialismRepair): string {
+    return text.replace(new RegExp(`\\b${repair.from}\\b`, 'gi'), repair.to);
+}
