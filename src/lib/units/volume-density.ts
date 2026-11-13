@@ -385,6 +385,42 @@ const ES_PASTE_RE = /^[^\p{L}]*(?:crema de (?:cacahuate|cacahuete|man[ií]|avell
 const ES_POUR_RE = /^[^\p{L}]*(?:leche|jugo|agua|aceite|vinagre|crema|refresco|licuados?)(?![\p{L}\p{N}])/iu;
 const ES_EXCLUDE_RE = /(?<![\p{L}\p{N}])(?:en polvo|polvo|nido|instant\w*|helad[ao]s?|paletas?|galletas?|barras?|barritas?|cereal(?:es)?|caramelos?|chips|totopos?|tortillas?|botanas?|pastel(?:es)?|flan(?:es)?|gelatinas?|mix|mezcla|sazonador|condimento|seasoning|ice ?cream|gelato|cakes?|cookies?|bars?|candy|powder|whey|gainer|protein|pops|batida|montada|chantilly|crema d[ei] (?:arroz|riso)|crema e (?:aroma|gusto)|y cebolla|y especias|knorr|beans?|trencito)(?![\p{L}\p{N}])/iu;
 
+
+/**
+ * Light dry solids (s457 S1). A record name with no liquid/paste/beverage/category
+ * token otherwise bills 240 x 0.5 = 120 g a cup, which is 3-12x too heavy for a
+ * cup of dry cereal or popcorn. Per-class density (g/ml, so g per 240 ml cup):
+ *
+ *   cereal 0.15 (36 g/cup)  — FatSecretServing Cheerios 30, Corn Flakes 28,
+ *                             Rice Krispies 26 g/cup; OFF cup-label median 40 g
+ *                             over 2,497 names.
+ *   puffed 0.04 (9.6 g/cup) — FDC 173141 popcorn 7.9 g/cup, FatSecret Puffed
+ *                             Rice 14 g/cup.
+ *
+ * WHY THIS RUNS FIRST: the liquid/paste tests are substring tests, and `butter`,
+ * `honey` and `oil` put "Movie Theater Butter Popcorn", "Honey Nut Cheerios" and
+ * "Popcorn, oil-popped" on PASTE (250 g/cup). The class test claims the name
+ * before they can (hence the `!lightClass &&` on every pour/paste flag below).
+ * Label rungs (label_unit_match, off_label_volume, fs_label_volume*,
+ * fdc_label_volume) precede this constant and are untouched.
+ *
+ * Both regexes are paired with an EXCLUDE list so that cooked, sweetened,
+ * coated, bar/granola and dish names stay on the old default.
+ */
+export type LightSolidClass = 'cereal' | 'puffed';
+export const LIGHT_SOLID_DENSITY_GML: Readonly<Record<LightSolidClass, number>> = { cereal: 0.15, puffed: 0.04 };
+const CEREAL_RE = /\b(?:cereals?|cheerios|(?:corn|bran|frosted|wheat|multi[- ]?grain|whole[- ]grain|honey) ?flakes|krispies|chex|kix|crispy rice|crisp rice)\b/i;
+const CEREAL_EXCLUDE_RE = /\b(?:bars?|treats?|cookies?|cakes?|muffins?|ice cream|yogh?urts?|parfaits?|milk|smoothies?|shakes?|drinks?|powder|whey|mix|granola|muesli|oats|oat bran|oatmeal|porridge|hot|cooked|prepared|cream of|creamy|cracked|farina|grits|malt[- ]o[- ]meal|raisin bran|all[- ]?bran|bran buds|fiber one|grape[- ]?nuts|nuggets|mini[- ]?wheats|shredded wheat|squares|clusters|bites|baby|infant|toddler|gerber|single grain|\d[- ]?grain|millet|superseed|bear naked|crumbs|coating|breading|egg whites?|chivda|crackers?|barras?|barritas?|isolate|kind|dark chocolate|galletas?|biscuits?|instant|crema|spread|salad|chicken|noodles|nestum)\b/i;
+
+const PUFFED_RE = /\b(?:pop(?:ped)?corn|kettle corn|boom chicka pop|skinny ?pop|smartfood|puffed (?:rice|wheat|corn|millet|kamut|quinoa|amaranth))\b/i;
+const PUFFED_EXCLUDE_RE = /\b(?:kernels?|unpopped|yellow|white popcorn|microwave|popcorn (?:oil|salt|seasoning|butter|topping|rice|cornmeal)|coated|chicken|shrimp|fish|jelly beans?|cand(?:y|ies)|caramel|toffee|candied|chocolate|drizzled?|clusters|cracker jack|balls?|bars?|cakes?|crackers?|chips|ice cream|gumm(?:y|ies)|seeds?|gourmet|premium|munch|pressed|partially|peanuts?|mix|factory|sweetened|honey|frosted|chick'?n|bites|nuggets|cauliflower|bucket|kit|mushroom|tins?|syrup|patty|burgers?|coating|cracklins|pork|squid|slim jim|poppycock|carm[ae]l|glazed|pecans?|jelly|belly|gummi|whey)\b/i;
+
+export function lightSolidClass(name: string): LightSolidClass | null {
+    if (PUFFED_RE.test(name) && !PUFFED_EXCLUDE_RE.test(name)) return 'puffed';
+    if (CEREAL_RE.test(name) && !CEREAL_EXCLUDE_RE.test(name)) return 'cereal';
+    return null;
+}
+
 /**
  * `beverage` bills exactly what `liquid` bills — see BEVERAGE_RE. It is a
  * separate member so the two vocabularies stay independently countable, not
@@ -397,8 +433,10 @@ export interface VolumeGrams {
     perUnit: Record<string, number>;
     /** Which branch decided it — logged, so a wrong bill is traceable to a rule. */
     volumeClass: VolumeClass;
-    /** g/ml actually used for solids (category density, or the 0.5 default). */
+    /** g/ml actually used for solids (light class, category density, or the 0.5 default). */
     solidDensity: number;
+    /** S1: the light-solid class that set solidDensity, or null. */
+    lightClass: LightSolidClass | null;
 }
 
 /**
@@ -422,16 +460,17 @@ export interface VolumeGrams {
 export function resolveVolumeGrams(...names: Array<string | null | undefined>): VolumeGrams {
     const name = names.find(n => n && n.trim().length > 0)?.trim() ?? '';
 
-    const isLiquid = LIQUID_RE.test(name);
-    const isPaste = !isLiquid && PASTE_RE.test(name);
+    const lightClass = lightSolidClass(name);
+    const isLiquid = !lightClass && LIQUID_RE.test(name);
+    const isPaste = !lightClass && !isLiquid && PASTE_RE.test(name);
     // Checked LAST, so this tier can only ever claim a name that would otherwise
     // be a `solid`. That ordering is the whole blast-radius argument for B1b —
     // see BEVERAGE_RE. `Port Wine Cheese Spread` is the case it protects: it
     // carries a beverage token and is a spread.
-    const isBeverage = !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)) || (SOUP_RE.test(name) && !SOUP_EXCLUDE_RE.test(name)));
+    const isBeverage = !lightClass && !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)) || (SOUP_RE.test(name) && !SOUP_EXCLUDE_RE.test(name)));
     // Spanish-named record slices, LAST and head-anchored — see ES_PASTE_RE.
-    const isEsPaste = !isLiquid && !isPaste && !isBeverage && ES_PASTE_RE.test(name) && !ES_EXCLUDE_RE.test(name);
-    const isEsPour = !isLiquid && !isPaste && !isBeverage && !isEsPaste && ES_POUR_RE.test(name) && !ES_EXCLUDE_RE.test(name);
+    const isEsPaste = !lightClass && !isLiquid && !isPaste && !isBeverage && ES_PASTE_RE.test(name) && !ES_EXCLUDE_RE.test(name);
+    const isEsPour = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && ES_POUR_RE.test(name) && !ES_EXCLUDE_RE.test(name);
     /** Pours at ~1 g/ml, by any vocabulary. */
     const isPourable = isLiquid || isBeverage || isEsPour;
     const isPasteLike = isPaste || isEsPaste;
@@ -446,7 +485,9 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     // conservatism — do not widen it without re-running those cases.
     let solidDensity = 0.5;
     const category = inferCategoryFromName(name);
-    if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
+    if (lightClass) {
+        solidDensity = LIGHT_SOLID_DENSITY_GML[lightClass];
+    } else if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
         const catDensity = categoryDensity(category);
         if (catDensity && catDensity > 0) solidDensity = catDensity;
     }
@@ -483,6 +524,7 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
         },
         volumeClass: isLiquid ? 'liquid' : (isBeverage || isEsPour) ? 'beverage' : isPasteLike ? 'paste' : 'solid',
         solidDensity,
+        lightClass,
     };
 }
 

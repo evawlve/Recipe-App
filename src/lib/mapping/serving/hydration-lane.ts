@@ -2757,6 +2757,22 @@ function nameCountPerPieceGrams(
     return { perPiece, n, noun: noun.toLowerCase() };
 }
 
+// Label unit words that MEASURE an amount rather than name one item: step (E)
+// (label_piece_estimate) may split a one-unit label only when its word is here.
+// Omitting a word forfeits a split (the line keeps label_serving_default); it can
+// never bill lower. Measured top one-unit OFF label words, 2026-11-13 (s457 CB).
+const LABEL_MEASURE_WORDS = new Set([
+    'serving', 'serve', 'portion', 'gram', 'onz', 'ounce', 'cup', 'tbsp', 'tsp',
+    'tablespoon', 'teaspoon', 'scoop', 'tasse', 'mesure',
+]);
+
+// Label unit words that name a CONTAINER of pieces ("1 pack (30 g)" of Doritos,
+// "1 can (40 g)" of Pringles): step (E) may still split these (rf-cb, s457).
+const LABEL_CONTAINER_WORDS = new Set([
+    'package', 'pack', 'pkg', 'packet', 'pouch', 'bag', 'box', 'can', 'container',
+    'carton', 'sachet', 'tube', 'roll', 'sleeve', 'tray', 'tub', 'bottle', 'jar', 'pot',
+]);
+
 const NAME_COUNT_SIZE_WORDS = new Set([
     'inch', 'inches', 'in', 'oz', 'ounce', 'ounces', 'layer', 'layers', 'for', 'lb', 'lbs',
     'ml', 'g', 'pack', 'packs', 'pk', 'piece', 'pieces', 'pc', 'pcs',
@@ -2898,7 +2914,11 @@ export async function buildOffResult(
     //     line lands on a constant that was ALREADY going to be at least that
     //     far from the label's own number. Refusal therefore cannot make any
     //     line worse than master billed it. That is all this argument buys —
-    //     and note which HALF of the change it covers.
+    //     and note which HALF of the change it covers. Since s457 S1 it holds
+    //     for NON-light names only: `LIGHT_SOLID_DENSITY_GML` in that module
+    //     (puffed 0.04, below the low edge; the other light classes inside it
+    //     with at most 1.5x of slack) is deliberately outside the bracket, and
+    //     on those names a refused LOW label lands on a constant CLOSER to it.
     //
     //     REFUSALS ARE BOUNDED; ADMISSIONS ARE NOT. When the band ADMITS a
     //     label this branch bills it outright, and nothing here caps how far
@@ -2920,10 +2940,10 @@ export async function buildOffResult(
     //     LABEL's implied density, and labels are a different population from
     //     the estimator's cells. THE LOW EDGE REFUSES GENUINELY LIGHT FOODS.
     //     Popcorn at `1 cup (8 g)` is 0.033 g/ml and is REAL, not corrupt; it
-    //     is refused here and billed the flat-solid 120 g, a ~15x overbill.
-    //     Puffed wheat at `1 cup (15 g)` is 0.0625 and ~8x. Both are exactly
-    //     what master bills — this lane neither causes nor fixes them — so it
-    //     is a KNOWN LIMITATION carried forward, not a regression. It is not
+    //     is still refused here, but since s457 S1 it falls to the puffed light
+    //     class (240 x 0.04 = 9.6 g) instead of the flat-solid 120 g, so the
+    //     refusal costs ~1.2x, not ~15x; puffed wheat at `1 cup (15 g)` lands on
+    //     the same 9.6 g. The low edge itself is unchanged. It is not
     //     narrowed here because nobody in this session could measure the real
     //     OFF label-density distribution (the corpus read was written and
     //     refused by the permission classifier), and moving a threshold on a
@@ -3616,8 +3636,25 @@ export async function buildOffResult(
         // survive a 2.5x under-draw. P < 200: 200 is the estimator's 'piece'
         // clamp, not a weight (a 355 g can would halve). Lower-only; in none of
         // the bare guard's sets; writes OffServing (barcode,'piece') on first hit.
+        // ONE WHOLE UNIT (s457 CB): a label that states ONE counted ITEM ("1 bar
+        // (44 g)", "1 sandwich (58 g)", "1 TAMAL") has already said what one of
+        // the thing weighs, so (E) never splits it. Measured: the 'piece' P for
+        // SNICKERS is borrowSiblingServing()'s median over the brand's bite-size
+        // "N pieces" SKUs (9.0 g), n = 5, and `2 snickers` billed 17.6 g for 88.
+        // A MEASURE label still splits ("1 portion", "1 ONZ", and "1 serving",
+        // which every gram-only label normalizes to), and so does a CONTAINER
+        // label: `10 doritos` on "1 pack (30 g)" bills 18.75 g, and refusing it
+        // billed 300 (rf-cb replay; `12 pringles` "1 can (40 g)" 480). The cost:
+        // `2 kit kats` on "1 package (42 g)" still splits (16.8 g for 84) until
+        // the sibling borrow is fixed. Words under 3 letters never refuse ((A)'s
+        // length floor). A refusal only REVERTS to label_serving_default, never
+        // bills lower. Placed before the estimator call, so a refused record
+        // mints no OffServing row.
+        const labelIsOneWholeUnit = labelUnitCount === 1 && labelUnitWord != null
+            && labelUnitWord.length >= 3 && !LABEL_MEASURE_WORDS.has(labelUnitWord)
+            && !LABEL_CONTAINER_WORDS.has(labelUnitWord);
         if (grams == null && !barePluralRequest && !bareRequest && qty >= 2
-            && hydrated.servingGrams && hydrated.servingGrams > 0) {
+            && hydrated.servingGrams && hydrated.servingGrams > 0 && !labelIsOneWholeUnit) {
             const amb = await getOrCreateAmbiguousServing(
                 candidate.id, hydrated.foodName, 'piece', brandForBorrow
             );
