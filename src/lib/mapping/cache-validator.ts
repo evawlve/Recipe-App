@@ -92,6 +92,10 @@
  * and the keyed /api/ok `cache_validate.responses` counter across a sweep, not
  * a log line. The lookup FAILURE logs at warn, because a persistently failing
  * lookup silently restores the whole nightly spend.
+ *
+ * BULK ENTRY (2026-11-14, s458 VR). runCacheValidation is exported for
+ * scripts/eval/validator-bulk-review.ts — same suppression, same prompt, same
+ * verdict guards; the request path still only kicks.
  */
 
 import { prisma } from '@/lib/db';
@@ -216,13 +220,18 @@ function userPrompt(input: CacheValidatorInput): string {
  * never fail, slow, or alter the request that triggered it.
  */
 export function kickCacheValidation(input: CacheValidatorInput, rawCacheKey: string): void {
-    const task = runCacheValidation(input, rawCacheKey).catch((err) => {
+    const task = runCacheValidation(input, rawCacheKey).then(() => undefined, (err) => {
         logger.debug('cache_validator.failed', {
             phrase: input.phrase,
             error: (err as Error).message,
         });
     });
     registerBackgroundTask(task);
+}
+
+/** The exact prompts the validator sends — for the bulk script's --print-prompts. */
+export function buildCacheValidatorPrompts(input: CacheValidatorInput): { systemPrompt: string; userPrompt: string } {
+    return { systemPrompt: SYSTEM_PROMPT, userPrompt: userPrompt(input) };
 }
 
 /**
@@ -235,7 +244,7 @@ export function kickCacheValidation(input: CacheValidatorInput, rawCacheKey: str
 async function findPriorVerdict(
     normalizedForm: string,
     input: CacheValidatorInput,
-): Promise<{ id: string; verdict: string; reviewedBy: string | null } | null> {
+): Promise<{ id: string; verdict: string; axis: string; reason: string; reviewedBy: string | null } | null> {
     try {
         return await prisma.mappingValidationVerdict.findFirst({
             where: {
@@ -249,7 +258,7 @@ async function findPriorVerdict(
                 model: VALIDATOR_AI_MODEL,
             },
             orderBy: { createdAt: 'desc' },
-            select: { id: true, verdict: true, reviewedBy: true },
+            select: { id: true, verdict: true, axis: true, reason: true, reviewedBy: true },
         });
     } catch (err) {
         logger.warn('cache_validator.prior_lookup_failed', {
@@ -273,7 +282,21 @@ function isWatchDisposition(reviewedBy: string | null): boolean {
     return typeof reviewedBy === 'string' && reviewedBy.endsWith(':watch');
 }
 
-async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: string): Promise<void> {
+export type CacheValidationOutcome =
+    | { outcome: 'suppressed'; priorVerdict: string; priorId: string; priorAxis: string; priorReason: string }
+    | { outcome: 'dry_run' }
+    | { outcome: 'written'; verdict: 'OK' | 'SUSPECT'; axis: string; reason: string; model: string }
+    | { outcome: 'llm_error' | 'wrong_tier' | 'malformed' | 'write_failed' };
+
+/**
+ * One validation. With `dryRun` it stops after the suppression check, before
+ * the model is paid for, and reports what it would have done.
+ */
+export async function runCacheValidation(
+    input: CacheValidatorInput,
+    rawCacheKey: string,
+    opts: { dryRun?: boolean } = {},
+): Promise<CacheValidationOutcome> {
     const normalizedForm = canonicalizeCacheKey(rawCacheKey);
 
     // Re-issue suppression on the BILLED TUPLE, checked before the model is
@@ -286,8 +309,16 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
             priorVerdict: prior.verdict,
             priorId: prior.id,
         });
-        return;
+        return {
+            outcome: 'suppressed',
+            priorVerdict: prior.verdict,
+            priorId: prior.id,
+            priorAxis: prior.axis,
+            priorReason: prior.reason,
+        };
     }
+
+    if (opts.dryRun) return { outcome: 'dry_run' };
 
     const result = await callStructuredLlm({
         schema: VERDICT_SCHEMA,
@@ -311,7 +342,7 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
             model: result.model,
             error: result.error,
         });
-        return;
+        return { outcome: 'llm_error' };
     }
 
     // Defense-in-depth behind the single-entry provider chain: never persist
@@ -323,7 +354,7 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
             phrase: input.phrase,
             model: result.model,
         });
-        return;
+        return { outcome: 'wrong_tier' };
     }
 
     const verdict = result.content.verdict;
@@ -343,7 +374,7 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
             phrase: input.phrase,
             content: result.content,
         });
-        return;
+        return { outcome: 'malformed' };
     }
 
     try {
@@ -367,10 +398,12 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
             axis,
             model: result.model,
         });
+        return { outcome: 'written', verdict, axis, reason, model: result.model ?? 'unknown' };
     } catch (err) {
         logger.warn('cache_validator.write_failed', {
             phrase: input.phrase,
             error: (err as Error).message,
         });
+        return { outcome: 'write_failed' };
     }
 }
