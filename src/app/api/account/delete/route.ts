@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth/request-auth";
 import { getSupabaseAuthClient } from "@/lib/supabase/admin";
+import { hashUserIdForTelemetry, MEL_USER_HASH_DELETED } from "@/lib/auth/telemetry-user-hash";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -100,6 +101,7 @@ export async function DELETE(req: NextRequest) {
     // (3) Everything from here on is AFTER the auth deletion and is reported on a 200: the
     // account is already gone, and a non-2xx would make the app say "try again" (into a 401).
     let requestLogRowsDeleted: number | null = null;
+    let eventLogRowsUnlinked: number | null = null;
     let appDataFound: boolean | null = false;
     let appDataDeleted = false;
     let appDataError: string | undefined;
@@ -126,6 +128,23 @@ export async function DELETE(req: NextRequest) {
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
         console.warn('[account.delete] request-log scrub failed after auth deletion:', detail);
+      }
+
+      // (3a') The unlink: the caller's `MappingEventLog.userHash` code becomes 'deleted' (s457
+      // UID-1). Skipped when no secret is configured (no hash was ever written). Its own
+      // try/catch, like (3a): a failure changes neither the status nor whether (3b) runs.
+      try {
+        const h = hashUserIdForTelemetry(userId);
+        if (h) {
+          const { count } = await prisma.mappingEventLog.updateMany({
+            where: { userHash: h },
+            data: { userHash: MEL_USER_HASH_DELETED },
+          });
+          eventLogRowsUnlinked = count;
+        }
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        console.warn('[account.delete] event-log unlink failed after auth deletion:', detail);
       }
 
       // (3b) The web app's rows. The lookup is guarded so a database failure here is reported
@@ -222,6 +241,7 @@ export async function DELETE(req: NextRequest) {
       success: true, 
       authDeleted: true,
       requestLogRowsDeleted,
+      eventLogRowsUnlinked,
       appDataFound,
       appDataDeleted,
       ...(appDataError !== undefined ? { appDataError } : {}),
