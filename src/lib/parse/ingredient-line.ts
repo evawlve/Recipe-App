@@ -303,16 +303,81 @@ function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
 
 // C6970 D30: a leading Spanish numeral directly before a Spanish unit word becomes its digit, IN PLACE, so
 // `dos tazas de leche` reads exactly as `2 tazas de leche`. Gated on SPANISH_UNIT_TOKENS: noun-led lines
-// (`dos huevos`), `tres leches`, un/una/uno and `pieza` are not touched. NOT `siete` (a single-token brand;
+// (`dos huevos`) are rewriteSpanishCountBeforeNoun()'s (s457 P4); `tres leches`, un/una/uno and `pieza` are not touched. NOT `siete` (a single-token brand;
 // detectBrandInQuery() reads the pre-rewrite line, so parity would break on brandLed).
 const SPANISH_NUMERAL_DIGITS: Record<string, string> = {
   dos: '2', tres: '3', cuatro: '4', cinco: '5', seis: '6', ocho: '8', nueve: '9', diez: '10',
   media: '0.5', medio: '0.5',
 };
-function rewriteSpanishNumeral(mergedTokens: string[]): void {
+function rewriteSpanishNumeral(mergedTokens: string[], detectedBrand: string | null = null): void {
   if (mergedTokens.length < 2) return;
   const d = SPANISH_NUMERAL_DIGITS[mergedTokens[0].toLowerCase()];
-  if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase())) mergedTokens[0] = d;
+  if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase())) { mergedTokens[0] = d; return; }
+  rewriteSpanishCountBeforeNoun(mergedTokens, detectedBrand);
+}
+
+// s457 P4: a leading Spanish count word before a NOUN becomes its digit, so `dos huevos` parses exactly as `2 huevos`
+// (2-999, `N y medio`, `medio/media` = 0.5, `una docena de` = 12, `media docena de` = 6, `un par de` = 2).
+// NOT rewritten: un/una/uno (numerically inert; stripping the article moves the ES: key onto worse answers, pd-p4),
+// siete (a brand), once and quince (English words: `once upon a farm`, `quince paste`), a numeral that opens a
+// detected brand (`dos equis`), a next token in SPANISH_COUNT_STOP_NEXT or `d'…`, and the food names in
+// SPANISH_COUNT_STOP_PAIRS (OffFood/FatSecretFood name census). Measurement: s457 pd-p4, carried in this PR's body.
+const foldEs = (t: string): string => t.toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '');
+const ES_ONES: Record<string, number> = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9 };
+const ES_TEENS: Record<string, number> = {
+  diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veinte: 20, veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+};
+const ES_TENS: Record<string, number> = { treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90 };
+const ES_HUNDREDS: Record<string, number> = {
+  cien: 100, ciento: 100, doscientos: 200, doscientas: 200, trescientos: 300, trescientas: 300, cuatrocientos: 400, cuatrocientas: 400,
+  quinientos: 500, quinientas: 500, seiscientos: 600, seiscientas: 600, setecientos: 700, setecientas: 700, ochocientos: 800,
+  ochocientas: 800, novecientos: 900, novecientas: 900,
+};
+const SPANISH_COUNT_EXCLUDED: ReadonlySet<string> = new Set(['un', 'una', 'uno', 'siete', 'once', 'quince']);
+const SPANISH_COUNT_STOP_NEXT: ReadonlySet<string> = new Set(['de', 'del', 'y', 'o', 'con', 'sin', 'onza', 'onzas', 'litro', 'litros', 'plato', 'platos']);
+const SPANISH_COUNT_STOP_PAIRS: ReadonlySet<string> = new Set([
+  'tres leches', 'tres leche', 'tres leched', 'tres leghes', 'tres estrellas', 'tres monjitas', 'tres amigos', 'tres marias',
+  'cuatro leches', 'cuatro chiles', 'cuatro quesos', 'cinco jotas', 'cinco lanzas', 'dos compadres', 'dos padres',
+  'dos amigos', 'dos rios', 'dos quesos', 'media crema', 'media noche', 'media luna', 'ocho rios', "ocho rio's",
+  // s457 rf-p4: brands led by a count word (OffFood/FatSecretFood "brandName" census) + three US brands.
+  'dos pinos', 'dos ranchitos', 'dos hermanos', 'dos anclas', 'dos banditos', 'dos bandits', 'dos hombres', 'dos toros',
+  'tres agaves', 'tres generaciones', 'tres hermanas', 'tres picosos', 'tres mentes', 'tres karkade', 'tres lecheria', 'tres latin',
+  'tres pontas', 'ocho candy', 'ocho organic', 'ocho coconut', 'ocho caramel', 'ocho peanut',
+]);
+/** The count at mergedTokens[0..consumed), or null. Reads 1-999 plus `N y medio/media`. */
+function readSpanishCount(t: string[]): { qty: number; consumed: number } | null {
+  const f = t.map(foldEs);
+  let k = 0; let qty = 0;
+  if (ES_HUNDREDS[f[0]] !== undefined) {
+    qty = ES_HUNDREDS[f[0]]; k = 1;
+    if (f[0] === 'cien') return { qty, consumed: 1 };
+  }
+  if (ES_TENS[f[k]] !== undefined) {
+    qty += ES_TENS[f[k]]; k += 1;
+    if (f[k] === 'y' && ES_ONES[f[k + 1]] !== undefined && f[k + 1] !== 'un' && f[k + 1] !== 'una') { qty += ES_ONES[f[k + 1]]; k += 2; }
+  } else if (ES_TEENS[f[k]] !== undefined) { qty += ES_TEENS[f[k]]; k += 1; }
+  else if (ES_ONES[f[k]] !== undefined) { qty += ES_ONES[f[k]]; k += 1; }
+  if (k === 0) return null;
+  if (f[k] === 'y' && (f[k + 1] === 'medio' || f[k + 1] === 'media')) { qty += 0.5; k += 2; }
+  return { qty, consumed: k };
+}
+function rewriteSpanishCountBeforeNoun(mergedTokens: string[], detectedBrand: string | null): void {
+  const f = mergedTokens.map(foldEs);
+  if (detectedBrand && foldEs(detectedBrand.trim().split(/\s+/)[0] ?? '') === f[0]) return;
+  // `una docena de huevos` -> 12, `media docena de huevos` -> 6, `un par de huevos` -> 2 (the `de` goes too).
+  let qty: number | null = null; let consumed = 0;
+  if ((f[0] === 'una' || f[0] === 'media') && f[1] === 'docena') { qty = f[0] === 'una' ? 12 : 6; consumed = f[2] === 'de' ? 3 : 2; }
+  else if (f[0] === 'docena') { qty = 12; consumed = f[1] === 'de' ? 2 : 1; }
+  else if (f[0] === 'un' && f[1] === 'par' && f[2] === 'de') { qty = 2; consumed = 3; }
+  else if (f[0] === 'medio' || f[0] === 'media') { qty = 0.5; consumed = 1; }
+  else if (!SPANISH_COUNT_EXCLUDED.has(f[0])) { const r = readSpanishCount(mergedTokens); if (r) { qty = r.qty; consumed = r.consumed; } }
+  if (qty === null || consumed >= mergedTokens.length) return;
+  const next = f[consumed];
+  if (!/^\p{L}/u.test(next) || SPANISH_COUNT_STOP_NEXT.has(next) || /^d['’]/.test(next)) return;
+  if (SPANISH_COUNT_STOP_PAIRS.has(`${f[consumed - 1]} ${next}`)) return;
+  mergedTokens.splice(0, consumed, String(qty));
 }
 
 // A spoken fraction of a measure: "half a cup of rice", "a half cup of egg
@@ -861,7 +926,8 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
-  rewriteSpanishNumeral(mergedTokens);
+  const brandDetection = detectBrandInQuery(normalizedLine); // hoisted (s457 P4): a pure read of normalizedLine
+  rewriteSpanishNumeral(mergedTokens, brandDetection.matchedBrand);
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
   if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
@@ -934,7 +1000,6 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // sprouts`), both on a single-token junk lexicon entry, and both outcomes
   // are benign — the kept word is true of the food. Lexicon precision is
   // brand-detector work, not a reason to narrow this gate past its own rows.
-  const brandDetection = detectBrandInQuery(normalizedLine);
   const brandLed = !!brandDetection.matchedBrand;
 
   const wholeIsIdentity =
