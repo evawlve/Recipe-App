@@ -1,7 +1,7 @@
 /**
  * C6970 D30: a leading Spanish numeral is rewritten to its digit ONLY when the next token is a Spanish unit word
  * (SPANISH_UNIT_TOKENS). `dos tazas de leche` then parses exactly as `2 tazas de leche`.
- * NOT rewritten: un/una/uno, noun-led lines (`dos huevos`), `pieza`, `siete` (a single-token brand: detectBrandInQuery()
+ * NOT rewritten HERE: un/una/uno, noun-led lines (`dos huevos`: rewriteSpanishCountBeforeNoun(), s457 P4), `pieza`, `siete` (a single-token brand: detectBrandInQuery()
  * reads the pre-rewrite line, so `siete ...` would skip the qualifier/hint strips its digit twin applies).
  * Parity holds from mergedTokens onward; the pre-token passes still see the word.
  */
@@ -52,8 +52,7 @@ describe('numeral before a Spanish unit word == digit twin', () => {
 describe('everything else is byte-identical to BASE (captured on origin/master 41af7084)', () => {
   const same = (n: string) => ({ qty: 1, multiplier: 1, unit: null, rawUnit: null, name: n, unitHint: null, qualifiers: null });
   test.each([
-    'dos huevos', 'media manzana', 'medio aguacate', 'dos piezas de pan', 'dos tamales de pollo',
-    'tres tacos al pastor', 'una taza de arroz', 'una cucharada de miel', 'un vaso de leche', 'tres leches',
+    'una taza de arroz', 'una cucharada de miel', 'un vaso de leche', 'tres leches',
     'tres leches cake', 'dos equis', 'media crema', 'siete tortilla chips', 'once upon a farm', 'dos', 'media',
     'siete cucharadas de azucar', 'siete tazas de pollo fresh',
   ])('%s unchanged', (line) => {
