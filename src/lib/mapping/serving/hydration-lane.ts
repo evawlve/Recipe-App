@@ -2518,6 +2518,23 @@ export function candidateHasVolumeServing(candidate: UnifiedCandidate, unit: str
     return false;
 }
 
+/**
+ * TIE-ONLY (s458 TB): does this record OWN a gram-quantified serving in the
+ * requested volume unit? candidateHasVolumeServing() answers for FDC and OFF and
+ * returns false for FatSecret on purpose (it feeds the cooked-grain SCORE boost);
+ * this predicate adds FatSecret's own household servings ("1 cup shredded"),
+ * because the tie key it feeds must not read a FatSecret record that owns a cup
+ * as serving-less - that is the FatSecret->OFF lane flip measured in s458 TB.
+ */
+export function candidateOwnsVolumeServing(candidate: UnifiedCandidate, unit: string): boolean {
+    if (candidate.source === 'fatsecret') {
+        return !!candidate.servings?.some(s =>
+            typeof s.grams === 'number' && s.grams > 0
+            && servingDescriptionMatchesVolumeUnit(s.description, unit));
+    }
+    return candidateHasVolumeServing(candidate, unit);
+}
+
 // Plausible single-retail-unit bands for package quantities. 'ml' is the
 // beverage archetype (a bottle/can/pouch someone counts as one drink); 'g'
 // is capped low so multi-serve family packages (a 432g Oreo package) never

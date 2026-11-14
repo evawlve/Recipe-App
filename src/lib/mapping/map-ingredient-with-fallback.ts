@@ -83,7 +83,7 @@ import { servingMacros } from './fs-serving-macros';
 import {
     hydrateAndSelectServing,
     candidateHasCountLabel, requestBillsByServing, candidateHasServingData,
-    isMatchableVolumeUnit, candidateHasVolumeServing,
+    isMatchableVolumeUnit, candidateHasVolumeServing, candidateOwnsVolumeServing,
 } from './serving/hydration-lane';
 // Facade re-exports: the public serving API moved to ./serving/hydration-lane
 // (Phase 1 stage 1a); instruments and tests import it from this module's path.
@@ -2381,6 +2381,8 @@ async function mapIngredientWithFallbackCore(
                         && isMatchableVolumeUnit(parsed.unit)
                         && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
                         ? parsed.unit : null;
+                    // s458 TB tie-only key: an explicit volume unit (simple-rerank Tiebreaker 4).
+                    const tieVolumeUnit = parsed?.unit && isMatchableVolumeUnit(parsed.unit) ? parsed.unit : null;
                     const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
                         id: c.id,
                         name: c.name,
@@ -2392,6 +2394,7 @@ async function mapIngredientWithFallbackCore(
                         countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
                         servingLabelMatch: billsByServing ? candidateHasServingData(c)
                             : grainVolumeUnit ? candidateHasVolumeServing(c, grainVolumeUnit) : undefined,
+                        volumeServingMatch: tieVolumeUnit ? candidateOwnsVolumeServing(c, tieVolumeUnit) : undefined,
                     }));
 
                     // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
@@ -3985,6 +3988,7 @@ async function attemptCacheFailureResearch(params: {
             && isMatchableVolumeUnit(parsed.unit)
             && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
             ? parsed.unit : null;
+        const tieVolumeUnitFB = parsed?.unit && isMatchableVolumeUnit(parsed.unit) ? parsed.unit : null;
         const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
             id: c.id,
             name: c.name,
@@ -3996,6 +4000,7 @@ async function attemptCacheFailureResearch(params: {
             countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
             servingLabelMatch: billsByServingFB ? candidateHasServingData(c)
                 : grainVolumeUnitFB ? candidateHasVolumeServing(c, grainVolumeUnitFB) : undefined,
+            volumeServingMatch: tieVolumeUnitFB ? candidateOwnsVolumeServing(c, tieVolumeUnitFB) : undefined,
         }));
         const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
         const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
