@@ -698,6 +698,11 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // landed above it, at the Step 1a cache read). Helpers hash UNCHANGED
     // (8c1e518d30331976 both sides). Old pin 728af8b72218e566 kept as superseded.
     '1ccbadcc7ea73404': 'gate-backstop',
+    // s458 TB: the caller delta adds `tieVolumeUnit` + `volumeServingMatch` at the primary
+    // rerank site (simple-rerank Tiebreaker 4); section 9 transcribes both lines in the
+    // same commit. `verify --limit 43 --variant gate-backstop` read 0 MISMATCH-UNEXPLAINED
+    // and 0 CONF-UNEXPLAINED for this pin; helpers hash unchanged.
+    'c0058ccf9229d9a9': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -756,7 +761,7 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
 // transcription in section 9 DID change, in the same commit: Step 3c now passes
 // `trimmed` to hasNullOrInvalidMacros(), exactly as the mapper does — see the
 // receipt on the new hash in KNOWN_CALLERS.
-const TRANSCRIBED_CALLER = '1ccbadcc7ea73404';
+const TRANSCRIBED_CALLER = 'c0058ccf9229d9a9';
 
 interface DriftResult {
     caller: string;
@@ -883,6 +888,8 @@ const {
  * --with-serving stage; it is the SAME function the route calls, not a transcription.
  */
 const { hydrateAndSelectServing } = mapperMod;
+/** s458 TB: the tie-only volume predicate, imported (not copied) from the serving lane. */
+const { candidateOwnsVolumeServing } = require('../../src/lib/mapping/serving/hydration-lane');
 const { countedPieceNoun, extractLabelServingUnit, GENERIC_PIECE_WORDS, servingLabelCountsPiece } = countLabelMod;
 const { assessMacroPlausibility } = plausibilityMod;
 
@@ -1685,6 +1692,9 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
             && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
             ? parsed.unit : null;
 
+        // s458 TB tie-only key (simple-rerank Tiebreaker 4)
+        const tieVolumeUnit = parsed?.unit && copy_isMatchableVolumeUnit(parsed.unit) ? parsed.unit : null;
+
         // caller 1734-1745
         const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
             id: c.id,
@@ -1697,6 +1707,7 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
             countLabelMatch: countedNoun ? copy_candidateHasCountLabel(c, countedNoun) : undefined,
             servingLabelMatch: billsByServing ? copy_candidateHasServingData(c)
                 : grainVolumeUnit ? candidateHasVolumeServing(c, grainVolumeUnit) : undefined,
+            volumeServingMatch: tieVolumeUnit ? candidateOwnsVolumeServing(c, tieVolumeUnit) : undefined,
         }));
 
         // caller 1750-1751. NON-MONOTONE #4 lives inside simpleRerank.
