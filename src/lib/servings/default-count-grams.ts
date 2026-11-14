@@ -206,6 +206,16 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'potato chip': { grams: 1, confidence: 0.7, aliases: ['potato chips', 'chips', 'chip'] },
     'pretzel': { grams: 2, confidence: 0.7, sizes: { small: 1, medium: 2, large: 6 }, aliases: ['pretzels', 'mini pretzel', 'mini pretzels'] },
     'rice cake': { grams: 9, confidence: 0.8, aliases: ['rice cakes'] },
+    // Flavoured rice cakes weigh more than the plain 9 g cake, and a counted
+    // line on a label-less flavoured record ("2 chocolate rice cakes" on
+    // off_05903002) reached the plain seed through the last-two-words
+    // fallback. EXACT names only: each key is three or more words, so the
+    // last-two and last-word fallbacks can never return it for another food.
+    // Grams are the US label medians (OffFood one-cake labels, s457 pd-rc):
+    // chocolate 15 g (Quaker), caramel 13 g (12 of 14), white cheddar 11 g (5 of 5).
+    'chocolate rice cake': { grams: 15, confidence: 0.8, aliases: ['chocolate rice cakes'] },
+    'caramel rice cake': { grams: 13, confidence: 0.8, aliases: ['caramel rice cakes'] },
+    'white cheddar rice cake': { grams: 11, confidence: 0.8, aliases: ['white cheddar rice cakes'] },
     'goldfish cracker': { grams: 0.5, confidence: 0.8, aliases: ['goldfish crackers', 'goldfish'] },
     'oreo': { grams: 11.3, confidence: 0.8, aliases: ['oreos', 'oreo cookie', 'oreo cookies'] },
     'eggo waffle': { grams: 35, confidence: 0.8, aliases: ['eggo waffles', 'eggo', 'eggos'] },
