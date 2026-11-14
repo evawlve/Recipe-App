@@ -202,11 +202,17 @@ describe('applyComponentSubtraction', () => {
     expect(applyComponentSubtraction(base({
       head: 'a hamburger', foodName: 'Hamburger', clause: 'without the cheese',
     }))).toEqual({ skipped: 'no_carrier' });
-    const r = applyComponentSubtraction(base({
+    // s458 RM-a: the carrier reads the winner only (A16)
+    expect(applyComponentSubtraction(base({
       head: '2 cheeseburgers', foodName: 'Burger', clause: 'without cheese', grams: 400,
+      nutrition: bill({ calories: 900 }), parsed: { qty: 2, multiplier: 1, unit: '' },
+    }))).toEqual({ skipped: 'no_carrier' });
+    const r = applyComponentSubtraction(base({
+      head: '2 cheeseburgers', foodName: 'Cheeseburger', clause: 'without cheese', grams: 400,
       nutrition: bill({ calories: 900 }), parsed: { qty: 2, multiplier: 1, unit: '' },
     }));
     expect('adjustments' in r && r.adjustments[0].component).toBe('cheese');
+    expect('adjustments' in r && r.adjustments[0].grams).toBe(42);
   });
 
   test('micros: null stays null, non-null subtracts and re-derives per 100 g (sodium in grams)', () => {

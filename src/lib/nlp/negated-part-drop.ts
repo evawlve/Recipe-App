@@ -34,6 +34,9 @@
  * keeps the negator in the LINE, so most of its splits still bill; it can now drop a removal-verb item
  * (`picked off the pepperoni`) or a bare part right after a line negator, nothing more.
  *
+ * s458 RM-a: itemRemovalClause() DETECTS a clause for billing; it never strips. Its item-only guards mirror removal-clause.ts F6a
+ * (no salt peanut butter, no stir almond butter).
+ *
  * Pure; never mutates its input.
  */
 
@@ -277,9 +280,20 @@ export interface SoloRemoval {
  * when the clause is not that shape.
  */
 export function stripSoloRemoval(rawText: string): SoloRemoval | null {
+  return matchRemoval(rawText, SOLO_NEG);
+}
+
+// s458 RM-a: the same grammar with `no` and `w/o` (words() reads `w/o` as `w o`); the caller bills with it, nothing strips.
+const ITEM_NEG = new Set(['without', 'minus', 'no', 'w o']);
+export function itemRemovalClause(rawText: string): SoloRemoval | null {
+  return matchRemoval(rawText, ITEM_NEG, true);
+}
+
+const ITEM_ABSENCE_WORDS = new Set(['added', 'free', 'reduced', 'low']);
+function matchRemoval(rawText: string, negs: Set<string>, item = false): SoloRemoval | null {
   const raw = rawText.trim().split(/\s+/);
   const lw = raw.map(t => words(t).join(' '));
-  const at = lw.flatMap((w, k) => (SOLO_NEG.has(w) ? [k] : []));
+  const at = lw.flatMap((w, k) => (negs.has(w) ? [k] : []));
   if (at.length !== 1 || at[0] === 0) return null;
   const k = at[0];
   const head = raw.slice(0, k).join(' ').replace(/[\s,;:(\-]+$/, '');
@@ -294,5 +308,13 @@ export function stripSoloRemoval(rawText: string): SoloRemoval | null {
   if (tail.length < 1 || tail.length > 4 || parts.some(p => p.length < 1 || p.length > 3)) return null;
   if (parts.some(p => p.some(w => soloStop(w) || /\d/.test(w)))) return null;
   if (parts.some(p => SOLO_ABSENCE.test(p.join(' ')))) return null;
+  if (item) {
+    // s458 RM-a: a part led by an absence noun, or an absence word anywhere, is an identity claim (`no salt peanut butter`).
+    if (parts.some(p => SOLO_ABSENCE.test(p[0])) || tail.some(w => ITEM_ABSENCE_WORDS.has(w))) return null;
+    // s458 RM-a: at most two words per part (`no stir almond butter`, `no name peanut butter` are product names).
+    if (parts.some(p => p.length > 2)) return null;
+    // s458 RM-a: the head must name a food, not only a count, unit or size (`2 tbsp no salt butter`, `4 slices no nitrate bacon`).
+    if (!headWords.some(w => !SOLO_HEAD_FILLER.has(w) && !/^[\d/.]+$/.test(w) && !soloStop(w))) return null;
+  }
   return { head, clause: raw.slice(k).join(' ') };
 }
