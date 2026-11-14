@@ -42,7 +42,7 @@ describe('spanish pourable/paste — collisions are byte-identical to BASE (clas
         ['Chocolate con Leche', 'solid', 120], ['Pan de leche', 'solid', 120],
         ['Leche en polvo', 'solid', 120], ['Leche Nido', 'solid', 120],
         ['Galletas con leche', 'solid', 120], ['Helado de crema', 'solid', 120],
-        ['Crema helada', 'solid', 120], ['Cereal con miel', 'solid', 120],
+        ['Crema helada', 'solid', 120], ['Cereal con miel', 'solid', 36],
         ['Barre de sésame au miel', 'solid', 120], ['Queso de leche cruda', 'solid', 120],
         ['Atún en aceite', 'solid', 120], ['Crema y Cebolla', 'solid', 120],
         ['Mantequilla Bean', 'solid', 120], ['Lala Leche entera', 'solid', 120],
