@@ -11,7 +11,7 @@ export const dynamic = 'force-static';
 // Diego's decision — do not change without his say-so.
 const PRIVACY_CONTACT = 'team.mealspire@gmail.com';
 
-const LAST_UPDATED = '7 September 2026';
+const LAST_UPDATED = '13 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Kinda Healthy',
@@ -103,7 +103,7 @@ const SECTIONS: Section[] = [
           },
           {
             lead: 'What you type or say into Magic Log.',
-            text: 'The text of a food entry is sent to our nutrition-matching service so it can be turned into foods with nutrition data. The text of the entry and the food record it matched are kept in a server-side log that we use to find and fix bad matches. Entries that fail to parse are recorded the same way.',
+            text: 'The text of a food entry is sent to our nutrition-matching service so it can be turned into foods with nutrition data. The text of the entry and the food record it matched are kept in a server-side log that we use to find and fix bad matches. Entries that fail to parse are recorded the same way. Entries made while signed in are tagged with a scrambled code derived from your account — not your email or name — so we can tell real use apart from our own testing. Deleting your account removes that code from the log.',
           },
           {
             lead: 'Barcodes you scan.',
