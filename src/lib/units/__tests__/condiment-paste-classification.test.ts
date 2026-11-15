@@ -72,7 +72,8 @@ describe('condiment paste — control: the other classes are byte-identical', ()
         ['peanut butter', 'paste', 250], ['bbq sauce', 'liquid', 240], ['chicken broth', 'liquid', 240],
         ['coke', 'beverage', 240], ['Broccoli Cheddar Soup', 'beverage', 240], ['Crema de cacahuate', 'paste', 250],
         ['Leche', 'beverage', 240], ['Cheerios', 'solid', 36], ['Boom chicka pop', 'solid', 9.6],
-        ['white rice', 'solid', 120], ['Cottage cheese', 'solid', 120],
+        // s459 DENS-2 moved `Cottage cheese` to paste on purpose (wet-dairy-paste-classification.test.ts).
+        ['white rice', 'solid', 120], ['Cottage cheese', 'paste', 250],
     ])('%s stays %s at %d g/cup', (name, cls, cup) => {
         const r = resolveVolumeGrams(name);
         expect(r.volumeClass).toBe(cls);
