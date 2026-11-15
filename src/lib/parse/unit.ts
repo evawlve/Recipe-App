@@ -161,6 +161,12 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'handful': 'handful', 'handfuls': 'handful',
     'bowl': 'bowl', 'bowls': 'bowl',
     'plate': 'plate', 'plates': 'plate',
+    // s459 AL-b: a pour. Without it `a shot of tequila` kept its article and the whole phrase as the name (qty 1, unit null),
+    // while `1 shot of gin` already read unit `shot` through the unknown-unit partitive path and billed 44 g. A COUNT unit, not
+    // a fixed volume: the serving layer estimates it per drink (isEstimableUnknownUnit), so an espresso shot (~30 ml) and a
+    // spirit shot (~44 ml) each keep their own size. `double`/`triple` stay out (see rewriteDoublePortion() in ingredient-line.ts).
+    'shot': 'shot', 'shots': 'shot',
+    'jigger': 'jigger', 'jiggers': 'jigger',
     // C6970 D29: Spanish count units. NOT `vaso` (no `glass` unit), NOT `pieza` (out of scope).
     'rebanada': 'slice', 'rebanadas': 'slice',
     'lata': 'can', 'latas': 'can',
