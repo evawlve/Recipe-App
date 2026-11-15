@@ -10,7 +10,8 @@ describe('removal billing fixture (s458)', () => {
     if (!c.soloStripClause) expect(itemRemovalClause(c.itemRawText)?.clause ?? null).toBe(c.expectItemClause);
     const clause = (c.soloStripClause ?? c.expectItemClause) as string;
     const r = applyComponentSubtraction({
-      nutrition: c.winner.nutrition as any, grams: c.winner.grams, foodName: c.winner.foodName, standardSource: c.winner.source,
+      nutrition: c.winner.nutrition as any, grams: c.winner.grams, foodName: c.winner.foodName, brandName: c.winner.brandName,
+      standardSource: c.winner.source,
       head: c.itemRawText, clause, parsed: c.parsed as any,
     });
     if ('subtracted' in c.expect) {

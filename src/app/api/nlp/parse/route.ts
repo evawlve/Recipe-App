@@ -811,8 +811,8 @@ export async function POST(req: NextRequest) {
         const removalClause = soloRemovedClause ?? itemClause;
         if (removalClause) {
           const r = applyComponentSubtraction({
-            nutrition, grams: mapped.grams, foodName: mapped.foodName, standardSource,
-            head: rawText, clause: removalClause, parsed,
+            nutrition, grams: mapped.grams, foodName: mapped.foodName, brandName: mapped.brandName ?? null,
+            standardSource, head: rawText, clause: removalClause, parsed,
           });
           sub = 'adjustments' in r ? r : null;
           logger.audit(soloRemovedClause ? 'nlp_parse.solo_subtraction' : 'nlp_parse.clause_subtraction', {

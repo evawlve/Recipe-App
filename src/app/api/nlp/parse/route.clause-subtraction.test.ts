@@ -1,7 +1,8 @@
 /**
  * /api/nlp/parse - s458 RM-a: a `no X` clause in an ITEM's own text (the line is never stripped, the mapper still
  * sees it) subtracts like `without X` does, and audits `nlp_parse.clause_subtraction`. A winner whose name already
- * lacks the part (`(No Mayo)`) is skipped `already_removed`. No clause, no audit.
+ * lacks the part (`(No Mayo)`) is skipped `already_removed`. No clause, no audit. s458 RM-b: on a winner whose
+ * brandName passes isRestaurantChain(), a TOPPING (mayo, sour cream, spread, lettuce, tomato, onion, pickle) needs no carrier.
  *
  * Mocks: the supabase / db / mapper / resolve-payload mocks of route.sugar-sodium-null.test.ts;
  * the REAL logger with a spy, as route.solo-removal.test.ts does.
@@ -111,6 +112,44 @@ describe('/api/nlp/parse item clause subtraction (no X)', () => {
     const audits = auditsNamed('nlp_parse.clause_subtraction');
     expect(audits).toHaveLength(1);
     expect(audits[0][1].skipped).toBe('already_removed');
+  });
+
+  // s458 RM-b: a chain TOPPING passes the carrier test on the WINNER's brandName (never the typed brand).
+  const chainWinner = (foodName: string, brandName: string | null) => {
+    resolveFoodDetails.mockResolvedValue(details(foodName));
+    mapIngredientWithFallback.mockResolvedValue({ ...MAPPED, foodName, brandName });
+  };
+
+  test("RM-b: wendys baconator no mayo on Baconator / Wendy's: mayo subtracted", async () => {
+    chainWinner('Baconator', "Wendy's");
+    const item = await parseOne('wendys baconator no mayo');
+    expect(item.adjustments[0].component).toBe('mayo');
+    expect(item.nutrition.calories).toBeCloseTo(242.7, 1);
+    expect(auditsNamed('nlp_parse.clause_subtraction')[0][1].subtracted).toEqual(['mayo']);
+  });
+
+  test('RM-b: the same winner with brandName null: no_carrier (the typed `wendys` is not the gate)', async () => {
+    chainWinner('Baconator', null);
+    const item = await parseOne('wendys baconator no mayo');
+    expect('adjustments' in item).toBe(false);
+    expect(auditsNamed('nlp_parse.clause_subtraction')[0][1].skipped).toBe('no_carrier');
+  });
+
+  test('RM-b: burger king whopper no cheese on Whopper / Burger King stays no_carrier (cheese is not a topping)', async () => {
+    chainWinner('Whopper', 'Burger King');
+    const item = await parseOne('burger king whopper no cheese');
+    expect('adjustments' in item).toBe(false);
+    expect(item.nutrition.calories).toBe(300);
+    expect(auditsNamed('nlp_parse.clause_subtraction')[0][1].skipped).toBe('no_carrier');
+  });
+
+  test("RM-b: solo path, a mcchicken without mayo on McChicken / McDonald's: solo_subtraction subtracts mayo", async () => {
+    chainWinner('McChicken', "McDonald's");
+    const item = await parseOne('a mcchicken without mayo');
+    expect(mapIngredientWithFallback.mock.calls[0][0]).toBe('a mcchicken');
+    expect(item.adjustments[0].component).toBe('mayo');
+    expect(auditsNamed('nlp_parse.solo_subtraction')[0][1].subtracted).toEqual(['mayo']);
+    expect(auditsNamed('nlp_parse.clause_subtraction')).toHaveLength(0);
   });
 
   test('a cheeseburger (no clause): no clause audit', async () => {
