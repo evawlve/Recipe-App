@@ -19,7 +19,8 @@
  *   e  refuse any key the triage corpus marks coldVerdict MISS
  *   f  Role A snapshot loads, is 15 min .. 24 h old, and is not under RUNS_ROOT
  *   g  take RUNS_ROOT/run.lock (released on every exit path)
- *   h  at most MAX_EXECUTE_RUNS_PER_DAY executes per LA date
+ *   h  at most MAX_KEYS_PER_DAY keys executed per LA date (this run's keys included); a
+ *      run's keys count from its execute row, so a crashed execute still spends them
  *   i  RUN dir: keys.json, reason.txt, roleA-screen.json (a COPY of Role A)
  *   j  dry run of _evict_rows.ts against the copy; non-zero refuses
  *   k  no --execute: log the dry run, exit 0
@@ -37,7 +38,8 @@ import { spawnSync } from 'child_process';
 import { loadSnapshot, parseKeysText, SUSPICIOUSLY_FRESH_MS } from './_evict_rows';
 
 export const MAX_KEYS_PER_RUN = 5;
-export const MAX_EXECUTE_RUNS_PER_DAY = 2;
+/** Diego, 2026-11-14 (s458): a daily KEY budget, raised from 2 execute runs (≤ 10 keys) to 30 keys; runs are no longer capped. */
+export const MAX_KEYS_PER_DAY = 30;
 export const RUNS_ROOT = '/Users/diego/dev/snapshots/evict-guarded';
 const REPO = path.resolve(__dirname, '..', '..');
 const TRIAGE_TSV = path.join(__dirname, 'triage-regression-corpus-2026-11-09.tsv');
@@ -116,9 +118,9 @@ export function keyRefusal(keys: string[]): string | null {
     return null;
 }
 
-export function dailyCapRefusal(executedCount: number): string | null {
-    return executedCount >= MAX_EXECUTE_RUNS_PER_DAY
-        ? `${executedCount} execute run(s) already logged today; the cap is ${MAX_EXECUTE_RUNS_PER_DAY} per LA day`
+export function dailyCapRefusal(keysSpentToday: number, keysThisRun: number): string | null {
+    return keysSpentToday + keysThisRun > MAX_KEYS_PER_DAY
+        ? `${keysSpentToday} key(s) already executed today + ${keysThisRun} in this run exceeds MAX_KEYS_PER_DAY (${MAX_KEYS_PER_DAY}) per LA day`
         : null;
 }
 
@@ -163,9 +165,14 @@ export function roleARefusal(takenAt: string, now: Date): string | null {
 }
 
 /** Count 'execute' rows for one LA date. Missing file is the caller's 0; a bad file THROWS. */
-export function executedToday(runsTsvText: string, laDate: string): number {
-    const { idx: [iDate, iMode], rows } = tsvColumns(runsTsvText, ['laDate', 'mode']);
-    return rows.filter(r => r[iMode] === 'execute' && r[iDate] === laDate).length;
+/** Keys spent on that LA date: the keyCount of every `execute` row (logged before the delete). Fail-closed on a bad count. */
+export function keysExecutedToday(runsTsvText: string, laDate: string): number {
+    const { idx: [iDate, iMode, iCount], rows } = tsvColumns(runsTsvText, ['laDate', 'mode', 'keyCount']);
+    return rows.filter(r => r[iMode] === 'execute' && r[iDate] === laDate).reduce((sum, r) => {
+        const n = Number(r[iCount]);
+        if (!Number.isInteger(n) || n < 1) throw new Error(`runs.tsv execute row has keyCount ${JSON.stringify(r[iCount])}`);
+        return sum + n;
+    }, 0);
 }
 
 export function parseDeleted(text: string): { deleted: number; after: number } | null {
@@ -292,11 +299,11 @@ async function locked(
     const runsFile = path.join(RUNS_ROOT, 'runs.tsv');
     let count: number;
     try {
-        count = fs.existsSync(runsFile) ? executedToday(fs.readFileSync(runsFile, 'utf8'), laClock(now).date) : 0;
+        count = fs.existsSync(runsFile) ? keysExecutedToday(fs.readFileSync(runsFile, 'utf8'), laClock(now).date) : 0;
     } catch (e) {
         return refuse(`runs.tsv unreadable: ${(e as Error).message}`);
     }
-    const cap = dailyCapRefusal(count);
+    const cap = dailyCapRefusal(count, keys.length);
     if (cap) return refuse(cap);
 
     const clock = laClock(now);
