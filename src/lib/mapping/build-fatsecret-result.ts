@@ -33,6 +33,7 @@ import { FATSECRET_REFRESH_DAYS } from './config';
 import {
     singularizeUnit, inferDiscreteUnit, extractLabelServingUnit,
     servingLabelCountsPiece, labelLeadingCount, labelPieceMatchesItem, labelFractionQuantity,
+    labelLeadingQuantity,
 } from './count-label';
 import {
     num,
@@ -283,6 +284,91 @@ function declaredVolumeUnitGrams(s: FsServingView, unit: string): number | null 
 }
 
 // ============================================================
+// Panel-less records under a count unit (s459 AL-b0)
+// ============================================================
+
+/** `piece` and `pc` count the same thing; every other noun matches only itself. */
+const PIECE_WORDS = new Set(['piece', 'pc']);
+function sameCountNoun(token: string, noun: string): boolean {
+    const t = singularizeUnit(token);
+    return t === noun || (PIECE_WORDS.has(noun) && PIECE_WORDS.has(t));
+}
+
+/**
+ * How many of the requested unit `noun` a PANEL-LESS record's macro serving
+ * holds, as the record ITSELF states it — or null when it does not say. Two
+ * statements count, and nothing else:
+ *
+ *  1. THE SERVING LABEL NAMES THE NOUN: "1 quesadilla", "2 cookies",
+ *     "1 serving" for `serving`. Its leading quantity is the answer.
+ *  2. THE LABEL IS THE GENERIC "1 serving" AND THE RECORD NAME NAMES THE NOUN:
+ *     "Pepperoni - Personal Pan Pizza Slice" for `slice`, "Chili Small" for
+ *     `small`, "Chicken Nuggets - 4 Pieces" for `piece` (4). The answer is the
+ *     integer directly before the noun, else 1. REFUSED when the name carries
+ *     any number that does not directly precede the noun — in "Classic Bone-in
+ *     Wings - 6 Pieces" (650 kcal) or "30 Count Boneless Wings" (1,820 kcal)
+ *     the count is of something else, and reading `wing` as 1 per serving
+ *     would bill `6 wings` at 6 x 650. (Names sampled 2026-11-15, box: chain
+ *     records enumerate the whole serving, "Chicken Nuggets - 6 Pieces" 260.)
+ *
+ * No lexicon and no size table: `small fries` on "World Famous Fries - Kids"
+ * says nothing about `small`, so it stays unresolved.
+ */
+function panellessUnitsPerServing(s: FsServingView, foodName: string, noun: string): number | null {
+    if (!noun) return null;
+    const labelWord = extractLabelServingUnit(s.description);
+    if (labelWord && sameCountNoun(labelWord, noun)) {
+        const q = labelLeadingQuantity(s.description);
+        return q != null && q > 0 ? q : 1;
+    }
+    if (!EXPLICIT_ONE_SERVING_RE.test(s.description)) return null;
+    const tokens = (foodName || '').toLowerCase().match(/[a-z]+|\d+(?:\.\d+)?/g) ?? [];
+    let named = false;
+    let count: number | null = null;
+    for (let i = 0; i < tokens.length; i++) {
+        if (/^\d/.test(tokens[i])) {
+            const n = Number(tokens[i]);
+            const next = tokens[i + 1];
+            if (!next || !sameCountNoun(next, noun) || !Number.isInteger(n) || n < 1) return null;
+            if (count != null && count !== n) return null;
+            count = n;
+        } else if (sameCountNoun(tokens[i], noun)) {
+            named = true;
+        }
+    }
+    return named ? (count ?? 1) : null;
+}
+
+/** A serving label that states a MASS, or a fluid volume: "1 1/2 oz", "28 g", "12 fl oz". */
+const LABEL_MEASURE_RE = /^\s*(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)\s*(fl\.?\s*oz|fluid\s+ounces?|oz|ounces?|grams?|g)(?![a-z])/i;
+
+/**
+ * Grams of a serving whose LABEL states its mass (or a fluid volume), or null.
+ * Used only for panel-less records, whose servings carry no grams: "1 1/2 oz" on
+ * Fireball (fs_4709204) is 42.5 g, and a `shot` estimate is then billed against
+ * it instead of dropping the record.
+ *
+ * MASS AND FLUID OUNCES ONLY. A `cup`/`tbsp`/`tsp`/`ml` label needs a density
+ * to meet a gram estimate, and the category density misreads the foods these
+ * records are: `a bowl of kimchi jjigae` on "Kimchi Jjigae" (`1 cup` 295 kcal)
+ * read the stew as a 0.5 g/ml solid, 120 g a cup, and billed a 300 g bowl at
+ * 737 kcal against today's 387 (replay, 2026-11-15). A fluid-ounce label is a
+ * pourable by construction, so it takes the owner's flat pourable figure
+ * (`VOLUME_UNIT_ML['fl oz']`, 1 g/ml) and no classifier.
+ */
+function measureLabelGrams(s: FsServingView): number | null {
+    const m = (s.description ?? '').match(LABEL_MEASURE_RE);
+    if (!m) return null;
+    const q = labelLeadingQuantity(s.description);
+    if (q == null || !(q > 0)) return null;
+    const u = m[1].toLowerCase();
+    const g = /^(fl|fluid)/.test(u) ? q * VOLUME_UNIT_ML['fl oz']
+        : /^(oz|ounce)/.test(u) ? q * WEIGHT_TO_GRAMS['oz']
+            : q;
+    return Number.isFinite(g) && g > 0 ? g : null;
+}
+
+// ============================================================
 // Builder
 // ============================================================
 
@@ -454,6 +540,25 @@ export async function buildFatSecretResult(
             foodId: candidate.id, unit, foodName, qty,
         });
     }
+
+    // The serving the macro-only fallback bills (see there for why the `100 g`
+    // panel row is demoted). Chosen once, because the panel-less count-unit
+    // step in (c2) must reason about the SAME serving the fallback will bill.
+    const macroServingPick: FsServingView | undefined = (() => {
+        const macroServings = servings.filter(s => servingMacros(s.nutrients) != null);
+        const nonPanelMacroServings = macroServings.filter(
+            s => !(panelIsInvertible && isPer100gPanelServing(s)));
+        const macroPool = nonPanelMacroServings.length > 0 ? nonPanelMacroServings : macroServings;
+        return (row?.defaultServingId
+            ? macroPool.find(s => s.servingId === row!.defaultServingId)
+            : undefined)
+            ?? macroPool[0];
+    })();
+    /**
+     * Servings the macro-only fallback bills for a panel-less record that
+     * declares its units per serving, used ONLY when the (c2) estimate fails.
+     */
+    let macroServingsBilled: number | null = null;
 
     // 3. Gram resolution cascade.
     let grams: number | null = null;
@@ -861,6 +966,34 @@ export async function buildFatSecretResult(
         // mirroring `buildOffResult()`: a serving the label genuinely enumerates
         // still wins ("2 bars" on a record with a "1 bar" serving never reaches
         // here), and a resolved container weight outranks a lead piece.
+        //
+        // A RECORD WITH NO PER-100G PANEL CANNOT BILL THE GRAMS THIS STEP
+        // RETURNS (s459 AL-b0). Every panel-less FatSecret record carries its
+        // macros on a gram-less serving (3,477 of 24,160 persisted records, 0 of
+        // them with a gram-bearing serving — measured 2026-11-15, box), so the
+        // estimate below leaves `pickedServing` null, step 4 finds neither a
+        // serving to scale nor a panel, logs `no_macros_for_serving` and returns
+        // null — and the mapper bills the NEXT candidate
+        // (`fallback_after_serving_failure`). `1 shot of cinnamon whiskey` lost
+        // Fireball (125 kcal) to "Cinnamon Whiskey Caramels" that way.
+        //
+        // NOT "skip this step whenever there is no panel": billing the serving
+        // x qty is right only when the serving IS one of the requested unit.
+        // `10 piece wendys nuggets` on "Chicken Nuggets - 4 Pieces" (1 serving =
+        // 170 kcal) would bill 1,700 kcal; `small fries` on "World Famous Fries
+        // - Kids" would bill a kids' portion. So the record must SAY how many of
+        // the unit its serving holds — `panellessUnitsPerServing()` — or its
+        // serving must be labelled as a measure ("1 1/2 oz",
+        // `measureLabelGrams()`). Either way the serving gets a weight in the
+        // estimate's own grams, so step 4 bills the RECORD's macros and the
+        // displayed grams stay the estimate (a large coffee is ~500 g, not the
+        // 2.5 g a 2.0 kcal/g density gives its 5 kcal). A record that says
+        // neither keeps today's behaviour.
+        const panellessCountUnit = !per100 && usableServings.length === 0 && unit != null
+            && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count');
+        const declaredUnitsPerServing = grams == null && panellessCountUnit && macroServingPick
+            ? panellessUnitsPerServing(macroServingPick, foodName, singularizeUnit(unit!))
+            : null;
         if (grams == null && unit
             && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
             const ambiguous = await getOrCreateAmbiguousServing(
@@ -871,6 +1004,23 @@ export async function buildFatSecretResult(
                 grams = qty * ambiguous.grams;
                 servingDescription = `${qty} ${unit} (${ambiguous.grams.toFixed(1)}g each)`;
                 servingTier = ambiguous.status === 'cached' ? 'count_unit_cached' : 'count_unit_ai';
+                // Panel-less record (no serving grams, no panel): give its macro
+                // serving a weight so step 4 can scale its macros by these grams.
+                // Declared units per serving: the serving weighs that many
+                // estimated units. A measure label: the label states the weight.
+                // Without either, step 4 drops the record.
+                const servingGrams = declaredUnitsPerServing != null
+                    ? declaredUnitsPerServing * ambiguous.grams
+                    : panellessCountUnit && macroServingPick
+                        ? measureLabelGrams(macroServingPick) : null;
+                if (servingGrams != null) {
+                    pickedServing = { ...macroServingPick!, grams: servingGrams };
+                    logger.info('fs.build_result.panelless_serving_weighed', {
+                        foodId: candidate.id, unit, servingGrams,
+                        unitsPerServing: declaredUnitsPerServing,
+                        serving: macroServingPick!.description,
+                    });
+                }
                 logger.info('fs.build_result.unit_serving_resolved', {
                     foodId: candidate.id,
                     unit,
@@ -883,6 +1033,12 @@ export async function buildFatSecretResult(
                     unit,
                     error: ambiguous.error,
                 });
+                // No estimate: a record that declared its units per serving
+                // still bills its own macros, on the macro-only fallback's
+                // fabricated weight, rather than dropping out.
+                if (declaredUnitsPerServing != null) {
+                    macroServingsBilled = qty / declaredUnitsPerServing;
+                }
             }
         }
 
@@ -983,15 +1139,7 @@ export async function buildFatSecretResult(
             // never drop: when the panel row is the ONLY thing carrying macros it
             // is still the record's whole nutrition and billing it beats
             // returning nothing.
-            const macroServings = servings.filter(s => servingMacros(s.nutrients) != null);
-            const nonPanelMacroServings = macroServings.filter(
-                s => !(panelIsInvertible && isPer100gPanelServing(s)));
-            const macroPool = nonPanelMacroServings.length > 0 ? nonPanelMacroServings : macroServings;
-            const macroServing =
-                (row?.defaultServingId
-                    ? macroPool.find(s => s.servingId === row!.defaultServingId)
-                    : undefined)
-                ?? macroPool[0];
+            const macroServing = macroServingPick;
             if (macroServing) {
                 const m = servingMacros(macroServing.nutrients)!;
                 // Invert the record's own per-100g panel when it has one: that
@@ -1027,10 +1175,16 @@ export async function buildFatSecretResult(
                     });
                 } else {
                 macroServing.grams = estPerServingGrams;
-                grams = qty * estPerServingGrams;
-                servingDescription = qty === 1
-                    ? macroServing.description
-                    : `${qty} x ${macroServing.description}`;
+                // `macroServingsBilled` is set only when a panel-less record
+                // declared its units per serving and the (c2) estimate failed
+                // (qty / units-per-serving); otherwise qty.
+                const servingsBilled = macroServingsBilled ?? qty;
+                grams = servingsBilled * estPerServingGrams;
+                servingDescription = macroServingsBilled != null
+                    ? `${qty} ${unit} (${+servingsBilled.toFixed(3)} x ${macroServing.description})`
+                    : qty === 1
+                        ? macroServing.description
+                        : `${qty} x ${macroServing.description}`;
                 // TWO BRANCHES, TWO TIERS. `fromPanel` recovered a REAL weight by
                 // inverting the record's own panel; the fallback FABRICATED one at a
                 // flat 2.0 kcal/g. They are stamped separately so the fabricated half
