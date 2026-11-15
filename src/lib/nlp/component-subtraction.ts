@@ -21,7 +21,7 @@
 
 import { words } from './trailing-quantity-fold';
 import { per100gFromBilledMacros } from './resolve-payload';
-import { ALIASES, COMPONENT_TABLE } from './component-table';
+import { ALIASES, COMPONENT_TABLE, resolveComponentKey } from './component-table';
 import { isRestaurantChain } from './restaurant-brand-fill';
 
 export type SkipReason =
@@ -116,27 +116,11 @@ function namesNegated(foodName: string, key: string): boolean {
     || hay.includes(` ${f} free `) || hay.includes(` ${f}less `));
 }
 
-function keyOf(token: string): string | null {
-  if (COMPONENT_TABLE[token]) return token;
-  return ALIASES[token] ?? null;
-}
-
 /** Split a removal clause into its part strings (negator and leading determiner dropped). */
 function clauseParts(clause: string): string[] {
   let w = words(clause).slice(1);
   if (w.length > 0 && LEADING_DETERMINERS.has(w[0])) w = w.slice(1);
   return w.join(' ').split(/ or | nor /).map(s => s.trim()).filter(Boolean);
-}
-
-/** The longest table key or alias matching the part's last 2, then last 1, tokens. */
-function resolveKey(part: string): string | null {
-  if (/\band\b/.test(part)) return null; // "onions and pickles": never guess which one
-  const t = part.split(' ');
-  if (t.length >= 2) {
-    const two = keyOf(t.slice(-2).join(' '));
-    if (two) return two;
-  }
-  return keyOf(t[t.length - 1]);
 }
 
 function headQtyOf(parsed: SubtractionInput['parsed']): number {
@@ -164,7 +148,7 @@ export function applyComponentSubtraction(input: SubtractionInput): SubtractionR
   };
 
   for (const part of clauseParts(clause)) {
-    const key = resolveKey(part);
+    const key = resolveComponentKey(part);
     if (!key) { skip(part, 'not_in_table'); continue; }
     const row = COMPONENT_TABLE[key];
 
