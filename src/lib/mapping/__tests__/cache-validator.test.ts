@@ -47,7 +47,7 @@ type PriorRow = { id: string; verdict: string } & Record<string, unknown>;
 function priorRows(rows: PriorRow[]): void {
     mockFindFirst.mockImplementation(async (args: { where: Record<string, unknown> }) => {
         const hit = rows.find((r) => Object.entries(args.where).every(([k, v]) => r[k] === v));
-        return hit ? { id: hit.id, verdict: hit.verdict, reviewedBy: hit.reviewedBy ?? null } : null;
+        return hit ? { id: hit.id, verdict: hit.verdict, axis: hit.axis ?? 'none', reason: hit.reason ?? '', reviewedBy: hit.reviewedBy ?? null } : null;
     });
 }
 
@@ -434,5 +434,54 @@ describe('hook-site shape (source pin — the mapper is not mockable at unit sca
         const kickIdx = src.indexOf('kickCacheValidation(');
         expect(saveIdx).toBeGreaterThan(-1);
         expect(kickIdx).toBeGreaterThan(saveIdx);
+    });
+});
+
+describe('runCacheValidation bulk entry (2026-11-14, s458 VR)', () => {
+    const { canonicalizeCacheKey } = jest.requireActual('../normalization-rules') as typeof import('../normalization-rules');
+    const LLM_OK = {
+        status: 'success', provider: 'anthropic', model: MODEL,
+        content: { verdict: 'OK', axis: 'none', reason: 'fine' },
+    };
+
+    it('dryRun with no prior -> dry_run, and neither the model nor the write is touched', async () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        mockCall.mockResolvedValue(LLM_OK);
+        const out = await cv.runCacheValidation(INPUT, 'chicken', { dryRun: true });
+        expect(out).toEqual({ outcome: 'dry_run' });
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('dryRun with a matching prior -> suppressed, carrying priorAxis and priorReason', async () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{
+            id: 'v1', verdict: 'SUSPECT', axis: 'serving', reason: 'too big',
+            normalizedForm: canonicalizeCacheKey('chicken'), foodId: INPUT.recordId,
+            billedGrams: INPUT.billedGrams, billedKcal: INPUT.billedKcal,
+            servingTier: INPUT.servingTier, model: MODEL, reviewedBy: null,
+        }]);
+        const out = await cv.runCacheValidation(INPUT, 'chicken', { dryRun: true });
+        expect(out).toEqual({
+            outcome: 'suppressed', priorVerdict: 'SUSPECT', priorId: 'v1', priorAxis: 'serving', priorReason: 'too big',
+        });
+        expect(mockCall).not.toHaveBeenCalled();
+    });
+
+    it('a non-dry success -> written, with exactly one create', async () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+        const out = await cv.runCacheValidation(INPUT, 'chicken');
+        expect(out).toEqual({ outcome: 'written', verdict: 'OK', axis: 'none', reason: 'fine', model: MODEL });
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('buildCacheValidatorPrompts returns the system prompt and the parity user prompt', () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const p = cv.buildCacheValidatorPrompts(INPUT);
+        expect(p.systemPrompt).toContain('post-save auditor');
+        expect(p.userPrompt).toContain('Phrase: "2 grilled chicken breasts"');
     });
 });
