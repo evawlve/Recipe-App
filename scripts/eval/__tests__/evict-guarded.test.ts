@@ -6,11 +6,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     dailyCapRefusal,
-    executedToday,
+    keysExecutedToday,
     inBlackout,
     keyRefusal,
     laClock,
-    MAX_EXECUTE_RUNS_PER_DAY,
+    MAX_KEYS_PER_DAY,
     parseDeleted,
     parseGuardedArgs,
     roleARefusal,
@@ -70,10 +70,16 @@ describe('keyRefusal / dailyCapRefusal', () => {
         expect(keyRefusal(['a|b'])).not.toBeNull();
         expect(keyRefusal(['a\tb'])).not.toBeNull();
     });
-    it('caps executes per day', () => {
-        expect(dailyCapRefusal(1)).toBeNull();
-        expect(dailyCapRefusal(2)).not.toBeNull();
-        expect(dailyCapRefusal(MAX_EXECUTE_RUNS_PER_DAY - 1)).toBeNull();
+    it('caps keys per LA day at 30, counting this run', () => {
+        expect(MAX_KEYS_PER_DAY).toBe(30);
+        expect(dailyCapRefusal(0, 5)).toBeNull();
+        expect(dailyCapRefusal(25, 5)).toBeNull();
+        expect(dailyCapRefusal(29, 1)).toBeNull();
+        expect(dailyCapRefusal(30, 1)).not.toBeNull();
+        expect(dailyCapRefusal(26, 5)).not.toBeNull();
+    });
+    it('no longer caps the number of runs: the third 1-key run of a day passes', () => {
+        expect(dailyCapRefusal(2, 1)).toBeNull();
     });
 });
 
@@ -107,20 +113,34 @@ describe('roleARefusal', () => {
     });
 });
 
-describe('executedToday', () => {
+describe('keysExecutedToday', () => {
     const head = 'utc\tlaDate\thhmmss\tmode\tkeyCount\n';
-    it('counts only execute rows of that date', () => {
+    it('sums keyCount over execute rows of that date only', () => {
         const t = head
-            + 'u\t2026-11-09\t1\texecute\t1\n'
-            + 'u\t2026-11-09\t2\texecute-result\t1\n'
-            + 'u\t2026-11-09\t3\tdry\t1\n'
-            + 'u\t2026-11-08\t4\texecute\t1\n';
-        expect(executedToday(t, '2026-11-09')).toBe(1);
-        expect(executedToday(t, '2026-11-08')).toBe(1);
+            + 'u\t2026-11-09\t1\texecute\t3\n'
+            + 'u\t2026-11-09\t2\texecute-result\t3\n'
+            + 'u\t2026-11-09\t3\tdry\t5\n'
+            + 'u\t2026-11-09\t4\texecute\t2\n'
+            + 'u\t2026-11-08\t5\texecute\t1\n';
+        expect(keysExecutedToday(t, '2026-11-09')).toBe(5);
+        expect(keysExecutedToday(t, '2026-11-08')).toBe(1);
+        expect(keysExecutedToday(t, '2026-11-07')).toBe(0);
     });
     it('throws when headerless or malformed', () => {
-        expect(() => executedToday('u\t2026-11-09\t1\texecute\t1\n', '2026-11-09')).toThrow();
-        expect(() => executedToday(head + 'a\tb\n', '2026-11-09')).toThrow();
+        expect(() => keysExecutedToday('u\t2026-11-09\t1\texecute\t1\n', '2026-11-09')).toThrow();
+        expect(() => keysExecutedToday(head + 'a\tb\n', '2026-11-09')).toThrow();
+    });
+    it('fails closed on an execute row whose keyCount is not a positive integer', () => {
+        expect(() => keysExecutedToday(head + 'u\t2026-11-09\t1\texecute\t?\n', '2026-11-09')).toThrow();
+        expect(() => keysExecutedToday(head + 'u\t2026-11-09\t1\texecute\t0\n', '2026-11-09')).toThrow();
+    });
+    it('reads the real run log shape: 11-14 spent 2 keys', () => {
+        const real = 'utc\tlaDate\thhmmss\tmode\tkeyCount\tkeys\treason\troleA\troleASha256\troleB\tdeleted\tafter\tverify\n'
+            + '2026-11-14T15:32:19.069Z\t2026-11-14\t073219\texecute\t1\talmond milk organic silk unsweetened\tr\ta\ts\tb\t?\t?\t?\n'
+            + '2026-11-14T15:32:20.255Z\t2026-11-14\t073220\texecute-result\t1\talmond milk organic silk unsweetened\tr\ta\ts\tb\t1\t4921\tOK\n'
+            + '2026-11-14T16:01:24.023Z\t2026-11-14\t080124\texecute\t1\tsnicker\tr\ta\ts\tb\t?\t?\t?\n';
+        expect(keysExecutedToday(real, '2026-11-14')).toBe(2);
+        expect(dailyCapRefusal(keysExecutedToday(real, '2026-11-14'), 1)).toBeNull();
     });
 });
 
