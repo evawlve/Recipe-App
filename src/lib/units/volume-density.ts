@@ -385,6 +385,84 @@ const ES_PASTE_RE = /^[^\p{L}]*(?:crema de (?:cacahuate|cacahuete|man[ií]|avell
 const ES_POUR_RE = /^[^\p{L}]*(?:leche|jugo|agua|aceite|vinagre|crema|refresco|licuados?)(?![\p{L}\p{N}])/iu;
 const ES_EXCLUDE_RE = /(?<![\p{L}\p{N}])(?:en polvo|polvo|nido|instant\w*|helad[ao]s?|paletas?|galletas?|barras?|barritas?|cereal(?:es)?|caramelos?|chips|totopos?|tortillas?|botanas?|pastel(?:es)?|flan(?:es)?|gelatinas?|mix|mezcla|sazonador|condimento|seasoning|ice ?cream|gelato|cakes?|cookies?|bars?|candy|powder|whey|gainer|protein|pops|batida|montada|chantilly|crema d[ei] (?:arroz|riso)|crema e (?:aroma|gusto)|y cebolla|y especias|knorr|beans?|trencito)(?![\p{L}\p{N}])/iu;
 
+/**
+ * DRESSINGS, DIPS AND CONDIMENT SPREADS — the seventh slice (s459 R-DENS,
+ * 2026-11-15). `dressing`, `mayo`, `mustard`, `hummus` and `tahini` are
+ * PASTE_RE tokens, but a record NAMED for the condiment alone (`Ranch`,
+ * `Pesto`, `Tzatziki`, `Thousand island`, `French Onion Dip`) carried no
+ * token, so it was a `solid` at the dry 0.5 g/ml: `2 tbsp ranch` billed 15 g /
+ * 55 kcal on FatSecret `Ranch` (HEB), `a cup of tzatziki` 120 g. The paste
+ * cell (16 g/tbsp, 250 g/cup) is what `2 tbsp ranch dressing` already bills.
+ *
+ * THE DENSITY, MEASURED (FatSecretServing + FdcServing volume rows, grams /
+ * millilitres, median [p25, p75]): ranch 1.00 [1.00, 1.06] n=95, vinaigrette
+ * 1.00 n=35, aioli 0.93 n=9, thousand island 1.08 n=16, guacamole 1.00 n=14,
+ * tzatziki 1.00 n=15, pesto 1.00 n=13, chimichurri 1.00 n=5, dip 1.00 n=67.
+ * Many FatSecret volume rows are FatSecret's own unit conversion, so read these
+ * as "~1 g/ml, not 0.5", not as a calibration. Re-derive: s459 pd-dens
+ * `replay/labeldens.py` over `org/fs-volume-servings.psv`.
+ *
+ * WHY THE LAST SLOT. Like the slices above it tests only a name that is
+ * otherwise `solid`, so only `solid` -> `paste` can move and NO NUMBER moves;
+ * these names join the `paste` class and are not separately countable by class.
+ *
+ * THE EXCLUDE LIST is the census, not a guess. The tokens are flavour words on
+ * snacks (`Cool Ranch`, Pringles `Dill Pickle & Ranch`, veggie straws), names
+ * on dry mixes and seasonings, and components of dishes (`Pesto Ravioli`,
+ * `French Dip`, `Veggies & Dip`). The `& ranch` / `and ranch` arm reads the
+ * flavour-pair shape; `ranch dip` / `ranch dressing` keep the class. The
+ * `with` / `au` arm reads the condiment as an ACCOMPANIMENT (`Olives with
+ * Pesto`, `Saumon au pesto`); the token before the connector keeps the class.
+ * Every exclusion only returns a name to its BASE class, so widening this list
+ * cannot move a bill; narrowing it can.
+ *
+ * OUT, with numbers: `gravy` (24% of the 274 OFF gravy names that would move
+ * carry > 35 g carbs / 100 g: Bisto-style granules named only `Gravy`; 0
+ * organic volume lines), `salsa` (pinned solid by the Spanish slice's census,
+ * 11% false), `queso` (crumbling cheese, 0.55 g/ml), `caesar` and `blue
+ * cheese` (salads and crumbles; their dressings already say `dressing`).
+ *
+ * THE CENSUS (2026-11-15; base vs this change over names classified by
+ * `resolveVolumeGrams()`; distinct names): OffFood 2,278 of 46,392 move;
+ * FatSecretFood 96 of 20,377 (0 false by name); FdcFood 1; MappingEventLog
+ * foodName 38 of 7,165 (all condiments); coverage corpus 26 of 4,102. Every
+ * move is solid -> paste. FALSE RATE, OFF, graded by name and panel
+ * (REASONING): a held-out md5 sample of 200 movers reads 17 not-a-condiment
+ * (7 flavour-named snacks, 1 dry mix, 9 dishes) + 4 borderline. Re-derive:
+ * s459 rf-dens `org/off-r1-holdout200.tsv`.
+ *
+ * KNOWN LIMITATION: the class reads the NAME, not the panel, so a snack or mix
+ * whose name is only the flavour (`Basilic et Pesto` crackers) bills the paste
+ * cell if a volume line ever lands on it. The cure is label volume.
+ */
+const CONDIMENT_TOKENS = '(?:ranch|vinaigrettes?|aiolis?|thousand island|guacamole|guac|tzatziki|baba g?h?an[ao]u(?:sh|j)|pesto|chimichurri|remoulade|tapenade|dips?)';
+const CONDIMENT_RE = new RegExp('\\b' + CONDIMENT_TOKENS + '\\b', 'i');
+const CONDIMENT_EXCLUDE_RE = new RegExp('\\b(?:' + [
+    // Dry forms: the mix / seasoning / powder of the same name.
+    'seasonings?|mix(?:es)?|powder(?:ed)?|packets?|dry|cubes?|instant|starter|blend|spices?|breading|crust',
+    // Snacks flavoured with the token (Cool Ranch, Pringles Mingles, veggie straws).
+    'chips?|chipsy|crisps?|crackers?|pretzels?|popcorn|puffcorn|puffs?|straws?|snacks?|twists|crunch\\w*|poppers|poppables',
+    'ripples|grooves|mingles|selects|thins?|nuggets|pops|korn|corn|chickpeas|peas|nuts?|cornnuts|kernels|seeds?|almonds?|cashews?|peanuts?',
+    'rice cakes?|doritos|takis|bugles|pringles?|lays|cheez[- ]?its?|sunchips|cool ranch|flamin\\W*|hint of|veggie harvest',
+    // Dishes, breads and pastas that carry the condiment as a component.
+    'wings?|chicken|turkey|beef|pork|lamb|steaks?|burgers?|wraps?|sandwich(?:es)?|club|italians|kofta|dogs?|pizz\\w*',
+    // s459 rf-dens: dish heads the 320-name sample and the token census found leaking (a dish NAMED with the condiment).
+    'poulet|pollo(?! loco)|chick|thighs?|sausages?|shrimp|prawns|tofu|rice|riced|meatballs?|quiche|cod|tilapia|fillets?|saumon|sardines?|cabillaud',
+    'lasagn\\w*|shells|panini|arancini|pinsa|linguin\\w*|cappellacci|girasoli|orzo|risotto|burritos?|quesadillas?|calzones?|kebabs?',
+    'croissants?|muffins?|samosas?|cr[eê]pes?|cakes?|meals?|grissini|breadsticks?|taralli\\w*|c[eé]leri|coleslaw|mushrooms|sprouts|broccoli|cauliflower|beans|florets|tri tip|jerky|curds',
+    // ... and snack forms named by the flavour.
+    'snaps|crispers|kettle|wavy|dippers|balls|thinables|goldfish|rings|rubs?|cones?|knorr|würzmischung',
+    // The condiment as an ACCOMPANIMENT: the token after `with` / `w/` / `avec` / `au(x)` (`Olives with Pesto`, `Saumon au
+    // pesto`). The token BEFORE the connector keeps the class (`Basil pesto with fresh fennel`, `Guacamole with Tomatoes`).
+    '(?:with|avec|aux?)\\b.*\\b' + CONDIMENT_TOKENS, 'w/.*\\b' + CONDIMENT_TOKENS,
+    'pasta|p[aâ]tes?|raviol\\w*|tortell\\w*|fus[ie]lli|tagliatell\\w*|penne\\w*|linguine|fettuccine|cavatappi|trofie|caserecce|mezzal\\w*|mezzel\\w*',
+    'saccottini|spaghetti|macaroni|mac|gnocchi|noodles?|ramen|quinoa|grits|salads?|salade|bowls?|potato(?:es)?|fries|fry|tots',
+    'croutons|bread|focaccia|bagels?|sourdough|flatbread|palmiers?|swirls|crumbles|toast|biscuits?|rolls?|tortillas?|tacos?',
+    'tostadas?|nachos|falafel|tuna|salmon|fish|poisson|eggs?|scramble|meatloaf|pies?|bakes?|trays?|platters?|carrots|veggies|french dip',
+    'cookies|fudge|chocolate|cheddar|mozzarella|feta|jack|vegetables|m[eé]lange|flavou?r(?:ed)?|style|bites|sticks|kits?',
+    // Names where `ranch` is not the dressing.
+    'ranchero|rancheros|torn ranch|christopher ranch|kewl ranch|niman ranch|ranch 99|99 ranch|ranch hand|(?<=(?:&|\\band)\\s)ranch(?! dip| dressing)',
+].join('|') + ')\\b', 'i');
 
 /**
  * Light dry solids (s457 S1). A record name with no liquid/paste/beverage/category
@@ -473,7 +551,10 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     const isEsPour = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && ES_POUR_RE.test(name) && !ES_EXCLUDE_RE.test(name);
     /** Pours at ~1 g/ml, by any vocabulary. */
     const isPourable = isLiquid || isBeverage || isEsPour;
-    const isPasteLike = isPaste || isEsPaste;
+    // Dressings, dips and condiment spreads, LAST — see CONDIMENT_RE.
+    const isCondiment = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && !isEsPour
+        && CONDIMENT_RE.test(name) && !CONDIMENT_EXCLUDE_RE.test(name);
+    const isPasteLike = isPaste || isEsPaste || isCondiment;
 
     // Dry-solid density: prefer the food's category density (sugar 0.85, flour
     // 0.53, oats 0.36 …) over a flat 0.5, which under-weighted DENSE solids by
