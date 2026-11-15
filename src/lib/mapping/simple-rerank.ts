@@ -44,6 +44,14 @@ export interface RerankCandidate {
      * silently flatten a can/bar/sleeve request to 100g.
      */
     servingLabelMatch?: boolean;
+    /**
+     * TIE-ONLY, never scored (s458 TB). True when the request names an explicit
+     * volume unit the serving matcher understands (cup / tbsp / tsp / fl oz / l /
+     * pint / quart / gallon) and this record OWNS a gram-quantified serving in that
+     * unit; false when the request names one and the record does not; undefined for
+     * every other request. Read only by the last tiebreaker before the id seat.
+     */
+    volumeServingMatch?: boolean;
 }
 
 export interface AiNutritionEstimate {
@@ -2493,6 +2501,18 @@ export function simpleRerank(
             }
         }
 
+        // Tiebreaker 4 (s458 TB): an exact tie that nothing above settled, on a
+        // request in an explicit volume unit, goes to a record that OWNS a serving
+        // in that unit; the other falls to the density rung (`volume_unit`, a
+        // borrowed tier) - `1 tbsp creamer` billed 7.5 g that way against its tied
+        // twin's own `1 Tbsp (15 ml)`. Volume units only: for counts and containers
+        // serving-richness is a SOURCE property and the same key turns into a
+        // FatSecret->OFF lane preference (serving-class-keys report, A7 K2).
+        // The flag is undefined outside volume requests, so this is inert there.
+        const aVol = a.candidate.volumeServingMatch ? 1 : 0;
+        const bVol = b.candidate.volumeServingMatch ? 1 : 0;
+        if (aVol !== bVol) return bVol - aVol;
+
         // Final tiebreaker: sort by ID for absolute determinism
         return a.candidate.id.localeCompare(b.candidate.id);
     });
@@ -2799,6 +2819,7 @@ export function toRerankCandidate(candidate: {
     };
     countLabelMatch?: boolean;
     servingLabelMatch?: boolean;
+    volumeServingMatch?: boolean;
 }): RerankCandidate {
     // Some FDC entries have doubled descriptions (a known FDC data quality issue).
     // e.g. "peeled plum tomatoes peeled plum tomatoes" → "peeled plum tomatoes"
@@ -2823,5 +2844,6 @@ export function toRerankCandidate(candidate: {
         nutrition: candidate.nutrition,
         countLabelMatch: candidate.countLabelMatch,
         servingLabelMatch: candidate.servingLabelMatch,
+        volumeServingMatch: candidate.volumeServingMatch,
     };
 }
