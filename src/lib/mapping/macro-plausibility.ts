@@ -881,6 +881,73 @@ export function assessRankTimePlausibility(
     return { impossible: false, floorHit, softPenalty, reasons };
 }
 
+// Non-alcoholic record for an alcoholic-drink query (s459 pd-al, row AL-a): `a pint of ipa` resolved to "IPA" [Nonny], a 0.5 % ABV
+// record at 11.8 kcal/100g, because two non-alcoholic IPAs (Nonny, Athletic) are the only records literally named "IPA" and the exact-name
+// match outscores every alcoholic IPA. Their NAME carries no marker, so the signal is the PANEL: ethanol is 7 kcal/g and never appears in
+// P/C/F, so kcal - Atwater(P,C,F) is the alcohol's share. Measured on the s459 pool: Nonny 0.6, Athletic 1.4, Guinness Zero 0.6,
+// "IPA Sans Alcool" 1.7 vs Goose Island IPA 35.7, Lagunitas IPA 35.4, Founders All Day 28.9, Corona Extra 26.2, FS Light Beer 21.5.
+// RANK-TIME ONLY and called from simpleRerank()'s floor-hit closure alone (it needs the candidate's brandName); the save gate and
+// assessRankTimePlausibility()'s other callers are untouched. HEAD read from queryName ONLY (an ALCOHOL_PATTERN word), as the drink rules do.
+// Silent when the query itself asks for non-alcoholic, when the query is a soft drink named like beer (root beer, ginger ale), and when
+// the user named the candidate's brand and the candidate's name carries no marker (`athletic brewing ipa` keeps Athletic's records).
+// The HEAD set is ALCOHOL_PATTERN plus wine varietals and the cocktails it lacks. Local on purpose: ALCOHOL_PATTERN also drives the
+// Atwater exemption, and widening it would move that check too. s399 members this adds: `a glass of pinot grigio` -> "Pinot Grigio 0%",
+// `a glass of sauvignon blanc` -> Fre, `a mint julep` -> a kombucha.
+const NA_EXTRA_HEAD = /\b(?:pinot(?:\s+(?:grigio|gris|noir|blanc))?|sauvignon(?:\s+blanc)?|chardonnay|merlot|cabernet|riesling|malbec|zinfandel|moscato|syrah|shiraz|tempranillo|chianti|ros[eé] wine|julep|paloma|cosmopolitan|gimlet|moscow mule|mule)\b|\brosé(?![\w])/i;
+const NA_PANEL_MAX_KCAL = 35;
+const NA_ALCOHOL_RESIDUAL_MAX_KCAL = 5;
+const NA_STRONG_MARKER = /\b(?:non[\s-]?alc(?:oholic)?|nonalcoholic|alcohol[\s-]?free|sans alcool|sin alcohol|alkoholfrei|alcoholvrij|dealcoholi[sz]ed|zero[\s-]?proof|0 alcohol)\b|(?:^|[^\w.,])(?:0[.,]0|0\s?%)(?![\d])/i;
+const NA_WEAK_MARKER = /\b(?:cero|zero(?![\s-]*(?:sugar|carb|cal)))\b|(?:^|\s)0(?=\s|$)/i;
+// `diet`/`skinny`: the user asked for a low-calorie drink (`a rum and diet coke`), so a low panel is not evidence of no alcohol
+// (s459 replay run 1: without it `a rum and diet coke` moved from "Rum and cola" to a Haagen-Dazs rum-raisin ice cream).
+const NA_QUERY_MARKER = /\b(?:virgin|mocktails?|na|n\/a|zero|cero|diet|skinny)\b|(?:^|\s)0(?=[\s.%]|$)/i;
+// Soft drinks named like alcohol, read as TOKENS so a token-sorted query (`ale ginger`, a warmer-shaped line) is exempt too
+// (s459 rf-al replay: `100g ale ginger` moved off the generic Ginger Ale under the phrase-only form).
+const NA_SOFT_BEER_ALE = [/\b(?:root|ginger|birch|butter)\b/i, /\b(?:beer|ale)s?\b/i];
+const NA_SOFT_CIDER = [/\b(?:apple|hot|mulled|sparkling)\b/i, /\bcider\b/i];
+const NA_SOFT_OTHER = /\b(?:cream soda|cooking wine|jus)\b/i;
+// The drink word modifies a FOOD (`light cranberry juice cocktail`, `tomato juice cocktail`, `cocktail tomatoes`,
+// `bloody mary mix`, `red wine vinegar`): a low panel is that food's, not a missing alcohol share (s459 rf-al replay: three
+// of these moved to a wrong food without it).
+const NA_QUERY_FOOD = /\b(?:juices?|mix(?:es|er|ers)?|vinegar|vinaigrette|dressing|sauce|tomato(?:es)?|onions?|fruit|shrimp|nuts|peanuts)\b/i;
+const NA_BRAND_GENERIC = new Set(['brewing', 'brewery', 'company', 'beer', 'beers', 'the', 'and', 'inc', 'llc', 'ltd', 'cellars', 'winery', 'distillery',
+    'cocktail', 'cocktails', 'drinks', 'drink', 'beverage', 'beverages', 'spirits', 'spirit', 'craft', 'sparkling', 'light', 'lite', 'hard', 'seltzer', 'wines']);
+function isSoftDrinkOrFoodQuery(q: string): boolean {
+    return NA_SOFT_BEER_ALE.every((r) => r.test(q)) || NA_SOFT_CIDER.every((r) => r.test(q)) || NA_SOFT_OTHER.test(q) || NA_QUERY_FOOD.test(q);
+}
+export function nonAlcoholicDrinkReason(
+    queryName: string,
+    candidateName: string,
+    brandName: string | undefined | null,
+    macrosPer100g?: MacroPlausibilityInput | null,
+    rawLine?: string,
+): string | null {
+    const q = (queryName || '').toLowerCase();
+    if (!(ALCOHOL_PATTERN.test(q) || NA_EXTRA_HEAD.test(q)) || isSoftDrinkOrFoodQuery(q)) return null;
+    const asked = `${q} ${(rawLine || '').toLowerCase().split(DRINK_SIBLING_BREAK)[0]}`;
+    if (NA_STRONG_MARKER.test(asked) || NA_QUERY_MARKER.test(asked)) return null;
+    const name = (candidateName || '').toLowerCase();
+    const strong = NA_STRONG_MARKER.test(name);
+    const weak = NA_WEAK_MARKER.test(name);
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    let residual = NaN;
+    if (Number.isFinite(kcal)) {
+        residual = kcal - 4 * Number(macrosPer100g?.protein ?? 0) - 4 * Number(macrosPer100g?.carbs ?? 0) - 9 * Number(macrosPer100g?.fat ?? 0);
+    }
+    const panelNA = Number.isFinite(kcal) && kcal <= NA_PANEL_MAX_KCAL && residual <= NA_ALCOHOL_RESIDUAL_MAX_KCAL;
+    if (!strong && !panelNA) return null;
+    if (!strong && !weak) {
+        const askedTokens = new Set(asked.split(/[^a-z0-9]+/).filter(Boolean));
+        const brandTokens = (brandName || '').toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !NA_BRAND_GENERIC.has(t)
+            // A drink word in a brand ("Romeo's Gin", "Moody Ale") is the drink the user typed, not the brand they named.
+            && !ALCOHOL_PATTERN.test(t) && !NA_EXTRA_HEAD.test(t));
+        if (brandTokens.some((t) => askedTokens.has(t))) return null;
+    }
+    const why = strong ? 'name' : weak ? 'name_and_panel' : `panel_${round1(kcal)}_residual_${round1(residual)}`;
+    return `rank:non_alcoholic_for_alcohol_query_${why}`;
+}
+
 function round1(n: number): number {
     return Math.round(n * 10) / 10;
 }
