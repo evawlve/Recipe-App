@@ -11,7 +11,7 @@ export const dynamic = 'force-static';
 // Diego's decision — do not change without his say-so.
 const PRIVACY_CONTACT = 'team.mealspire@gmail.com';
 
-const LAST_UPDATED = '13 November 2026';
+const LAST_UPDATED = '14 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Kinda Healthy',
@@ -103,7 +103,7 @@ const SECTIONS: Section[] = [
           },
           {
             lead: 'What you type or say into Magic Log.',
-            text: 'The text of a food entry is sent to our nutrition-matching service so it can be turned into foods with nutrition data. The text of the entry and the food record it matched are kept in a server-side log that we use to find and fix bad matches. Entries that fail to parse are recorded the same way. Entries made while signed in are tagged with a scrambled code derived from your account — not your email or name — so we can tell real use apart from our own testing. Deleting your account removes that code from the log.',
+            text: 'The text of a food entry is sent to our nutrition-matching service so it can be turned into foods with nutrition data; that service may send the text to the AI model providers listed under “Who else processes data”. The text of the entry and the food record it matched are kept in a server-side log that we use to find and fix bad matches. Entries that fail to parse are recorded the same way. Entries made while signed in are tagged with a scrambled code derived from your account — not your email or name — so we can tell real use apart from our own testing. Deleting your account removes that code from the log.',
           },
           {
             lead: 'Barcodes you scan.',
@@ -146,6 +146,10 @@ const SECTIONS: Section[] = [
             text: 'runs the service that matches your food entries.',
           },
           {
+            lead: 'AI model providers',
+            text: '— OpenRouter, which passes requests on to models from OpenAI, Google and Mistral AI, and Anthropic — receive the text of a food entry, or a food term and the food record it was matched to, so that the entry can be turned into foods and so that matches can be checked. Those requests carry no email, name, account code, health data or food log.',
+          },
+          {
             lead: 'Nutrition data sources',
             text: '— Open Food Facts, USDA FoodData Central and fatsecret — are queried to find nutrition information. Those queries carry the food term only; they do not carry your identity, your account, your health data or your food log.',
           },
@@ -158,7 +162,7 @@ const SECTIONS: Section[] = [
     blocks: [
       {
         kind: 'p',
-        text: `Your account data and food log are kept for as long as your account exists. To delete your account and everything stored with it, write to ${PRIVACY_CONTACT} and we will delete it. You can remove health access at any time using the steps above, which takes effect immediately and independently of anything else.`,
+        text: `Your account data and food log are kept for as long as your account exists. You can delete your account in the app: open Profile and tap “Delete account”. That deletes your account and everything stored with it — your targets, your food log and your weight entries — and removes the scrambled code from our server-side logs; the text of past entries stays in those logs with nothing linking it to you. You can also write to ${PRIVACY_CONTACT} and we will delete it for you. You can remove health access at any time using the steps above, which takes effect immediately and independently of anything else.`,
       },
     ],
   },

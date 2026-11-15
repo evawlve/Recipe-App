@@ -44,6 +44,7 @@ import {
     isBarePluralRequest,
     barePairTwin,
     isDoseAnchoredBareQuery,
+    categoryQueryName,
     BARE_LABEL_MIN_GRAMS,
     BARE_LABEL_MAX_GRAMS,
     BARE_MIN_PIECE_SERVING_GRAMS,
@@ -974,11 +975,12 @@ async function dispatchServing(
             let bareDefault = null;
             let overrideGrams = 0;
 
+            // s458 PS: a removed part is not the category (categoryQueryName)
             if (parsed.qty === 1) {
-                bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+                bareDefault = getBareQueryDefault((parsed.name && categoryQueryName(parsed.name, rawLine)) || candidate.name);
                 if (bareDefault) overrideGrams = bareDefault.grams;
             } else if (parsed.qty > 3) {
-                bareDefault = getDiscreteLeafyGreenDefault(parsed.name || candidate.name, parsed.qty);
+                bareDefault = getDiscreteLeafyGreenDefault((parsed.name && categoryQueryName(parsed.name, rawLine)) || candidate.name, parsed.qty);
                 if (bareDefault) overrideGrams = bareDefault.grams * parsed.qty;
             }
 
@@ -2006,7 +2008,8 @@ async function buildFdcResult(
     if (parsed && !parsed.unit && parsed.qty === 1) {
         try {
             const { getBareQueryDefault } = await import('../../ai/ambiguous-serving-estimator');
-            const bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+            // s458 PS: a removed part is not the category (categoryQueryName)
+            const bareDefault = getBareQueryDefault((parsed.name && categoryQueryName(parsed.name, rawLine)) || candidate.name);
             if (bareDefault && grams > bareDefault.grams * 2) {
                 logger.info('fdc.bare_query_inflation_capped', {
                     foodName: candidate.name,
@@ -2516,6 +2519,23 @@ export function candidateHasVolumeServing(candidate: UnifiedCandidate, unit: str
             && servingDescriptionMatchesVolumeUnit(raw?.servingSize, unit);
     }
     return false;
+}
+
+/**
+ * TIE-ONLY (s458 TB): does this record OWN a gram-quantified serving in the
+ * requested volume unit? candidateHasVolumeServing() answers for FDC and OFF and
+ * returns false for FatSecret on purpose (it feeds the cooked-grain SCORE boost);
+ * this predicate adds FatSecret's own household servings ("1 cup shredded"),
+ * because the tie key it feeds must not read a FatSecret record that owns a cup
+ * as serving-less - that is the FatSecret->OFF lane flip measured in s458 TB.
+ */
+export function candidateOwnsVolumeServing(candidate: UnifiedCandidate, unit: string): boolean {
+    if (candidate.source === 'fatsecret') {
+        return !!candidate.servings?.some(s =>
+            typeof s.grams === 'number' && s.grams > 0
+            && servingDescriptionMatchesVolumeUnit(s.description, unit));
+    }
+    return candidateHasVolumeServing(candidate, unit);
 }
 
 // Plausible single-retail-unit bands for package quantities. 'ml' is the
@@ -3047,7 +3067,8 @@ export async function buildOffResult(
     // the label/package tiers where the category CAP restores the tsp/scoop
     // dose default. Piece/tub foods (yoplait, snickers, pepper jack) are
     // unaffected: their categories are absent or oz/cup/can-based.
-    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(parsed?.name || '');
+    // s458 PS: a removed part is not the category (categoryQueryName)
+    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(categoryQueryName(parsed?.name || '', rawLine));
 
     // Units where the product's own label serving IS the thing the user asked
     // for ("1 container of yogurt" → the container size on the label). For these,

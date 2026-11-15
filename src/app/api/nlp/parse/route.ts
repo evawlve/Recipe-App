@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
-    const { dropNegatedParts, stripSoloRemoval } = await import('@/lib/nlp/negated-part-drop');
+    const { dropNegatedParts, stripSoloRemoval, itemRemovalClause } = await import('@/lib/nlp/negated-part-drop');
     const { foldModifierStutter } = await import('@/lib/nlp/modifier-stutter-fold');
     const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
     const { dropMeasuredRecipeHead } = await import('@/lib/nlp/measured-recipe-head-drop');
@@ -807,15 +807,17 @@ export async function POST(req: NextRequest) {
         // s447a: solo-path removal clause -> subtract ONE fixed portion of a CARRIED generic component.
         // Absent unless the dish carries it; `foodName`, `foodId`, `grams` are untouched.
         let sub: Extract<ReturnType<typeof applyComponentSubtraction>, { adjustments: unknown }> | null = null;
-        if (soloRemovedClause) {
+        const itemClause = soloRemovedClause ? null : (itemRemovalClause(rawText)?.clause ?? null);
+        const removalClause = soloRemovedClause ?? itemClause;
+        if (removalClause) {
           const r = applyComponentSubtraction({
             nutrition, grams: mapped.grams, foodName: mapped.foodName, standardSource,
-            head: rawText, clause: soloRemovedClause, parsed,
+            head: rawText, clause: removalClause, parsed,
           });
           sub = 'adjustments' in r ? r : null;
-          logger.audit('nlp_parse.solo_subtraction', {
+          logger.audit(soloRemovedClause ? 'nlp_parse.solo_subtraction' : 'nlp_parse.clause_subtraction', {
             head: rawText,
-            clause: soloRemovedClause,
+            clause: removalClause,
             subtracted: sub ? sub.adjustments.map(a => a.component) : [],
             partSkips: sub?.partSkips ?? [],
             skipped: 'skipped' in r ? r.skipped : null,

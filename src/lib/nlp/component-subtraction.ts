@@ -7,7 +7,8 @@
  * arithmetic lives here, not in the route (sodium is GRAMS everywhere; NULL STAYS NULL).
  *
  * Skip reasons, one per cause: `unmapped`, `not_in_table`, `no_carrier`,
- * `too_large_kcal`, `too_large_grams`, `qty_out_of_range`. A multi-part clause may
+ * `too_large_kcal`, `too_large_grams`, `qty_out_of_range`, `already_removed`
+ * (s458 RM-a: the winner's own name already lacks the part). A multi-part clause may
  * partially subtract: success when >= 1 part subtracted, `partSkips` names the rest;
  * `{ skipped }` only when every part skips (the first part's reason).
  */
@@ -22,7 +23,8 @@ export type SkipReason =
   | 'no_carrier'
   | 'too_large_kcal'
   | 'too_large_grams'
-  | 'qty_out_of_range';
+  | 'qty_out_of_range'
+  | 'already_removed';
 
 export type BilledNutrition = {
   calories: number;
@@ -95,6 +97,14 @@ function names(text: string, term: string): boolean {
   return hay.includes(` ${term} `) || hay.includes(` ${term}s `);
 }
 
+const NAME_NEG = [' no ', ' without ', ' minus ', ' w o ', ' hold the ', ' sans '];
+function namesNegated(foodName: string, key: string): boolean {
+  const hay = padded(foodName);
+  const forms = [key, ...Object.keys(ALIASES).filter(a => ALIASES[a] === key)];
+  return forms.some(f => NAME_NEG.some(n => hay.includes(`${n}${f} `) || hay.includes(`${n}${f}s `))
+    || hay.includes(` ${f} free `) || hay.includes(` ${f}less `));
+}
+
 function keyOf(token: string): string | null {
   if (COMPONENT_TABLE[token]) return token;
   return ALIASES[token] ?? null;
@@ -125,7 +135,7 @@ function headQtyOf(parsed: SubtractionInput['parsed']): number {
 }
 
 export function applyComponentSubtraction(input: SubtractionInput): SubtractionResult {
-  const { grams, foodName, standardSource, head, clause } = input;
+  const { grams, foodName, standardSource, clause } = input;
   if (standardSource === 'ai_estimated' || !(input.nutrition.calories > 0) || !(grams > 0)) {
     return { skipped: 'unmapped' };
   }
@@ -148,7 +158,8 @@ export function applyComponentSubtraction(input: SubtractionInput): SubtractionR
 
     const namesComponent =
       names(foodName, key) || Object.keys(ALIASES).some(a => ALIASES[a] === key && names(foodName, a));
-    const namesCarrier = row.carriers.some(c => names(head, c) || names(foodName, c));
+    if (namesNegated(foodName, key)) { skip(key, 'already_removed'); continue; }
+    const namesCarrier = row.carriers.some(c => names(foodName, c));
     if (!namesComponent && !namesCarrier) { skip(key, 'no_carrier'); continue; }
 
     const compGrams = row.grams * headQty;
