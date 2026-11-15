@@ -45,6 +45,22 @@ import type { ParsedIngredient } from '../parse/ingredient-line';
 import { getBareQueryDefault, maskAdvertisedAbsence } from '../ai/ambiguous-serving-estimator';
 import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
 import { PREPARED_DRINK_MAX_KCAL, preparedDrinkHeadWord } from '../mapping/macro-plausibility';
+import { parseRemovalClause } from '../mapping/removal-clause';
+
+/**
+ * The query name a CATEGORY read may see: parseRemovalClause()'s head, the removal clause cut.
+ * ABSENCE claims, F6c head-named parts and F6b raw-line checks are inherited from that grammar
+ * (and so is any later widening of it). The defect: `whoppr no mayo` and `whopper without mayo`
+ * billed 14 g (the mayo default) for a ~200-270 g Whopper (s458 battery A29, D16).
+ * The token-COUNT rule, capMayOverrideLabelServing(), stays on the RAW name: a removal may stop or
+ * re-aim a category read, never unlock a cap the raw count forbade (pinned by
+ * `caesar dressing no anchovies`).
+ * KNOWN COST: a brand-only head (`tropicana no pulp orange juice`) loses its category read.
+ * Owner: mobile sync-docs report to come (s458 PS).
+ */
+export function categoryQueryName(queryName: string, rawLine: string): string {
+    return parseRemovalClause(queryName || '', rawLine).head;
+}
 
 /**
  * Tiers whose grams come from real package/label machinery and can only be
@@ -418,13 +434,14 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
     // capped to the 14 g condiment default, a 2.1x-2.8x under-bill, on a line whose CATEGORY the
     // mask did not even change. Blanking preserves token POSITIONS, not token COUNT.
     //
-    // So: `capMayOverrideLabelServing()`, `queryHeadToken()`, `isDoseAnchoredBareQuery()` and
-    // `discretePieceFloor()` all keep reading the RAW `queryName`. Only the lexicon lookup is
+    // So: `capMayOverrideLabelServing()` keeps reading the RAW `queryName`; `queryHeadToken()`, `isDoseAnchoredBareQuery()` and
+    // `discretePieceFloor()` read `categoryName` (the removal clause cut, never the mask). Only the lexicon lookup is
     // masked, which is the only place the misread can enter. `foodName` is likewise unmasked — the
     // REPLACE fallback reads the matched RECORD's name, and suppressing the match there is measured
     // to make `trident spearmint gum` worse (4 g, ~2 sticks, becomes the flat 100 g default).
     // maskAdvertisedAbsence()'s header owns the rest of the reasoning.
-    const queryDefault = getBareQueryDefault(maskAdvertisedAbsence(queryName));
+    const categoryName = categoryQueryName(queryName, rawLine);
+    const queryDefault = getBareQueryDefault(maskAdvertisedAbsence(categoryName));
 
     // A multi-word PRODUCT query keeps its record's DECLARED label serving: the
     // manufacturer's number outranks a category guess made from one token inside
@@ -473,7 +490,7 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
     if (DECLARED_LABEL_TIERS.has(servingTier)
         && capAllowed
         && queryDefault
-        && isDoseAnchoredBareQuery(queryName)) {
+        && isDoseAnchoredBareQuery(categoryName)) {
         const lex = /^\s*(\d+)\s+(tsp|tbsp|scoop)s?\b/i.exec(queryDefault.description);
         const rec = /^\s*(\d+(?:\.\d+)?)\s*(tsp|tbsp|scoop)s?\b/i.exec(servingDescription ?? '');
         if (lex && rec && lex[2].toLowerCase() === rec[2].toLowerCase()) {
@@ -513,7 +530,7 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         // cheese default and billed 40 kcal for a ~400 kcal dish.
         if (capAllowed
             && queryDefault
-            && getBareQueryDefault(queryHeadToken(queryName)) != null
+            && getBareQueryDefault(queryHeadToken(categoryName)) != null
             && grams > queryDefault.grams * 2) {
             return buildOverride(queryDefault.grams);
         }
@@ -531,7 +548,7 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         // Bounded discrete floor (Track 3, Jul 2026): a name that implies a
         // discrete piece must NEVER bill the flat 100g default — one sensible
         // piece is strictly closer ("kirkland protein bar …" → ~50g bar).
-        const floor = discretePieceFloor(queryName) ?? discretePieceFloor(foodName);
+        const floor = discretePieceFloor(categoryName) ?? discretePieceFloor(foodName);
         if (floor) {
             return {
                 grams: floor.grams,
