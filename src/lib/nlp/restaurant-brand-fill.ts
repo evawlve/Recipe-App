@@ -16,6 +16,20 @@
  * are NOT listed (Diego, 2026-10-16): each also sells packaged grocery products (`starbucks doubleshot`),
  * and a fill turned the banana logged beside one into Starbucks banana bread. Dropping them costs carry
  * (364 -> 337 of 387 on the round-1 draws); a wrong food is worse than a missing brand.
+ *
+ * s459 row RC added 21 top-US chains on that rule read strictly: OffFood holds no packaged retail product under
+ * the chain's spelling (a row outside the `Brand, Item` menu form, brandName read 2026-11-15). Left out for that
+ * reason: whataburger (ketchup, mayo, pancake mix), steak n shake (frozen steakburgers, chili), denny's (pancake
+ * mix; Henry Denny & Sons' Irish meats share the spelling), red robin (frozen fries), del taco (frozen
+ * quesadillas), bojangles, zaxby's, dairy queen and papa john's (bottled sauces; `Papa John's Salads & Produce`
+ * is another company), ihop, krispy kreme, tim hortons, cheesecake factory, p.f. chang's, red lobster,
+ * tgi fridays, white castle, nathan's, cinnabon, texas roadhouse, buffalo wild wings, on the border, dutch bros,
+ * jamba, smoothie king, auntie anne's, checkers, waffle house. The entries above this comment's s459 block
+ * were not re-read on this rule (taco bell, olive garden, chick-fil-a, arby's, sonic and wendy's each have such
+ * rows). Bare `culver` is not listed (`Culver Duck`). `jersey mike's` waits on a fill guard: a full-day line
+ * led by a sub fills olive oil, avocado and rice. Membership gates four things: this fill, the self-correction
+ * brand carry, the `restaurant_chain` brand re-assert, and the chain-topping subtraction (RM-b, and RM-d's
+ * `hold the` / `sin`). A bare initialism (`dq`, `bk`) is not listed.
  */
 
 export const RESTAURANT_CHAINS: readonly string[] = [
@@ -24,6 +38,12 @@ export const RESTAURANT_CHAINS: readonly string[] = [
   'chipotle', 'olive garden', 'applebee', "applebee's", "chili's", 'outback',
   'jack in the box', 'arby', "arby's", 'sonic', 'freshii', 'wingstop', 'five guys',
   "raising cane's", 'in-n-out', "portillo's", 'cava',
+  // s459 row RC: top-US chains with no packaged retail product under the same name (OffFood brandName read 2026-11-15).
+  "carl's jr", "carl's junior", "culver's", 'shake shack', 'little caesar', 'little caesars',
+  'jimmy john', "jimmy john's", 'hardee', "hardee's", 'firehouse subs', 'qdoba', 'el pollo loco',
+  "church's chicken", 'sweetgreen', 'noodles and company', 'noodles & company', 'longhorn steakhouse',
+  "jason's deli", "mcalister's", 'potbelly', 'first watch', 'golden corral', 'crumbl', "moe's southwest",
+  "marco's pizza",
 ];
 
 // Apostrophe characters dropped before comparison: ' U+2018 U+2019 and backtick (iOS types U+2019).

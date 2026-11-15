@@ -241,7 +241,10 @@
     "unit": null
    },
    "expect": {
-    "skipped": "no_carrier"
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 480
    }
   },
   {
