@@ -1,0 +1,1574 @@
+{
+  "about": "s458 pd-rm: frozen winners (hc battery draws on build 98T2T2gSRnq-9HiffElOW; organic MEL noCache=false latest winner, synthetic macros) -> expected billing under brief RM-a. Winners are fixed; only the clause feed and the subtraction gate are under test. | rf-rm r1: item grammar guards (absence-led part, absence word, <=2-word part, head names more than a count/unit/size); oatmeal-no-sugar-added moved to detectOnly; 13 detect pins added; A24 annotated.",
+  "cases": [
+    {
+      "src": "s458-hc",
+      "id": "A01#0",
+      "line": "a double quarter pounder with no cheese",
+      "itemRawText": "a double quarter pounder with no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "Double Quarter Pounder with Cheese",
+        "brandName": "McDonald's",
+        "grams": 278,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 740,
+          "protein": 48,
+          "carbs": 43,
+          "fat": 42,
+          "fiber": 1.9,
+          "sugar": 10,
+          "sodium": 1.4
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "cheese"
+        ],
+        "calories": 669.2
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A02#0",
+      "line": "1 big mac no mac sauce",
+      "itemRawText": "1 big mac no mac sauce",
+      "soloStripClause": null,
+      "expectItemClause": "no mac sauce",
+      "winner": {
+        "foodName": "Big mac",
+        "brandName": "Mcdonald’s",
+        "grams": 220,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 625,
+          "protein": 40,
+          "carbs": 47,
+          "fat": 29,
+          "fiber": 3.7,
+          "sugar": 7.9,
+          "sodium": 4.8
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 625
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A03#0",
+      "line": "a mcchicken without mayo",
+      "itemRawText": "a mcchicken",
+      "soloStripClause": "without mayo",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "McChicken",
+        "brandName": "McDonald's",
+        "grams": 195,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 390,
+          "protein": 14,
+          "carbs": 38,
+          "fat": 21,
+          "fiber": 1,
+          "sugar": 4,
+          "sodium": 0.6
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 390
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A04#0",
+      "line": "a mcdonalds cheeseburger without cheese",
+      "itemRawText": "a mcdonalds cheeseburger",
+      "soloStripClause": "without cheese",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "McDonald's, Cheeseburger",
+        "brandName": "McDonald's",
+        "grams": 100,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 300,
+          "protein": 15,
+          "carbs": 33,
+          "fat": 12,
+          "fiber": 2,
+          "sugar": 7,
+          "sodium": 0.7
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "cheese"
+        ],
+        "calories": 229.2
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A05#0",
+      "line": "quarter pounder w cheese no bun",
+      "itemRawText": "quarter pounder w cheese no bun",
+      "soloStripClause": null,
+      "expectItemClause": "no bun",
+      "winner": {
+        "foodName": "Quarter Pounder with Cheese",
+        "brandName": null,
+        "grams": 25,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 107.3,
+          "protein": 5.3,
+          "carbs": 12.4,
+          "fat": 3.8,
+          "fiber": 0.8,
+          "sugar": 2.2,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 0.25,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 107.3
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A06#0",
+      "line": "a whopper with no mayo",
+      "itemRawText": "a whopper with no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 31,
+          "carbs": 54,
+          "fat": 39,
+          "fiber": 3,
+          "sugar": 13,
+          "sodium": 1.2
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 670
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A07#0",
+      "line": "a whopper jr without mayo",
+      "itemRawText": "a whopper jr",
+      "soloStripClause": "without mayo",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Whopper Jr.",
+        "brandName": "Burger King",
+        "grams": 170,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 340,
+          "protein": 15,
+          "carbs": 30,
+          "fat": 18,
+          "fiber": 2,
+          "sugar": 7,
+          "sodium": 0.6
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 340
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A09#0",
+      "line": "a baconator without cheese",
+      "itemRawText": "a baconator",
+      "soloStripClause": "without cheese",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Baconator",
+        "brandName": "Wendy's",
+        "grams": 450,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 900,
+          "protein": 57,
+          "carbs": 34,
+          "fat": 59,
+          "fiber": 1,
+          "sugar": 7,
+          "sodium": 1.6
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 900
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A10#0",
+      "line": "daves single from wendys no cheese",
+      "itemRawText": "daves single from wendys no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "Dave's Single",
+        "brandName": "Wendy's",
+        "grams": 285,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 570,
+          "protein": 29,
+          "carbs": 36,
+          "fat": 34,
+          "fiber": 2,
+          "sugar": 8,
+          "sodium": 1.1
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 570
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A12#0",
+      "line": "chickfila chicken sandwich no bun",
+      "itemRawText": "chickfila chicken sandwich no bun",
+      "soloStripClause": null,
+      "expectItemClause": "no bun",
+      "winner": {
+        "foodName": "Chick-Fil-A, Chicken, Egg & Cheese Bagel",
+        "brandName": "Chick-Fil-A",
+        "grams": 100,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 474,
+          "protein": 27,
+          "carbs": 51,
+          "fat": 18,
+          "fiber": 3,
+          "sugar": 8,
+          "sodium": 1.3
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 474
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A13#0",
+      "line": "a chick-fil-a deluxe without cheese",
+      "itemRawText": "a chick-fil-a deluxe",
+      "soloStripClause": "without cheese",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Chick-fil-A Deluxe Sandwich w/ American",
+        "brandName": "Chick-fil-A",
+        "grams": 247,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 490,
+          "protein": 32,
+          "carbs": 43,
+          "fat": 22,
+          "fiber": 1,
+          "sugar": 7,
+          "sodium": 1.7
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 490
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A14#0",
+      "line": "a crunchwrap supreme without sour cream",
+      "itemRawText": "a crunchwrap supreme",
+      "soloStripClause": "without sour cream",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Crunchwrap Supreme",
+        "brandName": "Taco Bell",
+        "grams": 265,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 530,
+          "protein": 15,
+          "carbs": 74,
+          "fat": 20,
+          "fiber": 6,
+          "sugar": 6,
+          "sodium": 1.2
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 530
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A16#0",
+      "line": "taco bell burrito supreme without beans",
+      "itemRawText": "taco bell burrito supreme",
+      "soloStripClause": "without beans",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Crunchy Taco Supreme",
+        "brandName": "Taco Bell",
+        "grams": 95,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 190,
+          "protein": 8,
+          "carbs": 16,
+          "fat": 10,
+          "fiber": 3,
+          "sugar": 1,
+          "sodium": 0.3
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 190
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A23#0",
+      "line": "in-n-out cheeseburger without spread",
+      "itemRawText": "in-n-out cheeseburger",
+      "soloStripClause": "without spread",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Cheeseburger with Onion",
+        "brandName": "In-N-Out",
+        "grams": 229,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 430,
+          "protein": 20,
+          "carbs": 40,
+          "fat": 21,
+          "fiber": 2.1,
+          "sugar": 9,
+          "sodium": 1.1
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "spread"
+        ],
+        "calories": 372.3
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A24#0",
+      "line": "a grande caramel frappuccino with no whip",
+      "itemRawText": "a grande caramel frappuccino with no whip",
+      "soloStripClause": null,
+      "expectItemClause": "no whip",
+      "winner": {
+        "foodName": "Caramel Frappuccino",
+        "brandName": "Starbucks",
+        "grams": 269.23,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 210,
+          "protein": 6,
+          "carbs": 37,
+          "fat": 3.5,
+          "fiber": 0,
+          "sugar": 32,
+          "sodium": 0.1
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "whipped cream"
+        ],
+        "calories": 184.3
+      },
+      "note": "KNOWN WRONG, ACCEPTED (battery only): fs_131012626 is the Starbucks \"1 bottle\" ready-to-drink Frappuccino (210 kcal), which never had whip; the `frappuccino` carrier cannot tell it from a handcrafted cup. Queued with RM-b/RM-c carrier work."
+    },
+    {
+      "src": "s458-hc",
+      "id": "A26#0",
+      "line": "popeyes classic chicken sandwich no pickles",
+      "itemRawText": "popeyes classic chicken sandwich no pickles",
+      "soloStripClause": null,
+      "expectItemClause": "no pickles",
+      "winner": {
+        "foodName": "Chicken Sandwich - Classic",
+        "brandName": "Popeyes Chicken & Biscuits",
+        "grams": 350,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 700,
+          "protein": 28,
+          "carbs": 50,
+          "fat": 42,
+          "fiber": 2,
+          "sugar": 8,
+          "sodium": 1.4
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "pickle"
+        ],
+        "calories": 698.6
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A27#0",
+      "line": "a jumbo jack without mayo",
+      "itemRawText": "a jumbo jack",
+      "soloStripClause": "without mayo",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Jumbo Jack",
+        "brandName": "Jack in the Box",
+        "grams": 216,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 520,
+          "protein": 23,
+          "carbs": 32,
+          "fat": 33,
+          "fiber": 1.9,
+          "sugar": 6,
+          "sodium": 0.7
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 520
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A28#0",
+      "line": "dbl qtr pounder no chz",
+      "itemRawText": "dbl qtr pounder no chz",
+      "soloStripClause": null,
+      "expectItemClause": "no chz",
+      "winner": {
+        "foodName": "Quater pounder",
+        "brandName": null,
+        "grams": 100,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 254,
+          "protein": 12.4,
+          "carbs": 20.2,
+          "fat": 13.5,
+          "fiber": null,
+          "sugar": 2.2,
+          "sodium": 0.4
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 254
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "A29#0",
+      "line": "whoppr no mayo",
+      "itemRawText": "whoppr no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 14,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 34.7,
+          "protein": 1.6,
+          "carbs": 2.8,
+          "fat": 2,
+          "fiber": 0.2,
+          "sugar": 0.7,
+          "sodium": 0.1
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 34.7
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "D15#0",
+      "line": "double quarter pounder no cheese, large fries and a medium sprite",
+      "itemRawText": "double quarter pounder no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "Double Quarter Pounder with Cheese",
+        "brandName": "McDonald's",
+        "grams": 278,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 740,
+          "protein": 48,
+          "carbs": 43,
+          "fat": 42,
+          "fiber": 1.9,
+          "sugar": 10,
+          "sodium": 1.4
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "cheese"
+        ],
+        "calories": 669.2
+      }
+    },
+    {
+      "src": "s458-hc",
+      "id": "D16#0",
+      "line": "whopper without mayo and medium fries",
+      "itemRawText": "whopper without mayo",
+      "soloStripClause": null,
+      "expectItemClause": "without mayo",
+      "winner": {
+        "foodName": "Whopper Without Mayo",
+        "brandName": null,
+        "grams": 14,
+        "source": "ai_estimated",
+        "nutrition": {
+          "calories": 35,
+          "protein": 2.1,
+          "carbs": 4.2,
+          "fat": 1.4,
+          "fiber": 0.3,
+          "sugar": 0.7,
+          "sodium": 0.1
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "unmapped",
+        "calories": 35
+      }
+    },
+    {
+      "src": "mel-organic(2 ev, last 2026-10-18)",
+      "id": "org:a burrito without beans",
+      "line": "a burrito without beans",
+      "itemRawText": "a burrito",
+      "soloStripClause": "without beans",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Chili without beans",
+        "brandName": null,
+        "grams": 236,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 330.4,
+          "protein": 16.5,
+          "carbs": 33,
+          "fat": 16.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "already_removed",
+        "calories": 330.4
+      }
+    },
+    {
+      "src": "mel-organic(2 ev, last 2026-10-18)",
+      "id": "org:a cheeseburger without cheese",
+      "line": "a cheeseburger without cheese",
+      "itemRawText": "a cheeseburger",
+      "soloStripClause": "without cheese",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Cheeseburger",
+        "brandName": null,
+        "grams": 102,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 319,
+          "protein": 16,
+          "carbs": 31.9,
+          "fat": 16,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "cheese"
+        ],
+        "calories": 248.2
+      }
+    },
+    {
+      "src": "mel-organic(2 ev, last 2026-10-19)",
+      "id": "org:a cobb salad without the egg",
+      "line": "a cobb salad without the egg",
+      "itemRawText": "a cobb salad",
+      "soloStripClause": "without the egg",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Cobb Salad",
+        "brandName": null,
+        "grams": 50,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 37.5,
+          "protein": 1.9,
+          "carbs": 3.8,
+          "fat": 1.9,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "too_large_grams",
+        "calories": 37.5
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-19)",
+      "id": "org:a grilled chicken sandwich without mayo",
+      "line": "a grilled chicken sandwich without mayo",
+      "itemRawText": "a grilled chicken sandwich",
+      "soloStripClause": "without mayo",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Grilled Chicken Sandwich",
+        "brandName": null,
+        "grams": 140,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 272,
+          "protein": 13.6,
+          "carbs": 27.2,
+          "fat": 13.6,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 214.7
+      }
+    },
+    {
+      "src": "mel-organic(2 ev, last 2026-10-19)",
+      "id": "org:a hamburger without the cheese",
+      "line": "a hamburger without the cheese",
+      "itemRawText": "a hamburger",
+      "soloStripClause": "without the cheese",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "85% Lean Ground Beef",
+        "brandName": null,
+        "grams": 112,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 240,
+          "protein": 12,
+          "carbs": 24,
+          "fat": 12,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 240
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-16)",
+      "id": "org:a hot dog without the bun",
+      "line": "a hot dog without the bun",
+      "itemRawText": "a hot dog",
+      "soloStripClause": "without the bun",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Hot Dog",
+        "brandName": null,
+        "grams": 56,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 134.4,
+          "protein": 6.7,
+          "carbs": 13.4,
+          "fat": 6.7,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "too_large_grams",
+        "calories": 134.4
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-08-12)",
+      "id": "org:almond butter creamy maranatha no stir",
+      "line": "almond butter creamy maranatha no stir",
+      "itemRawText": "almond butter creamy maranatha no stir",
+      "soloStripClause": null,
+      "expectItemClause": "no stir",
+      "winner": {
+        "foodName": "No Stir Almond Butter Creamy",
+        "brandName": null,
+        "grams": 32,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 190.1,
+          "protein": 9.5,
+          "carbs": 19,
+          "fat": 9.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 190.1
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-25)",
+      "id": "org:an egg mcmuffin no butter",
+      "line": "an egg mcmuffin no butter",
+      "itemRawText": "an egg mcmuffin no butter",
+      "soloStripClause": null,
+      "expectItemClause": "no butter",
+      "winner": {
+        "foodName": "Egg McMuffin",
+        "brandName": null,
+        "grams": 155,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 310,
+          "protein": 15.5,
+          "carbs": 31,
+          "fat": 15.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "butter"
+        ],
+        "calories": 274.1
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-19)",
+      "id": "org:a turkey club minus the bacon",
+      "line": "a turkey club minus the bacon",
+      "itemRawText": "a turkey club",
+      "soloStripClause": "minus the bacon",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Turkey Club",
+        "brandName": null,
+        "grams": 244,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 461.2,
+          "protein": 23.1,
+          "carbs": 46.1,
+          "fat": 23.1,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "bacon"
+        ],
+        "calories": 374.6
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-16)",
+      "id": "org:a turkey sub without mayo",
+      "line": "a turkey sub without mayo",
+      "itemRawText": "a turkey sub",
+      "soloStripClause": "without mayo",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Turkey Sub",
+        "brandName": null,
+        "grams": 255,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 510,
+          "protein": 25.5,
+          "carbs": 51,
+          "fat": 25.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 452.7
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-18)",
+      "id": "org:a waffle without syrup",
+      "line": "a waffle without syrup",
+      "itemRawText": "a waffle",
+      "soloStripClause": "without syrup",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Waffles",
+        "brandName": null,
+        "grams": 70,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 179.9,
+          "protein": 9,
+          "carbs": 18,
+          "fat": 9,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 179.9
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-08-19)",
+      "id": "org:bar cow no protein",
+      "line": "bar cow no protein",
+      "itemRawText": "bar cow no protein",
+      "soloStripClause": null,
+      "expectItemClause": "no protein",
+      "winner": {
+        "foodName": "No Cow  protein bar",
+        "brandName": null,
+        "grams": 60,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 114,
+          "protein": 5.7,
+          "carbs": 11.4,
+          "fat": 5.7,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": "bar"
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 114
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-17)",
+      "id": "org:bfast burrito w/o cheese",
+      "line": "bfast burrito w/o cheese",
+      "itemRawText": "bfast burrito w/o cheese",
+      "soloStripClause": null,
+      "expectItemClause": "w/o cheese",
+      "winner": {
+        "foodName": "Veg bfast Burrito",
+        "brandName": null,
+        "grams": 28,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 42.8,
+          "protein": 2.1,
+          "carbs": 4.3,
+          "fat": 2.1,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 42.8
+      }
+    },
+    {
+      "src": "mel-organic(10 ev, last 2026-11-14)",
+      "id": "org:burger king whopper no cheese",
+      "line": "burger king whopper no cheese",
+      "itemRawText": "burger king whopper no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": null,
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 33.5,
+          "carbs": 67,
+          "fat": 33.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 670
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-17)",
+      "id": "org:eggs benedict minus the hollandaise",
+      "line": "eggs benedict minus the hollandaise",
+      "itemRawText": "eggs benedict",
+      "soloStripClause": "minus the hollandaise",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Eggs Benedict",
+        "brandName": null,
+        "grams": 300,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 759,
+          "protein": 38,
+          "carbs": 75.9,
+          "fat": 38,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 759
+      }
+    },
+    {
+      "src": "mel-organic(4 ev, last 2026-10-26)",
+      "id": "org:grande caramel frappuccino no whip",
+      "line": "grande caramel frappuccino no whip",
+      "itemRawText": "grande caramel frappuccino no whip",
+      "soloStripClause": null,
+      "expectItemClause": "no whip",
+      "winner": {
+        "foodName": "Grande Cup - Caramel Macchiato Flavour",
+        "brandName": null,
+        "grams": 330,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 198,
+          "protein": 9.9,
+          "carbs": 19.8,
+          "fat": 9.9,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 198
+      }
+    },
+    {
+      "src": "mel-organic(10 ev, last 2026-11-14)",
+      "id": "org:mcdonalds mcdouble no cheese",
+      "line": "mcdonalds mcdouble no cheese",
+      "itemRawText": "mcdonalds mcdouble no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "McDouble",
+        "brandName": null,
+        "grams": 140,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 390,
+          "protein": 19.5,
+          "carbs": 39,
+          "fat": 19.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 390
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-16)",
+      "id": "org:oatmeal without the brown sugar",
+      "line": "oatmeal without the brown sugar",
+      "itemRawText": "oatmeal",
+      "soloStripClause": "without the brown sugar",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Rolled Oats",
+        "brandName": null,
+        "grams": 40,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 160,
+          "protein": 8,
+          "carbs": 16,
+          "fat": 8,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 160
+      }
+    },
+    {
+      "src": "mel-organic(1 ev, last 2026-10-18)",
+      "id": "org:oatmeal w/o brown sugar",
+      "line": "oatmeal w/o brown sugar",
+      "itemRawText": "oatmeal w/o brown sugar",
+      "soloStripClause": null,
+      "expectItemClause": "w/o brown sugar",
+      "winner": {
+        "foodName": "Rolled Oats",
+        "brandName": null,
+        "grams": 40,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 160,
+          "protein": 8,
+          "carbs": 16,
+          "fat": 8,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 160
+      }
+    },
+    {
+      "src": "mel-organic(13 ev, last 2026-11-14)",
+      "id": "org:taco bell cheesy gordita crunch no sauce",
+      "line": "taco bell cheesy gordita crunch no sauce",
+      "itemRawText": "taco bell cheesy gordita crunch no sauce",
+      "soloStripClause": null,
+      "expectItemClause": "no sauce",
+      "winner": {
+        "foodName": "Taco Bell, Cheesy Gordita Crunch",
+        "brandName": null,
+        "grams": 100,
+        "source": "openfoodfacts",
+        "nutrition": {
+          "calories": 496,
+          "protein": 24.8,
+          "carbs": 49.6,
+          "fat": 24.8,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "not_in_table",
+        "calories": 496
+      }
+    },
+    {
+      "src": "mel-organic(12 ev, last 2026-11-14)",
+      "id": "org:wendy's baconator no mayo",
+      "line": "wendy's baconator no mayo",
+      "itemRawText": "wendy's baconator no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Baconator",
+        "brandName": null,
+        "grams": 450,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 900,
+          "protein": 45,
+          "carbs": 90,
+          "fat": 45,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 900
+      }
+    },
+    {
+      "src": "mel-organic 2026-10-20 historical winner (fs_125455751)",
+      "id": "guard:baconator-no-mayo-sibling",
+      "line": "wendy's baconator no mayo",
+      "itemRawText": "wendy's baconator no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Crispy Chicken Sandwich (No Mayo)",
+        "brandName": "Wendy's",
+        "grams": 145,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 290,
+          "protein": 14.5,
+          "carbs": 29.0,
+          "fat": 14.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "already_removed",
+        "calories": 290
+      }
+    },
+    {
+      "src": "FatSecretFood fs 68721916 (sibling record)",
+      "id": "guard:cfa-deluxe-no-cheese-sibling",
+      "line": "a chick-fil-a deluxe no cheese",
+      "itemRawText": "a chick-fil-a deluxe no cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no cheese",
+      "winner": {
+        "foodName": "Chick-fil-A Deluxe Sandwich w/ No Cheese",
+        "brandName": "Chick-fil-A",
+        "grams": 233,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 430,
+          "protein": 21.5,
+          "carbs": 43.0,
+          "fat": 21.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "already_removed",
+        "calories": 430
+      }
+    }
+  ],
+  "detectOnly": [
+    [
+      "no cow protein bar",
+      null
+    ],
+    [
+      "trader joes hold the cone",
+      null
+    ],
+    [
+      "a pound of pasta, no i mean a cup of pasta",
+      null
+    ],
+    [
+      "no sugar added greek yogurt",
+      null
+    ],
+    [
+      "a latte no sugar",
+      null
+    ],
+    [
+      "pizza no extra cheese",
+      null
+    ],
+    [
+      "no name mayo",
+      null
+    ],
+    [
+      "coffee no cream or sugar",
+      null
+    ],
+    [
+      "no bun",
+      null
+    ],
+    [
+      "whopper no cheese 2",
+      null
+    ],
+    [
+      "a burger no onions and pickles",
+      null
+    ],
+    [
+      "a no 9 combo from mcdonalds",
+      null
+    ],
+    [
+      "almond butter creamy maranatha no stir",
+      "no stir"
+    ],
+    [
+      "bar cow no protein",
+      "no protein"
+    ],
+    [
+      "a double quarter pounder with no cheese",
+      "no cheese"
+    ],
+    [
+      "double quarter pounder no cheese",
+      "no cheese"
+    ],
+    [
+      "bfast burrito w/o cheese",
+      "w/o cheese"
+    ],
+    [
+      "a burger with no pickles or onions",
+      "no pickles or onions"
+    ],
+    [
+      "a cheeseburger no cheese",
+      "no cheese"
+    ],
+    [
+      "a cobb salad without the egg",
+      "without the egg"
+    ],
+    [
+      "a coke without sugar",
+      null
+    ],
+    [
+      "oatmeal, no sugar added",
+      null
+    ],
+    [
+      "2 tbsp no salt peanut butter",
+      null
+    ],
+    [
+      "kerrygold no salt butter",
+      null
+    ],
+    [
+      "1 tbsp no salt butter",
+      null
+    ],
+    [
+      "applegate no sugar bacon",
+      null
+    ],
+    [
+      "a cup of no sugar whipped cream",
+      null
+    ],
+    [
+      "maranatha no stir almond butter",
+      null
+    ],
+    [
+      "skippy no stir peanut butter",
+      null
+    ],
+    [
+      "loblaws no name peanut butter",
+      null
+    ],
+    [
+      "4 slices no nitrate bacon",
+      null
+    ],
+    [
+      "a burrito bowl no beans",
+      "no beans"
+    ],
+    [
+      "a turkey sandwich no american cheese",
+      "no american cheese"
+    ],
+    [
+      "a burger no sour cream",
+      "no sour cream"
+    ]
+  ]
+}
