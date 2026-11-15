@@ -397,7 +397,7 @@ export async function getOrCreateAmbiguousServing(
         // a per-piece weight in disguise for the requested unit. Out-of-bounds
         // seeds fall through to sibling-borrow / AI instead.
         if (countDefault) {
-            const seedBounds = getAmbiguousUnitBounds(normalizedUnit);
+            const seedBounds = getAmbiguousUnitBounds(normalizedUnit, foodName);
             const seedOutOfBounds = (seedBounds.min != null && countDefault.grams < seedBounds.min)
                 || (seedBounds.max != null && countDefault.grams > seedBounds.max);
             if (seedOutOfBounds) {
@@ -437,7 +437,7 @@ export async function getOrCreateAmbiguousServing(
     // disguise; fall through so the estimator overwrites it).
     const existing = await findExistingServing(foodId, normalizedUnit);
     if (existing?.grams) {
-        const bounds = getAmbiguousUnitBounds(normalizedUnit);
+        const bounds = getAmbiguousUnitBounds(normalizedUnit, foodName);
         const outOfBounds = (bounds.min != null && existing.grams < bounds.min)
             || (bounds.max != null && existing.grams > bounds.max);
         if (outOfBounds) {

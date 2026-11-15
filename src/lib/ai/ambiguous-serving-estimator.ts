@@ -80,10 +80,40 @@ export const UNIT_MIN_GRAMS: Record<string, number> = {
     cookie: 4, cookies: 4,
 };
 
-/** Sanity bounds for an ambiguous unit's per-unit grams; either side may be undefined. */
-export function getAmbiguousUnitBounds(unit: string): { min?: number; max?: number } {
+/**
+ * A SCOOP OF POWDER IS NOT A SCOOP OF FOOD (s459 pd-sc). `UNIT_MAX_GRAMS.scoop`
+ * below is calibrated on protein powder (30-35 g, competition scoops 45 g), but
+ * it was applied to every food: an ice-cream / mashed-potato / rice / casserole
+ * scoop is a disher or serving-spoon portion, and the estimator's own answer for
+ * those was clamped to 50 g. MEASURED in the box app log 2026-07-21 -> 2026-11-15:
+ * 54 of 54 `scoop` clamps were non-powder foods (ice cream 60-100 -> 50, mashed
+ * potatoes 120-150 -> 50, rice 150 -> 50, cottage cheese 120-150 -> 50,
+ * casseroles 150-200 -> 50) and 0 were powders.
+ *
+ * So the powder cap stays exactly where it was for any name that LOOKS like a
+ * powder (a false positive keeps today's behaviour, the safe direction), and
+ * every other name gets FOOD_SCOOP_MAX_GRAMS. The cap still exists for the
+ * reason it always did: a hallucinated 400 g "scoop" must not bill.
+ */
+const POWDER_SCOOP_NAME_RE = /\b(protein|whey|casein|collagen|peptides?|creatine|pre[- ]?workouts?|powders?|bcaas?|eaas?|aminos?|greens|isolate|gainer|electrolytes?|supplements?|formula)\b/i;
+export const POWDER_SCOOP_MAX_GRAMS = 50;
+export const FOOD_SCOOP_MAX_GRAMS = 120;
+
+/** Per-unit cap for `scoop`, by whether the food is a powder. Null for every other unit. */
+export function scoopMaxGrams(unit: string, foodName: string | null | undefined): number | null {
     const u = unit.toLowerCase().trim();
-    return { min: UNIT_MIN_GRAMS[u], max: UNIT_MAX_GRAMS[u] };
+    if (u !== 'scoop' && u !== 'scoops') return null;
+    if (foodName == null || POWDER_SCOOP_NAME_RE.test(foodName)) return POWDER_SCOOP_MAX_GRAMS;
+    return FOOD_SCOOP_MAX_GRAMS;
+}
+
+/**
+ * Sanity bounds for an ambiguous unit's per-unit grams; either side may be undefined.
+ * `foodName` moves only the `scoop` cap (scoopMaxGrams); omitted, it reads as before.
+ */
+export function getAmbiguousUnitBounds(unit: string, foodName?: string | null): { min?: number; max?: number } {
+    const u = unit.toLowerCase().trim();
+    return { min: UNIT_MIN_GRAMS[u], max: (foodName != null ? scoopMaxGrams(u, foodName) : null) ?? UNIT_MAX_GRAMS[u] };
 }
 
 // Unit-specific weight sanity caps (safety net for AI hallucinations).
@@ -530,7 +560,7 @@ export async function estimateAmbiguousServing(
         // generously so a hallucinated weight can't produce absurd calories,
         // while still allowing legitimately large portions (bowl, plate, etc.).
         const GENERIC_UNKNOWN_MAX = 600;
-        const maxGrams = UNIT_MAX_GRAMS[unit.toLowerCase()]
+        const maxGrams = scoopMaxGrams(unit, foodName) ?? UNIT_MAX_GRAMS[unit.toLowerCase()]
             ?? (isEstimableUnknownUnit(unit) ? GENERIC_UNKNOWN_MAX : undefined);
         let clampedGrams = estimatedGrams;
         if (maxGrams && estimatedGrams > maxGrams) {
