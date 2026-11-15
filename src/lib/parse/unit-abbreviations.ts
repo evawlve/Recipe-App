@@ -20,7 +20,8 @@
  *                     `cn` `cns` -> can ; `btl` `btls` -> bottle ;
  *                     `svg` `svg.` `svgs` -> serving ; `slc` `slc.` `slcs` -> slice ;
  *                     `bx` `bxs` -> box ; `pkg` `pkg.` `pkgs` -> package ;
- *                     `pkt` `pkts` -> packet ; `ctn` `ctns` -> carton
+ *                     `pkt` `pkts` -> packet ; `ctn` `ctns` -> carton ;
+ *                     `pc` `pc.` `pcs` `pcs.` -> piece (s459 QW)
  * Every target is a non-`unknown` normalizeUnitToken() key (pinned in the test,
  * so the two lists cannot drift apart).
  *
@@ -83,6 +84,13 @@ const CASE_INSENSITIVE: Readonly<Record<string, string>> = {
   pkts: 'packet',
   ctn: 'carton',
   ctns: 'carton',
+  // s459 QW: `10 pc chicken mcnuggets`, `3 pcs fried chicken`, `8pc wings`. Without this the token
+  // stayed in the NAME and the search query, where it pulled records whose name carries a piece
+  // count (`3 pcs fried chicken` -> "Fried Chicken 4 Pcs Our Choice", 2,325 g / 4,650 kcal cold).
+  pc: 'piece',
+  'pc.': 'piece',
+  pcs: 'piece',
+  'pcs.': 'piece',
 };
 
 const SPANISH_DE = new Set(['de', 'del']);

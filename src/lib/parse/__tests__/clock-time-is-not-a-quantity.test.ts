@@ -53,7 +53,7 @@ const controls: Array<[string, number, string | null, string]> = [
   ['11 almonds', 11, null, 'almonds'],
   ['2 eggs', 2, 'egg', 'eggs'],
   ['1.5 cups rice', 1.5, 'cup', 'rice'],
-  ['3pcs nuggets', 3, null, 'pcs nuggets'],
+  ['3pcs nuggets', 3, 'piece', 'nuggets'], // s459 QW: `pcs` is the piece unit now; still qty 3, never a time
   ['24 oz coffee', 24, 'oz', 'coffee'],
   ['1 cup 2% milk', 1, 'cup', '2% milk'],
   ['85/15 ground beef', 1, null, '85/15 ground beef'],
