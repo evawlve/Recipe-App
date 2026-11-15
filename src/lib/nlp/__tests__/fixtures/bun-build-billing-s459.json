@@ -1,0 +1,1024 @@
+{
+ "about": "s459 pd-mf: frozen-winner billing fixture for MF-a (bun-replacing builds bill as `no bun`). Winners from cold nosave draws on deploy 33 (9YR4B-3kkKA-hKzmYKt20) and s458 hc draws (deploy 31), organic rows from MappingEventLog noCache=false (synthetic macro split). detectOnly pins bunBuildClause(line)?.phrase.",
+ "cases": [
+  {
+   "src": "s459-mf",
+   "id": "A20#0",
+   "line": "five guys hamburger lettuce wrap",
+   "itemRawText": "five guys hamburger lettuce wrap",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Lettuce",
+    "brandName": "Five Guys",
+    "grams": 30,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 3,
+     "protein": 0,
+     "carbs": 1,
+     "fat": 0,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "too_large_grams"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "A22#0",
+   "line": "double double protein style",
+   "itemRawText": "double double protein style",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Double protein raw oats",
+    "brandName": null,
+    "grams": 48,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 190,
+     "protein": 10,
+     "carbs": 31,
+     "fat": 3.5,
+     "fiber": 6,
+     "sugar": 0,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW1#0",
+   "line": "five guys cheeseburger lettuce wrap",
+   "itemRawText": "five guys cheeseburger lettuce wrap",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Five Guys, Lettuce",
+    "brandName": "Five Guys",
+    "grams": 30,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 12,
+     "protein": 0,
+     "carbs": 3,
+     "fat": 0,
+     "fiber": null,
+     "sugar": null,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "too_large_grams"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW2#0",
+   "line": "burger king whopper lettuce wrap",
+   "itemRawText": "burger king whopper lettuce wrap",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 550
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW3#0",
+   "line": "cheeseburger lettuce wrap",
+   "itemRawText": "cheeseburger lettuce wrap",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Low-Carb/Keto Bacon Cheeseburger Lettuce Wraps (GF)",
+    "brandName": "212 Meal Prep",
+    "grams": 296.5,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 593,
+     "protein": 63,
+     "carbs": 2,
+     "fat": 37,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW4#0",
+   "line": "turkey burger lettuce wrap",
+   "itemRawText": "turkey burger lettuce wrap",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Turkey Burger",
+    "brandName": null,
+    "grams": 93.25,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 217,
+     "protein": 25.3,
+     "carbs": 0,
+     "fat": 12.2,
+     "fiber": 0,
+     "sugar": 0,
+     "sodium": 0.4
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "not_in_panel"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW5#0",
+   "line": "hamburger wrapped in lettuce",
+   "itemRawText": "hamburger wrapped in lettuce",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Lettuce wrap",
+    "brandName": null,
+    "grams": 139,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 109.8,
+     "protein": 3,
+     "carbs": 19,
+     "fat": 2,
+     "fiber": 3.1,
+     "sugar": 6,
+     "sodium": 0.7
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "LW6#0",
+   "line": "carls jr famous star lettuce wrapped",
+   "itemRawText": "carls jr famous star lettuce wrapped",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Zucchini Star",
+    "brandName": "Carl's Jr.",
+    "grams": 262,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 600,
+     "protein": 13,
+     "carbs": 69,
+     "fat": 31,
+     "fiber": 2.9,
+     "sugar": 13,
+     "sodium": 1.5
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 480
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "PS1#0",
+   "line": "protein style cheeseburger",
+   "itemRawText": "protein style cheeseburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Greek style protein 15g",
+    "brandName": "Farmers Union",
+    "grams": 150,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 113.3,
+     "protein": 22.8,
+     "carbs": 6.6,
+     "fat": 5.7,
+     "fiber": 0.3,
+     "sugar": 5.4,
+     "sodium": 0.1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "PS2#0",
+   "line": "cheeseburger protein style",
+   "itemRawText": "cheeseburger protein style",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger protein pockets",
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 226,
+     "protein": 16.1,
+     "carbs": 22.8,
+     "fat": 4.6,
+     "fiber": null,
+     "sugar": 4.4,
+     "sodium": 0.3
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "PS3#0",
+   "line": "in-n-out protein style cheeseburger",
+   "itemRawText": "in-n-out protein style cheeseburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger with Onion",
+    "brandName": "In-N-Out",
+    "grams": 229,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 430,
+     "protein": 20,
+     "carbs": 40,
+     "fat": 21,
+     "fiber": 2.1,
+     "sugar": 9,
+     "sodium": 1.1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 310
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "PS4#0",
+   "line": "protein style double double",
+   "itemRawText": "protein style double double",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Greek style protein 15g",
+    "brandName": "Farmers Union",
+    "grams": 150,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 113.3,
+     "protein": 22.8,
+     "carbs": 6.6,
+     "fat": 5.7,
+     "fiber": 0.3,
+     "sugar": 5.4,
+     "sodium": 0.1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "BL1#0",
+   "line": "bunless cheeseburger",
+   "itemRawText": "bunless cheeseburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger",
+    "brandName": null,
+    "grams": 140,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 347.2,
+     "protein": 13,
+     "carbs": 35,
+     "fat": 16.8,
+     "fiber": null,
+     "sugar": 4.1,
+     "sodium": 0.3
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 227.2
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "BL2#0",
+   "line": "bunless whopper",
+   "itemRawText": "bunless whopper",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 550
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "BL3#0",
+   "line": "a bunless double quarter pounder",
+   "itemRawText": "a bunless double quarter pounder",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Double Quarter Pounder with Cheese",
+    "brandName": "McDonald's",
+    "grams": 278,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 740,
+     "protein": 48,
+     "carbs": 43,
+     "fat": 42,
+     "fiber": 1.9,
+     "sugar": 10,
+     "sodium": 1.4
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 620
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "BL4#0",
+   "line": "five guys bunless bacon cheeseburger",
+   "itemRawText": "five guys bunless bacon cheeseburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Bunless Bacon Cheeseburger",
+    "brandName": "Five Guys",
+    "grams": 240,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 660,
+     "protein": 44,
+     "carbs": 1,
+     "fat": 53,
+     "fiber": null,
+     "sugar": 1,
+     "sodium": 1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "NB1#0",
+   "line": "cheeseburger no bun",
+   "itemRawText": "cheeseburger no bun",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger on a bun",
+    "brandName": "Market Basket",
+    "grams": 198,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 1049.4,
+     "protein": 53.5,
+     "carbs": 57.4,
+     "fat": 65.3,
+     "fiber": 2,
+     "sugar": 5.9,
+     "sodium": 1.6
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 929.4
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "NB2#0",
+   "line": "whopper no bun",
+   "itemRawText": "whopper no bun",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 550
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "NB3#0",
+   "line": "mcdouble no bun",
+   "itemRawText": "mcdouble no bun",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Beef patty",
+    "brandName": null,
+    "grams": 45,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 132.7,
+     "protein": 4,
+     "carbs": 16.7,
+     "fat": 5.5,
+     "fiber": 1.4,
+     "sugar": 2,
+     "sodium": 0.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "NB4#0",
+   "line": "five guys hamburger no bun",
+   "itemRawText": "five guys hamburger no bun",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Hamburger",
+    "brandName": "Five Guys",
+    "grams": 265,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 700,
+     "protein": 39,
+     "carbs": 39,
+     "fat": 43,
+     "fiber": 2.1,
+     "sugar": 8,
+     "sodium": 0.4
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 580
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "RB1#0",
+   "line": "five guys bunless hamburger",
+   "itemRawText": "five guys bunless hamburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Hamburger",
+    "brandName": "Five Guys",
+    "grams": 265,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 700,
+     "protein": 39,
+     "carbs": 39,
+     "fat": 43,
+     "fiber": 2.1,
+     "sugar": 8,
+     "sodium": 0.4
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 580
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "RB2#0",
+   "line": "five guys bunless cheeseburger",
+   "itemRawText": "five guys bunless cheeseburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger",
+    "brandName": "Five Guys",
+    "grams": 490,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 980,
+     "protein": 47,
+     "carbs": 40,
+     "fat": 55,
+     "fiber": 2,
+     "sugar": 9,
+     "sodium": 1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 860
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "RB3#0",
+   "line": "bunless hamburger",
+   "itemRawText": "bunless hamburger",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Ground Beef (85% Lean / 15% Fat)",
+    "brandName": null,
+    "grams": 28,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 60,
+     "protein": 5.2,
+     "carbs": 0,
+     "fat": 4.2,
+     "fiber": 0,
+     "sugar": 0,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s459-mf",
+   "id": "RB4#0",
+   "line": "bunless double double",
+   "itemRawText": "bunless double double",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Double chocolat",
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 411.8,
+     "protein": 5.9,
+     "carbs": 58.8,
+     "fat": 23.5,
+     "fiber": 5.9,
+     "sugar": 35.3,
+     "sodium": 0.1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s458-hc",
+   "id": "A12#0",
+   "line": "chickfila chicken sandwich no bun",
+   "itemRawText": "chickfila chicken sandwich no bun",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Chick-Fil-A, Chicken, Egg & Cheese Bagel",
+    "brandName": "Chick-Fil-A",
+    "grams": 100,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 474,
+     "protein": 27,
+     "carbs": 51,
+     "fat": 18,
+     "fiber": 3,
+     "sugar": 8,
+     "sodium": 1.3
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "s458-hc",
+   "id": "A22#0",
+   "line": "double double protein style",
+   "itemRawText": "double double protein style",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Double protein raw oats",
+    "brandName": null,
+    "grams": 48,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 190,
+     "protein": 10,
+     "carbs": 31,
+     "fat": 3.5,
+     "fiber": 6,
+     "sugar": 0,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier"
+   }
+  },
+  {
+   "src": "organic",
+   "id": "org:pf changs chicken lettuce wraps",
+   "line": "pf changs chicken lettuce wraps",
+   "itemRawText": "pf changs chicken lettuce wraps",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Chicken Lettuce Wraps",
+    "brandName": "P.F. Chang's",
+    "grams": 284,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 320.6,
+     "protein": 16,
+     "carbs": 32.1,
+     "fat": 16,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "organic",
+   "id": "org:in-n-out cheeseburger protein style",
+   "line": "in-n-out cheeseburger protein style",
+   "itemRawText": "in-n-out cheeseburger protein style",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Cheeseburger with Onion Protein Style (Bun replaced with Lettuce)",
+    "brandName": "In-N-Out",
+    "grams": 231,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 280,
+     "protein": 14,
+     "carbs": 28,
+     "fat": 14,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "organic",
+   "id": "org:in-n-out double double protein style",
+   "line": "in-n-out double double protein style",
+   "itemRawText": "in-n-out double double protein style",
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Double-Double Animal & Protein Style",
+    "brandName": "in-N-Out",
+    "grams": 362,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 520,
+     "protein": 26,
+     "carbs": 52,
+     "fat": 26,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed"
+   }
+  },
+  {
+   "src": "organic",
+   "id": "org:a hot dog without the bun",
+   "line": "a hot dog without the bun",
+   "itemRawText": "a hot dog without the bun",
+   "expectItemClause": "without the bun",
+   "winner": {
+    "foodName": "Hot Dog",
+    "brandName": null,
+    "grams": 56,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 134.4,
+     "protein": 6.7,
+     "carbs": 13.4,
+     "fat": 6.7,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "too_large_grams"
+   }
+  }
+ ],
+ "detectOnly": [
+  [
+   "five guys hamburger lettuce wrap",
+   "lettuce wrap"
+  ],
+  [
+   "lettuce-wrapped turkey burger",
+   "lettuce wrapped"
+  ],
+  [
+   "a burger wrapped in lettuce",
+   "wrapped in lettuce"
+  ],
+  [
+   "double double protein style",
+   "protein style"
+  ],
+  [
+   "protein style",
+   null
+  ],
+  [
+   "a lettuce wrap",
+   null
+  ],
+  [
+   "bunless",
+   null
+  ],
+  [
+   "a burger with a lettuce bun",
+   "lettuce bun"
+  ],
+  [
+   "pf changs chicken lettuce wraps",
+   "lettuce wraps"
+  ],
+  [
+   "chicken in lettuce cups",
+   null
+  ],
+  [
+   "a hot dog in a bun",
+   null
+  ],
+  [
+   "on a potato bun",
+   null
+  ],
+  [
+   "lettuce",
+   null
+  ],
+  [
+   "romaine lettuce",
+   null
+  ],
+  [
+   "honey bunches of oats",
+   null
+  ],
+  [
+   "bun bo hue",
+   null
+  ],
+  [
+   "a sloppy joe on a bun",
+   null
+  ],
+  [
+   "in-n-out double double animal style",
+   null
+  ],
+  [
+   "a chick-fil-a grilled chicken cool wrap",
+   null
+  ],
+  [
+   "greek style yogurt",
+   null
+  ],
+  [
+   "2 bunless",
+   null
+  ]
+ ]
+}

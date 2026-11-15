@@ -1641,8 +1641,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 390
+        "subtracted": [
+          "bun"
+        ],
+        "calories": 270
       }
     },
     {
