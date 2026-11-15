@@ -250,3 +250,34 @@ describe('applyComponentSubtraction', () => {
     else expect(r.skipped).toBe(expected);
   });
 });
+
+// s459 row RC: a winner from a chain the list newly holds passes RM-b's chain-topping carrier test. Frozen winners
+// from the seat's cold draws on build 9YR4B-3kkKA-hKzmYKt20 (2026-11-15); on 8ab177bb both skip `no_carrier`.
+describe('s459 RC: newly listed chains reach the chain-topping subtraction', () => {
+  test("jimmy johns turkey tom no mayo -> Turkey Tom (Unwich), Jimmy John's: mayo subtracts", () => {
+    const r = applyComponentSubtraction(base({
+      nutrition: { calories: 250, protein: 15, carbs: 5, fat: 17, fiber: 2, sugar: 3, sodium: 0.7 },
+      grams: 125, foodName: 'Turkey Tom (Unwich)', brandName: "Jimmy John's",
+      head: 'jimmy johns turkey tom', clause: 'no mayo', parsed: { qty: null, multiplier: null, unit: null },
+    }));
+    expect('adjustments' in r && r.adjustments.map(a => a.component)).toEqual(['mayo']);
+    expect('nutrition' in r && r.nutrition.calories).toBe(192.7);
+  });
+
+  test("culvers butterburger no pickles -> Butterburger - Single, Culver's: pickle subtracts", () => {
+    const r = applyComponentSubtraction(base({
+      nutrition: { calories: 390, protein: 20, carbs: 38, fat: 17, fiber: 1, sugar: 6, sodium: 0.5 },
+      grams: 195, foodName: 'Butterburger - Single', brandName: "Culver's",
+      head: 'culvers butterburger', clause: 'no pickles', parsed: { qty: null, multiplier: null, unit: null },
+    }));
+    expect('adjustments' in r && r.adjustments.map(a => a.component)).toEqual(['pickle']);
+    expect('nutrition' in r && r.nutrition.calories).toBe(388.6);
+  });
+
+  test("a grocery chain is still not a chain winner: Krispy Kreme + no mayo skips no_carrier", () => {
+    const r = applyComponentSubtraction(base({
+      grams: 125, foodName: 'Original Glazed', brandName: 'Krispy Kreme', clause: 'no mayo',
+    }));
+    expect(r).toEqual({ skipped: 'no_carrier' });
+  });
+});
