@@ -153,3 +153,49 @@ export const ALIASES: Record<string, string> = {
   cheddar: 'cheese',
   swiss: 'cheese',
 };
+
+/**
+ * s459 RM-d: Spanish part words, read on the CLAUSE side only (`sin mayonesa`, `no queso`). Never used to match a winner's
+ * name (`names()` / `namesNegated()` read ALIASES only), so an English record named `Pan Pizza` or `Queso Dip` is untouched.
+ * An absence word (`azucar`, `grasa`, `lactosa`, `gluten`, `sal`, `gas`, `hueso`, `piel`) is deliberately NOT here: `sin X`
+ * subtracts only when X resolves through this table (see itemRemovalClause()).
+ */
+export const CLAUSE_ALIASES_ES: Record<string, string> = {
+  mayonesa: 'mayo',
+  queso: 'cheese',
+  crema: 'sour cream',
+  'crema agria': 'sour cream',
+  'crema batida': 'whipped cream',
+  cebolla: 'onion',
+  cebollas: 'onion',
+  tomate: 'tomato',
+  tomates: 'tomato',
+  jitomate: 'tomato',
+  jitomates: 'tomato',
+  lechuga: 'lettuce',
+  pepinillo: 'pickle',
+  pepinillos: 'pickle',
+  frijol: 'bean',
+  frijoles: 'bean',
+  tocino: 'bacon',
+  huevo: 'egg',
+  huevos: 'egg',
+  pan: 'bun',
+  mantequilla: 'butter',
+};
+
+function keyOf(token: string): string | null {
+  if (COMPONENT_TABLE[token]) return token;
+  return ALIASES[token] ?? CLAUSE_ALIASES_ES[token] ?? null;
+}
+
+/** The longest table key or alias matching a clause part's last 2, then last 1, tokens (s459: moved here from component-subtraction.ts). */
+export function resolveComponentKey(part: string): string | null {
+  if (/\band\b/.test(part)) return null; // "onions and pickles": never guess which one
+  const t = part.split(' ');
+  if (t.length >= 2) {
+    const two = keyOf(t.slice(-2).join(' '));
+    if (two) return two;
+  }
+  return keyOf(t[t.length - 1]);
+}

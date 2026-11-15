@@ -41,6 +41,7 @@
  */
 
 import { words, sameWord, tokenizeWithPieces, Tok } from './trailing-quantity-fold';
+import { resolveComponentKey } from './component-table';
 
 export interface NegatedPartDrop {
   kind: 'negated' | 'removed' | 'exclusion';
@@ -284,7 +285,13 @@ export function stripSoloRemoval(rawText: string): SoloRemoval | null {
 }
 
 // s458 RM-a: the same grammar with `no` and `w/o` (words() reads `w/o` as `w o`); the caller bills with it, nothing strips.
-const ITEM_NEG = new Set(['without', 'minus', 'no', 'w o']);
+// s459 RM-d: `hold the` (two tokens) and Spanish `sin` join it, but only for a part the component table names (TABLE_GATED):
+// `trader joes hold the cone` (a product), `leche de almendra sin azucar`, `yogurt griego sin grasa`, `agua sin gas`,
+// `pollo sin hueso` (identity claims) never resolve, so they stay as typed. The table is the whitelist; there is no
+// Spanish absence list to keep in step with it.
+const ITEM_NEG = new Set(['without', 'minus', 'no', 'w o', 'hold the', 'sin']);
+const TABLE_GATED = new Set(['hold the', 'sin']);
+const TWO_TOKEN_NEG = new Set(['hold the']);
 export function itemRemovalClause(rawText: string): SoloRemoval | null {
   return matchRemoval(rawText, ITEM_NEG, true);
 }
@@ -293,14 +300,19 @@ const ITEM_ABSENCE_WORDS = new Set(['added', 'free', 'reduced', 'low']);
 function matchRemoval(rawText: string, negs: Set<string>, item = false): SoloRemoval | null {
   const raw = rawText.trim().split(/\s+/);
   const lw = raw.map(t => words(t).join(' '));
-  const at = lw.flatMap((w, k) => (negs.has(w) ? [k] : []));
-  if (at.length !== 1 || at[0] === 0) return null;
-  const k = at[0];
+  // s459 RM-d: a negator may span two tokens (`hold the`); `len` is how many raw tokens it takes.
+  const at = lw.flatMap((w, k) => {
+    const pair = `${w} ${lw[k + 1] ?? ''}`;
+    return negs.has(w) ? [[k, 1]] : TWO_TOKEN_NEG.has(pair) && negs.has(pair) ? [[k, 2]] : [];
+  });
+  if (at.length !== 1 || at[0][0] === 0) return null;
+  const [k, len] = at[0];
+  const neg = lw.slice(k, k + len).join(' ');
   const head = raw.slice(0, k).join(' ').replace(/[\s,;:(\-]+$/, '');
   const headWords = words(head);
   if (!headWords.some(w => !SOLO_HEAD_FILLER.has(w) && !/^[\d/.]+$/.test(w))) return null;
-  let tail = raw.slice(k + 1).flatMap(t => words(t));
-  if (tail.length > 0 && (SOLO_TAIL_DETS.has(tail[0]) || (lw[k] === 'without' && (tail[0] === 'a' || tail[0] === 'an')))) {
+  let tail = raw.slice(k + len).flatMap(t => words(t));
+  if (tail.length > 0 && (SOLO_TAIL_DETS.has(tail[0]) || (neg === 'without' && (tail[0] === 'a' || tail[0] === 'an')))) {
     tail = tail.slice(1);
   }
   // `without onions or pickles`: each part is checked on its own.
@@ -315,6 +327,8 @@ function matchRemoval(rawText: string, negs: Set<string>, item = false): SoloRem
     if (parts.some(p => p.length > 2)) return null;
     // s458 RM-a: the head must name a food, not only a count, unit or size (`2 tbsp no salt butter`, `4 slices no nitrate bacon`).
     if (!headWords.some(w => !SOLO_HEAD_FILLER.has(w) && !/^[\d/.]+$/.test(w) && !soloStop(w))) return null;
+    // s459 RM-d: a table-gated negator names a removable component in every part, or the line stays as typed.
+    if (TABLE_GATED.has(neg) && !parts.every(p => resolveComponentKey(p.join(' ')))) return null;
   }
   return { head, clause: raw.slice(k).join(' ') };
 }
