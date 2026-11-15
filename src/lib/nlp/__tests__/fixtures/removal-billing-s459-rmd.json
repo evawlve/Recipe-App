@@ -1,0 +1,1025 @@
+{
+ "about": "s459 pd-rmd (RM-d): `hold the` and `sin` subtract like `no`. Frozen winners (s458 hc draws; s459 pd-rmd cold nosave draws; synthetic guards) -> expected billing. Only the clause feed and the subtraction gate are under test.",
+ "cases": [
+  {
+   "src": "s458-hc (build 98T2T2gSRnq-9HiffElOW)",
+   "id": "A08#0",
+   "line": "burger king original chicken sandwich hold the mayo",
+   "itemRawText": "burger king original chicken sandwich hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "Burger King, Original Chicken Sandwich",
+    "brandName": "Burger King",
+    "grams": 190,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 231.8,
+     "protein": 15,
+     "carbs": 25.1,
+     "fat": 8,
+     "fiber": 1,
+     "sugar": 2,
+     "sodium": 0.5
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 174.5
+   }
+  },
+  {
+   "src": "s458-hc (build 98T2T2gSRnq-9HiffElOW)",
+   "id": "F01#0",
+   "line": "un taco de pastor sin cebolla",
+   "itemRawText": "un taco de pastor sin cebolla",
+   "soloStripClause": null,
+   "expectItemClause": "sin cebolla",
+   "winner": {
+    "foodName": "Taco Pastor",
+    "brandName": "Arrachera",
+    "grams": 113,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 230.5,
+     "protein": 16,
+     "carbs": 8,
+     "fat": 15,
+     "fiber": 0,
+     "sugar": 0,
+     "sodium": 0.6
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "onion"
+    ],
+    "calories": 224.6
+   }
+  },
+  {
+   "src": "s458-hc (build 98T2T2gSRnq-9HiffElOW)",
+   "id": "F04#0",
+   "line": "un whopper sin mayonesa",
+   "itemRawText": "un whopper sin mayonesa",
+   "soloStripClause": null,
+   "expectItemClause": "sin mayonesa",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 612.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H01#0",
+   "line": "a whopper hold the mayo",
+   "itemRawText": "a whopper hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 612.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H02#0",
+   "line": "a big mac hold the pickles",
+   "itemRawText": "a big mac hold the pickles",
+   "soloStripClause": null,
+   "expectItemClause": "hold the pickles",
+   "winner": {
+    "foodName": "Big mac",
+    "brandName": "Mcdonald’s",
+    "grams": 220,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 625,
+     "protein": 40,
+     "carbs": 47,
+     "fat": 29,
+     "fiber": 3.7,
+     "sugar": 7.9,
+     "sodium": 4.8
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "pickle"
+    ],
+    "calories": 623.6
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H03#0",
+   "line": "a mcchicken hold the mayo",
+   "itemRawText": "a mcchicken hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "McChicken",
+    "brandName": "McDonald's",
+    "grams": 195,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 390,
+     "protein": 14,
+     "carbs": 38,
+     "fat": 21,
+     "fiber": 1,
+     "sugar": 4,
+     "sodium": 0.6
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 332.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H04#0",
+   "line": "a jumbo jack hold the mayo",
+   "itemRawText": "a jumbo jack hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "Jumbo Jack",
+    "brandName": "Jack in the Box",
+    "grams": 216,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 520,
+     "protein": 23,
+     "carbs": 32,
+     "fat": 33,
+     "fiber": 1.9,
+     "sugar": 6,
+     "sodium": 0.7
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 462.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H07#0",
+   "line": "chick-fil-a chicken sandwich hold the pickles",
+   "itemRawText": "chick-fil-a chicken sandwich hold the pickles",
+   "soloStripClause": null,
+   "expectItemClause": "hold the pickles",
+   "winner": {
+    "foodName": "Chick-fil-A Chicken Sandwich",
+    "brandName": "Chick-fil-A",
+    "grams": 183,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 420,
+     "protein": 29,
+     "carbs": 41,
+     "fat": 18,
+     "fiber": 0.9,
+     "sugar": 6,
+     "sodium": 1.5
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "pickle"
+    ],
+    "calories": 418.6
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H08#0",
+   "line": "a whopper hold the cheese",
+   "itemRawText": "a whopper hold the cheese",
+   "soloStripClause": null,
+   "expectItemClause": "hold the cheese",
+   "winner": {
+    "foodName": "Whopper",
+    "brandName": "Burger King",
+    "grams": 270,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 670,
+     "protein": 31,
+     "carbs": 54,
+     "fat": 39,
+     "fiber": 3,
+     "sugar": 13,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier",
+    "calories": 670
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H09#0",
+   "line": "a turkey club hold the bacon",
+   "itemRawText": "a turkey club hold the bacon",
+   "soloStripClause": null,
+   "expectItemClause": "hold the bacon",
+   "winner": {
+    "foodName": "Turkey Club",
+    "brandName": "Charlie's",
+    "grams": 244,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 461.2,
+     "protein": 29,
+     "carbs": 50,
+     "fat": 15,
+     "fiber": null,
+     "sugar": 2,
+     "sodium": 1.8
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bacon"
+    ],
+    "calories": 374.6
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H10#0",
+   "line": "a blt hold the mayo",
+   "itemRawText": "a blt hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "Blt",
+    "brandName": null,
+    "grams": 200,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 470,
+     "protein": 20,
+     "carbs": 37.2,
+     "fat": 27.6,
+     "fiber": null,
+     "sugar": 6,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 412.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H11#0",
+   "line": "a cobb salad hold the egg",
+   "itemRawText": "a cobb salad hold the egg",
+   "soloStripClause": null,
+   "expectItemClause": "hold the egg",
+   "winner": {
+    "foodName": "Cobb salad",
+    "brandName": null,
+    "grams": 50,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 45.7,
+     "protein": 3.4,
+     "carbs": 1.7,
+     "fat": 2.9,
+     "fiber": 0.6,
+     "sugar": 0.6,
+     "sodium": 0.1
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "too_large_grams",
+    "calories": 45.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H12#0",
+   "line": "a cheeseburger hold the onions",
+   "itemRawText": "a cheeseburger hold the onions",
+   "soloStripClause": null,
+   "expectItemClause": "hold the onions",
+   "winner": {
+    "foodName": "Cheeseburger",
+    "brandName": null,
+    "grams": 102,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 319,
+     "protein": 14.8,
+     "carbs": 31.8,
+     "fat": 15.2,
+     "fiber": null,
+     "sugar": null,
+     "sodium": 0.5
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "onion"
+    ],
+    "calories": 313.1
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "H15#0",
+   "line": "a hot dog hold the bun",
+   "itemRawText": "a hot dog hold the bun",
+   "soloStripClause": null,
+   "expectItemClause": "hold the bun",
+   "winner": {
+    "foodName": "Hot Dog",
+    "brandName": null,
+    "grams": 56,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 138.9,
+     "protein": 7.3,
+     "carbs": 0.8,
+     "fat": 11.8,
+     "fiber": null,
+     "sugar": 0.1,
+     "sodium": 0.5
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "too_large_grams",
+    "calories": 138.9
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S01#0",
+   "line": "una big mac sin pepinillos",
+   "itemRawText": "una big mac sin pepinillos",
+   "soloStripClause": null,
+   "expectItemClause": "sin pepinillos",
+   "winner": {
+    "foodName": "Big mac",
+    "brandName": "Mcdonald’s",
+    "grams": 220,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 625,
+     "protein": 40,
+     "carbs": 47,
+     "fat": 29,
+     "fiber": 3.7,
+     "sugar": 7.9,
+     "sodium": 4.8
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "pickle"
+    ],
+    "calories": 623.6
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S02#0",
+   "line": "un mcchicken sin mayonesa",
+   "itemRawText": "un mcchicken sin mayonesa",
+   "soloStripClause": null,
+   "expectItemClause": "sin mayonesa",
+   "winner": {
+    "foodName": "McChicken",
+    "brandName": "McDonald's",
+    "grams": 195,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 390,
+     "protein": 14,
+     "carbs": 38,
+     "fat": 21,
+     "fiber": 1,
+     "sugar": 4,
+     "sodium": 0.6
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "mayo"
+    ],
+    "calories": 332.7
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S04#0",
+   "line": "un crunchwrap supreme sin crema",
+   "itemRawText": "un crunchwrap supreme sin crema",
+   "soloStripClause": null,
+   "expectItemClause": "sin crema",
+   "winner": {
+    "foodName": "Crunchwrap Supreme",
+    "brandName": "Taco Bell",
+    "grams": 265,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 530,
+     "protein": 15,
+     "carbs": 74,
+     "fat": 20,
+     "fiber": 6,
+     "sugar": 6,
+     "sodium": 1.2
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "sour cream"
+    ],
+    "calories": 467.9
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S05#0",
+   "line": "un whopper sin queso",
+   "itemRawText": "un whopper sin queso",
+   "soloStripClause": null,
+   "expectItemClause": "sin queso",
+   "winner": {
+    "foodName": "Ground Beef (85% Lean / 15% Fat)",
+    "brandName": null,
+    "grams": 28,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 60,
+     "protein": 5.2,
+     "carbs": 0,
+     "fat": 4.2,
+     "fiber": 0,
+     "sugar": 0,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier",
+    "calories": 60
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S06#0",
+   "line": "un burrito de pollo sin frijoles",
+   "itemRawText": "un burrito de pollo sin frijoles",
+   "soloStripClause": null,
+   "expectItemClause": "sin frijoles",
+   "winner": {
+    "foodName": "Puerto Rican Style Soupy Rice From Asopao De Pollo",
+    "brandName": null,
+    "grams": 240,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 194,
+     "protein": 8,
+     "carbs": 21.5,
+     "fat": 8.6,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier",
+    "calories": 194
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S07#0",
+   "line": "una hamburguesa sin pan",
+   "itemRawText": "una hamburguesa sin pan",
+   "soloStripClause": null,
+   "expectItemClause": "sin pan",
+   "winner": {
+    "foodName": "Hamburger",
+    "brandName": null,
+    "grams": 150,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 310.5,
+     "protein": 25.5,
+     "carbs": 1.5,
+     "fat": 22.5,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "bun"
+    ],
+    "calories": 190.5
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S08#0",
+   "line": "un sandwich de pavo sin mayonesa",
+   "itemRawText": "un sandwich de pavo sin mayonesa",
+   "soloStripClause": null,
+   "expectItemClause": "sin mayonesa",
+   "winner": {
+    "foodName": "Salchicha de Pavo",
+    "brandName": "San Rafael",
+    "grams": 100,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 179,
+     "protein": 12,
+     "carbs": 5,
+     "fat": 12.3,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier",
+    "calories": 179
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S09#0",
+   "line": "un hot dog sin cebolla",
+   "itemRawText": "un hot dog sin cebolla",
+   "soloStripClause": null,
+   "expectItemClause": "sin cebolla",
+   "winner": {
+    "foodName": "Hot Dog",
+    "brandName": null,
+    "grams": 56,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 134.4,
+     "protein": 8.4,
+     "carbs": 5,
+     "fat": 11.2,
+     "fiber": null,
+     "sugar": null,
+     "sodium": 0
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "onion"
+    ],
+    "calories": 128.5
+   }
+  },
+  {
+   "src": "s459-pd-rmd cold (build 9YR4B-3kkKA-hKzmYKt20)",
+   "id": "S10#0",
+   "line": "tres tacos de asada sin cebolla",
+   "itemRawText": "tres tacos de asada sin cebolla",
+   "soloStripClause": null,
+   "expectItemClause": "sin cebolla",
+   "winner": {
+    "foodName": "Carne asada tacos",
+    "brandName": null,
+    "grams": 415.5,
+    "source": "openfoodfacts",
+    "nutrition": {
+     "calories": 511.1,
+     "protein": 31.5,
+     "carbs": 52.5,
+     "fat": 22.5,
+     "fiber": 7.5,
+     "sugar": 6,
+     "sodium": 0.2
+    }
+   },
+   "parsed": {
+    "qty": 3,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "subtracted": [
+     "onion"
+    ],
+    "calories": 493.5
+   }
+  },
+  {
+   "src": "synthetic guard",
+   "id": "guard:es-alias-not-winner-side",
+   "line": "a pan pizza no bun",
+   "itemRawText": "a pan pizza no bun",
+   "soloStripClause": null,
+   "expectItemClause": "no bun",
+   "winner": {
+    "foodName": "Pan Pizza",
+    "brandName": "Pizza Hut",
+    "grams": 100,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 280,
+     "protein": 14,
+     "carbs": 28,
+     "fat": 14,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "no_carrier",
+    "calories": 280
+   }
+  },
+  {
+   "src": "synthetic guard",
+   "id": "guard:sin-already-removed-sibling",
+   "line": "un whopper sin mayonesa",
+   "itemRawText": "un whopper sin mayonesa",
+   "soloStripClause": null,
+   "expectItemClause": "sin mayonesa",
+   "winner": {
+    "foodName": "Whopper Sandwich w/o Mayo",
+    "brandName": "Burger King",
+    "grams": 250,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 580,
+     "protein": 29,
+     "carbs": 58,
+     "fat": 29,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed",
+    "calories": 580
+   }
+  },
+  {
+   "src": "synthetic guard",
+   "id": "guard:hold-the-already-removed-sibling",
+   "line": "a whopper hold the mayo",
+   "itemRawText": "a whopper hold the mayo",
+   "soloStripClause": null,
+   "expectItemClause": "hold the mayo",
+   "winner": {
+    "foodName": "Whopper Sandwich w/o Mayo",
+    "brandName": "Burger King",
+    "grams": 250,
+    "source": "fatsecret",
+    "nutrition": {
+     "calories": 580,
+     "protein": 29,
+     "carbs": 58,
+     "fat": 29,
+     "fiber": null,
+     "sugar": null,
+     "sodium": null
+    }
+   },
+   "parsed": {
+    "qty": 1,
+    "multiplier": 1,
+    "unit": null
+   },
+   "expect": {
+    "skipped": "already_removed",
+    "calories": 580
+   }
+  }
+ ],
+ "detectOnly": [
+  [
+   "burger king original chicken sandwich hold the mayo",
+   "hold the mayo"
+  ],
+  [
+   "un whopper sin mayonesa",
+   "sin mayonesa"
+  ],
+  [
+   "un taco de pastor sin cebolla",
+   "sin cebolla"
+  ],
+  [
+   "una big mac sin salsa",
+   null
+  ],
+  [
+   "un frappuccino de caramelo grande sin crema batida",
+   "sin crema batida"
+  ],
+  [
+   "trader joes hold the cone",
+   null
+  ],
+  [
+   "cone hold joe the trader",
+   null
+  ],
+  [
+   "leche de almendra sin azúcar",
+   null
+  ],
+  [
+   "un yogurt griego sin grasa",
+   null
+  ],
+  [
+   "una coca cola sin azúcar",
+   null
+  ],
+  [
+   "un café americano sin azúcar",
+   null
+  ],
+  [
+   "agua mineral sin gas",
+   null
+  ],
+  [
+   "pan sin gluten",
+   null
+  ],
+  [
+   "leche sin lactosa",
+   null
+  ],
+  [
+   "pollo sin hueso",
+   null
+  ],
+  [
+   "pollo sin piel",
+   null
+  ],
+  [
+   "uvas sin semilla",
+   null
+  ],
+  [
+   "cerveza sin alcohol",
+   null
+  ],
+  [
+   "papas sin sal",
+   null
+  ],
+  [
+   "un burrito sin crema",
+   "sin crema"
+  ],
+  [
+   "un burrito sin frijoles",
+   "sin frijoles"
+  ],
+  [
+   "una hamburguesa sin pan",
+   "sin pan"
+  ],
+  [
+   "un hot dog sin pan",
+   "sin pan"
+  ],
+  [
+   "a big mac hold the pickles",
+   "hold the pickles"
+  ],
+  [
+   "a whopper hold the onions",
+   "hold the onions"
+  ],
+  [
+   "a whopper hold the onions and pickles",
+   null
+  ],
+  [
+   "a burger hold the mayo or pickles",
+   "hold the mayo or pickles"
+  ],
+  [
+   "a coffee hold the sugar",
+   null
+  ],
+  [
+   "a burger, hold the mayo",
+   "hold the mayo"
+  ],
+  [
+   "burger w o cheese",
+   null
+  ],
+  [
+   "burger w/o cheese",
+   "w/o cheese"
+  ],
+  [
+   "a cheeseburger sin queso cheddar",
+   "sin queso cheddar"
+  ],
+  [
+   "un sandwich sin la mayonesa",
+   "sin la mayonesa"
+  ],
+  [
+   "nachos sin crema agria",
+   "sin crema agria"
+  ],
+  [
+   "un mcmuffin sin huevo",
+   "sin huevo"
+  ],
+  [
+   "chili sin carne",
+   null
+  ],
+  [
+   "café sin crema",
+   "sin crema"
+  ],
+  [
+   "a latte hold the whip",
+   "hold the whip"
+  ]
+ ]
+}
