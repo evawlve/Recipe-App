@@ -8,15 +8,22 @@
  *
  * Skip reasons, one per cause: `unmapped`, `not_in_table`, `no_carrier`,
  * `too_large_kcal`, `too_large_grams`, `qty_out_of_range`, `already_removed`
- * (s458 RM-a: the winner's own name already lacks the part). A multi-part clause may
+ * (s458 RM-a: the winner's own name already lacks the part), `not_in_panel` (s459 MF-a: the part's
+ * carbs, fat or protein exceed the billed panel's, so the record cannot contain it). A multi-part clause may
  * partially subtract: success when >= 1 part subtracted, `partSkips` names the rest;
  * `{ skipped }` only when every part skips (the first part's reason).
  *
  * s458 RM-b: a CHAIN TOPPING (CHAIN_TOPPINGS) also passes the carrier test when the
  * WINNER's `brandName` passes `isRestaurantChain()`: a menu-item name (`McChicken`,
  * `Jumbo Jack`) does not list its toppings, and the user typing `no mayo` is the
- * evidence. Never cheese, bacon, bun or egg (a Whopper has no cheese): those still
- * need the record's name or a carrier. `already_removed` runs first, unchanged.
+ * evidence. Never cheese, bacon or egg (a Whopper has no cheese): those still
+ * need the record's name or a carrier (the bun: s459 MF-a below). `already_removed` runs first, unchanged.
+ *
+ * s459 MF-a: `bun` passes the carrier test on a chain winner too, except a chain BREAD_FORM (biscuit, McMuffin, croissant),
+ * and never on a winner whose name is a BUNLESS_FORM (a wrap, salad, bowl, nuggets, pocket, pizza ..., chain or not): the
+ * user typing a bun removal (`no bun`, `bunless`, `lettuce wrap`, `protein style`) is the evidence that a Whopper or a
+ * McDouble had one. `already_removed` also reads a bun-replacing BUILD in the winner's name (`Protein Style`,
+ * `Lettuce Wrap`, `Unwich`, `Bun replaced`), so a published variant is never subtracted twice.
  */
 
 import { words } from './trailing-quantity-fold';
@@ -31,7 +38,8 @@ export type SkipReason =
   | 'too_large_kcal'
   | 'too_large_grams'
   | 'qty_out_of_range'
-  | 'already_removed';
+  | 'already_removed'
+  | 'not_in_panel';
 
 export type BilledNutrition = {
   calories: number;
@@ -93,8 +101,16 @@ const LEADING_DETERMINERS = new Set(['the', 'any', 'my', 'a', 'an']);
 const MAX_HEAD_QTY = 10;
 const MAX_KCAL_SHARE = 0.6;
 const MAX_GRAMS_SHARE = 0.6;
+/** s459 MF-a: grams of rounding slack per macro before a part "does not fit" the billed panel. */
+const PANEL_SLACK_G = 0.5;
 /** s458 RM-b: the toppings a restaurant-chain winner carries without naming them. */
 const CHAIN_TOPPINGS = new Set(['mayo', 'sour cream', 'spread', 'lettuce', 'tomato', 'onion', 'pickle']);
+/** s459 MF-a: a winner of one of these forms (chain or not) has no hamburger bun to remove. */
+const BUNLESS_FORM = /\b(?:wraps?|salads?|bowls?|nuggets?|tenders?|strips?|fries|fry|tacos?|burritos?|quesadillas?|wings?|bites|popcorn|soups?|shakes?|platters?|plates?|sides?|pretzels?|hash browns?|pancakes?|waffles?|pizzas?|pockets?|casseroles?|nachos|crunchwraps?|chalupas?|gorditas?|corn dogs?)\b/;
+/** s459 MF-a: a chain winner on another bread carries no hamburger BUN (a non-chain carrier name, `sausage`, still does). */
+const BREAD_FORM = /\b(?:bagels?|biscuits?|muffins?|mcmuffins?|mcgriddles?|croissants?|croissan'?wich(?:es)?|toast)\b/;
+/** s459 MF-a: a winner whose name says the bun was replaced already lacks it. */
+const BUN_BUILT_OUT = /\b(?:protein style|lettuce wrap(?:s|ped)?|lettuce wrapped|unwich|bun replaced|lettuce buns?|wrapped in lettuce)\b/;
 
 const r1 = (x: number) => Number(x.toFixed(1));
 
@@ -111,6 +127,7 @@ function names(text: string, term: string): boolean {
 const NAME_NEG = [' no ', ' without ', ' minus ', ' w o ', ' hold the ', ' sans '];
 function namesNegated(foodName: string, key: string): boolean {
   const hay = padded(foodName);
+  if (key === 'bun' && BUN_BUILT_OUT.test(hay)) return true;
   const forms = [key, ...Object.keys(ALIASES).filter(a => ALIASES[a] === key)];
   return forms.some(f => NAME_NEG.some(n => hay.includes(`${n}${f} `) || hay.includes(`${n}${f}s `))
     || hay.includes(` ${f} free `) || hay.includes(` ${f}less `));
@@ -155,7 +172,10 @@ export function applyComponentSubtraction(input: SubtractionInput): SubtractionR
     const namesComponent =
       names(foodName, key) || Object.keys(ALIASES).some(a => ALIASES[a] === key && names(foodName, a));
     if (namesNegated(foodName, key)) { skip(key, 'already_removed'); continue; }
-    const namesCarrier = row.carriers.some(c => names(foodName, c)) || (chainWinner && CHAIN_TOPPINGS.has(key));
+    // s459 MF-a: a bunless form (`Cheeseburger Protein Pockets`, `Pan Pizza`, a wrap) never loses a bun, chain or not.
+    if (key === 'bun' && BUNLESS_FORM.test(padded(foodName))) { skip(key, 'no_carrier'); continue; }
+    const namesCarrier = row.carriers.some(c => names(foodName, c))
+      || (chainWinner && (CHAIN_TOPPINGS.has(key) || (key === 'bun' && !BREAD_FORM.test(padded(foodName)))));
     if (!namesComponent && !namesCarrier) { skip(key, 'no_carrier'); continue; }
 
     const compGrams = row.grams * headQty;
@@ -163,6 +183,10 @@ export function applyComponentSubtraction(input: SubtractionInput): SubtractionR
     const f = compGrams / 100;
     const d = row.per100g;
     if (d.calories * f > MAX_KCAL_SHARE * bill.calories) { skip(key, 'too_large_kcal'); continue; }
+    // s459 MF-a: the billed panel must be able to hold the part (a 0 g-carb `Turkey Burger` patty record has no bun to remove).
+    if (d.carbs * f > bill.carbs + PANEL_SLACK_G || d.fat * f > bill.fat + PANEL_SLACK_G || d.protein * f > bill.protein + PANEL_SLACK_G) {
+      skip(key, 'not_in_panel'); continue;
+    }
 
     const sub = (billed: number, delta: number) => Math.max(0, r1(billed - delta));
     bill.calories = sub(bill.calories, d.calories * f);

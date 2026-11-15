@@ -665,10 +665,8 @@
     "unit": null
    },
    "expect": {
-    "subtracted": [
-     "bun"
-    ],
-    "calories": 190.5
+    "skipped": "not_in_panel",
+    "calories": 310.5
    }
   },
   {
