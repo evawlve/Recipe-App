@@ -26,9 +26,9 @@
  * tgi fridays, white castle, nathan's, cinnabon, texas roadhouse, buffalo wild wings, on the border, dutch bros,
  * jamba, smoothie king, auntie anne's, checkers, waffle house. The entries above this comment's s459 block
  * were not re-read on this rule (taco bell, olive garden, chick-fil-a, arby's, sonic and wendy's each have such
- * rows). Bare `culver` is not listed (`Culver Duck`). `jersey mike's` waits on a fill guard: a full-day line
- * led by a sub fills olive oil, avocado and rice. Membership gates four things: this fill, the self-correction
- * brand carry, the `restaurant_chain` brand re-assert, and the chain-topping subtraction (RM-b, and RM-d's
+ * rows). Bare `culver` is not listed (`Culver Duck`). `jersey mike's` waited on the fill guard below (a
+ * full-day line led by a sub filled olive oil, avocado and rice) and joined in s459 row JM. Membership gates four
+ * things: this fill, the self-correction brand carry, the `restaurant_chain` brand re-assert, and the chain-topping subtraction (RM-b, and RM-d's
  * `hold the` / `sin`). A bare initialism (`dq`, `bk`) is not listed.
  *
  * s459 row FG, the measured-line guard: a line that measures ANY later food by weight or volume (`4 oz ground beef`,
@@ -67,6 +67,10 @@ export const RESTAURANT_CHAINS: readonly string[] = [
   "church's chicken", 'sweetgreen', 'noodles and company', 'noodles & company', 'longhorn steakhouse',
   "jason's deli", "mcalister's", 'potbelly', 'first watch', 'golden corral', 'crumbl', "moe's southwest",
   "marco's pizza",
+  // s459 row JM: Jersey Mike's. OffFood holds 1,723 menu-form rows (`Jersey Mike's Subs, <item>`) and 3 UPC
+  // `Hot Chopped Pepper Relish` rows (read 2026-11-15); FatSecret holds menu sides only. The bare `jersey mike`
+  // covers the singular spelling (the trailing-s rule strips the INPUT side only).
+  "jersey mike's", 'jersey mike',
 ];
 
 // Apostrophe characters dropped before comparison: ' U+2018 U+2019 and backtick (iOS types U+2019).

@@ -4,8 +4,8 @@ type It = { rawText: string; brand?: string };
 const it = (rawText: string, brand = ''): It => ({ rawText, brand });
 
 describe('restaurant-brand-fill', () => {
-  test('the list is the 33 sim entries plus four, minus the four grocery-chain spellings, plus s459 row RC (26)', () => {
-    expect(RESTAURANT_CHAINS).toHaveLength(59);
+  test('the list is the 33 sim entries plus four, minus the four grocery-chain spellings, plus s459 row RC (26), plus s459 row JM (2)', () => {
+    expect(RESTAURANT_CHAINS).toHaveLength(61);
     expect(RESTAURANT_CHAINS).toEqual(expect.arrayContaining(["raising cane's", 'in-n-out', "portillo's", 'cava']));
     for (const grocery of ['cracker barrel', 'starbucks', 'dunkin', "dunkin'", 'panera']) {
       expect(RESTAURANT_CHAINS).not.toContain(grocery);
@@ -72,17 +72,43 @@ describe('restaurant-brand-fill', () => {
   });
 
   // Not listed: a packaged retail product under the chain's name (OffFood, 2026-11-15), another company under the
-  // chain's spelling, a grocery brand sharing the chain's first word, a bare initialism, and jersey mike's (fill guard).
+  // chain's spelling, a grocery brand sharing the chain's first word and a bare initialism.
   test.each([
     ['ihop'], ['Krispy Kreme'], ['Tim Hortons'], ['The Cheesecake Factory'], ["P.F. Chang's"], ['Red Lobster'],
     ['TGI Fridays'], ['White Castle'], ["Nathan's Famous"], ['Cinnabon'], ['Texas Roadhouse'], ['Buffalo Wild Wings'],
     ['On The Border'], ['Dutch Bros'], ['Jamba'], ['Smoothie King'], ["Auntie Anne's"], ['Checkers'], ['Waffle House'],
     ['Culver Duck'], ['Denny & Sons'], ['Monty Bojangles'], ['Violet Crumble'], ['crumble'], ['longhorn'], ["moe's"],
-    ['dq'], ['bk'], ["Jersey Mike's"], ['jersey mikes subs'],
+    ['dq'], ['bk'], ['Jersey'], ['Mike'], ['Jersey Mikey'],
     ['Whataburger'], ["Steak 'N Shake"], ["Denny's"], ['Dennys'], ['Red Robin'], ['Del Taco'], ['Bojangles'],
     ["Zaxby's"], ['Dairy Queen'], ["Papa John's"], ["Papa John's Salads & Produce"],
   ])('s459 RC: %j is not a chain', (b) => {
     expect(isRestaurantChain(b)).toBe(false);
+  });
+
+  // s459 row JM: every brandName spelling OffFood / FatSecretFood / FoodMapping / the segmenter hold (2026-11-15).
+  test.each([
+    ["Jersey Mike's"], ['Jersey Mike’s'], ['Jersey mike’s'], ["Jersey Mike's Subs"], ['Jersey Mikes'], ['jersey mikes subs'],
+    ['jersey mike'], ['JERSEY MIKE’S SUBS'],
+  ])('s459 JM: %j is a chain', (b) => {
+    expect(isRestaurantChain(b)).toBe(true);
+  });
+
+  // The FG guard, not the list, keeps a home log unbranded: the 07-28 organic SegmentationCache row that held the
+  // chain out of #682 (`a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, ...`) fills nothing.
+  test('s459 JM: a full-day line led by a Jersey Mike\'s sub stays unfilled (FG guard)', () => {
+    const input = [
+      it('a jersey mikes giant club sub', 'Jersey Mikes'), it('12 oz coke', 'Coca-Cola'), it('1 tbsp olive oil'),
+      it('half an avocado'), it('3 slices of pepperoni pizza'), it('siggis skyr', "Siggi's"),
+    ];
+    const r = fillRestaurantBrand(input);
+    expect(r.fills).toBe(0);
+    expect(r.items).toBe(input);
+  });
+
+  test('s459 JM: a Jersey Mike\'s order fills its unbranded sides', () => {
+    const r = fillRestaurantBrand([it('a jersey mikes giant club sub', 'Jersey Mikes'), it('a bag of chips'), it('a cookie')]);
+    expect(r.fills).toBe(2);
+    expect(r.items.map(i => i.brand)).toEqual(['Jersey Mikes', 'Jersey Mikes', 'Jersey Mikes']);
   });
 
   test('s459 RC: a newly listed chain fills its later unbranded items', () => {
