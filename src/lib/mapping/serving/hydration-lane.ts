@@ -30,7 +30,7 @@ import { insertAiServing } from '../ai-backfill';
 import { backfillOnDemand, isDiscreteItem } from '../serving-backfill';
 import { classifyUnit } from '../unit-type';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from '../ambiguous-unit-backfill';
-import { isEstimableUnknownUnit } from '../../ai/ambiguous-serving-estimator';
+import { isEstimableUnknownUnit, scoopMaxGrams } from '../../ai/ambiguous-serving-estimator';
 import { extractPrepModifier } from '../preemptive-backfill';
 import { requestAiNutrition, createAiNutritionBudget, type AiNutritionBudget } from '../ai-nutrition-backfill';
 import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } from '../config';
@@ -1042,6 +1042,8 @@ async function dispatchServing(
                 matchedCapUnit = token;
             }
         }
+        // A scoop of food is not a scoop of powder — same cap as the estimator (scoopMaxGrams).
+        if (matchedCapUnit) maxPerUnit = scoopMaxGrams(matchedCapUnit, candidate.name) ?? maxPerUnit;
 
         if (maxPerUnit) {
             const perUnitGrams = finalGrams / qty;
@@ -2048,6 +2050,8 @@ async function buildFdcResult(
                 maxPerUnit = cap; matchedCapUnit = token;
             }
         }
+        // A scoop of food is not a scoop of powder — same cap as the estimator (scoopMaxGrams).
+        if (matchedCapUnit) maxPerUnit = scoopMaxGrams(matchedCapUnit, candidate.name) ?? maxPerUnit;
         if (maxPerUnit) {
             const perUnitGrams = grams / qty;
             if (perUnitGrams > maxPerUnit) {
