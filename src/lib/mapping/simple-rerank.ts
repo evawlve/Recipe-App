@@ -9,7 +9,7 @@ import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
 import { COVERAGE_SPELLING_FOLD, detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
 import { DRY_GRAIN_PANEL_MIN_KCAL_PER_100G } from './estimate-state-guard';
-import { assessRankTimePlausibility } from './macro-plausibility';
+import { assessRankTimePlausibility, nonAlcoholicDrinkReason } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
 import { applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair } from './brand-spelling-repair';
@@ -2209,6 +2209,8 @@ export function simpleRerank(
     const isPlausibilityFloorHit = (c: RerankCandidate): boolean => {
         if (!plausibilityPartitionActive) return false;
         if (isDenylistedOffRecord(c.id)) return true;
+        // s459 AL-a: a non-alcoholic record for an alcoholic-drink query (name marker, or a panel with no alcohol share).
+        if (nonAlcoholicDrinkReason(query, c.name, c.brandName, c.nutrition?.per100g ? c.nutrition : null, rawLine) != null) return true;
         // No per-100g nutrition → nothing to assess → not flagged.
         if (!c.nutrition?.per100g) return false;
         return assessRankTimePlausibility(query, c.name, c.nutrition, rawLine).floorHit;
