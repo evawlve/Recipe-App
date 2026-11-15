@@ -51,6 +51,20 @@ const R_SPLIT = [
 ];
 const P_TEXT = 'a banquet chicken pot pie and an apple';
 const P_SPLIT = [seg('a banquet chicken pot pie', 'chicken pot pie', 'banquet'), seg('an apple', 'apple')];
+// s459 FG: the live R07 line (deploy 34) - a measured later item makes the line a home log; no fill.
+const FG_TEXT = 'taco bell crunchy taco shells, 4 oz ground beef and shredded cheddar';
+const FG_SPLIT = [
+  seg('taco bell crunchy taco shells', 'crunchy taco shells', 'taco bell'),
+  seg('4 oz ground beef', 'ground beef'),
+  seg('shredded cheddar', 'shredded cheddar'),
+];
+// rf-fg: a drink's cup size is not a home measure - the chain order's sides keep the chain, the drink stays unbranded.
+const FGD_TEXT = 'mcdonalds big mac, medium fries and a 16 oz coke';
+const FGD_SPLIT = [
+  seg('mcdonalds big mac', 'big mac', 'mcdonalds'),
+  seg('medium fries', 'fries'),
+  seg('16 oz coke', 'coke'),
+];
 const NEG_TEXT = 'a chick-fil-a sandwich, no pickles';
 const NEG_SPLIT = [seg('a chick-fil-a sandwich', 'sandwich', 'chick-fil-a'), seg('no pickles', 'pickles')];
 
@@ -153,5 +167,22 @@ describe('/api/nlp/parse restaurant brand fill', () => {
     expect(response.status).toBe(200);
     expect(mapped()).toEqual([{ raw: 'a chick-fil-a sandwich', brand: 'chick-fil-a' }]);
     expect(fillLines()).toHaveLength(0);
+  });
+
+  test('s459 FG: a measured later item (4 oz ground beef) -> no item after item 1 is branded, 0 fills', async () => {
+    cacheHit(FG_TEXT, FG_SPLIT);
+    const response = await POST(parseRequest({ text: FG_TEXT }));
+    expect(response.status).toBe(200);
+    expect(mapped().map(m => m.brand)).toEqual(['taco bell', undefined, undefined]);
+    expect(fillLines()).toHaveLength(0);
+  });
+
+  test('s459 FG: a sized drink (16 oz coke) does not block - the fries keep mcdonalds, the coke is not filled', async () => {
+    cacheHit(FGD_TEXT, FGD_SPLIT);
+    const response = await POST(parseRequest({ text: FGD_TEXT }));
+    expect(response.status).toBe(200);
+    expect(mapped().map(m => m.brand)).toEqual(['mcdonalds', 'mcdonalds', undefined]);
+    expect(fillLines()).toHaveLength(1);
+    expect(fillLines()[0][1]).toEqual({ count: 1 });
   });
 });
