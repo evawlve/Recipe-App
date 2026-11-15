@@ -1,4 +1,4 @@
-import { RESTAURANT_CHAINS, isRestaurantChain, fillRestaurantBrand } from '../restaurant-brand-fill';
+import { RESTAURANT_CHAINS, isRestaurantChain, fillRestaurantBrand, measuredAs } from '../restaurant-brand-fill';
 
 type It = { rawText: string; brand?: string };
 const it = (rawText: string, brand = ''): It => ({ rawText, brand });
@@ -110,5 +110,72 @@ describe('restaurant-brand-fill', () => {
     const r = fillRestaurantBrand(input);
     expect(input).toEqual(snapshot);
     expect(r.items[1]).not.toBe(input[1]);
+  });
+
+  // s459 row FG: a line that measures any later food by weight or volume is a home log, not a restaurant order.
+  // Members: the live cold draws of s459 pd-fg F01/F03/F05/F07/F08, pd-rc P19/P21 and rf-rc R07 (deploy 34-36).
+  test.each([
+    [['taco bell crunchy taco shells', 'taco bell'], ['4 oz ground beef'], ['shredded cheddar']],
+    [['subway 6 inch turkey sub', 'subway'], ['1 tbsp olive oil'], ['1 cup rice'], ['2 tsp sugar']],
+    [['wendys spicy chicken sandwich', 'wendys'], ['1 cup of grapes'], ['2 tbsp peanut butter']],
+    [['chick-fil-a 8 count nuggets', 'chick-fil-a'], ['2 cups of milk'], ['a banana']],
+    [['taco bell crunchwrap supreme', 'taco bell'], ['a banana'], ['8 oz of milk']],
+    [['a subway footlong club', 'Subway'], ['12 oz coke', 'Coca-Cola'], ['1 tbsp olive oil'], ['half an avocado'],
+      ['3 slices of pepperoni pizza'], ["siggis skyr", "Siggi's"]],
+    [['a burger', 'mcdonalds'], ['100g chicken']],
+    [['taco bell crunchwrap supreme', 'taco bell'], ['a banana'], ['16 oz water']],
+    [['wendys baconator', 'wendys'], ['a banana'], ['2 tbsp coffee creamer']],
+    [['a burger', 'mcdonalds'], ['2 cucharadas de crema de cacahuate']],
+  ])('s459 FG: a later measured item -> 0 fills on the whole line (%j ...)', (...rows: string[][]) => {
+    const input = rows.map(([r, b]) => it(r, b ?? ''));
+    const r = fillRestaurantBrand(input);
+    expect(r.fills).toBe(0);
+    expect(r.items).toBe(input);
+  });
+
+  // Restaurant orders keep the fill: counts, sizes, servings, fractions, an `N oz` drink inside a size phrase, and a
+  // measured item 1 (the guard reads later items only). Members: pd-fg F10-F13, F16, F20; s192's two organic fill rows.
+  test.each([
+    [['mcdonalds big mac and fries', 'mcdonalds'], ['a coke']],
+    [['chick-fil-a spicy chicken sandwich', 'chick-fil-a'], ['waffle fries'], ['a large lemonade']],
+    [['panda express orange chicken', 'panda express'], ['chow mein'], ['a serving of super greens']],
+    [['half a serving of panda express chow mein', 'panda express'], ['a serving of orange chicken'],
+      ['half a serving of beijing beef']],
+    [['popeyes mashed potatoes', 'popeyes'], ['cajun gravy']],
+    [['chipotle chips', 'Chipotle'], ['guac']],
+    [['outback 8 oz sirloin', 'outback'], ['a baked potato'], ['steamed broccoli']],
+    [['chick-fil-a 8 count nuggets', 'chick-fil-a'], ['a 20 oz lemonade'], ['3 slices of cheesecake']],
+  ])('s459 FG: a restaurant order keeps its fill (%j ...)', (...rows: string[][]) => {
+    const r = fillRestaurantBrand(rows.map(([t, b]) => it(t, b ?? '')));
+    expect(r.fills).toBe(rows.length - 1);
+    expect(r.items.every(x => x.brand === rows[0][1])).toBe(true);
+  });
+
+  // A drink's cup size is how a chain sells a drink, not a home measure: the line's sides keep the fill, and the
+  // measured drink itself stays unbranded (filled, `16oz latte` billed "Chick-fil-A Icedream Cup"). Members: pd-fg F14,
+  // rf-fg P01/P03/P06 (live, deploy 36).
+  test.each([
+    [['mcdonalds big mac', 'mcdonalds'], ['medium fries'], ['16 oz coke']],
+    [['sonic cheeseburger', 'sonic'], ['tots'], ['32 oz diet coke']],
+    [['taco bell crunchwrap supreme', 'taco bell'], ['cinnamon twists'], ['20 oz mountain dew']],
+    [['chick-fil-a chicken biscuit', 'chick-fil-a'], ['hash browns'], ['16oz latte']],
+    [['mcdonalds egg mcmuffin', 'mcdonalds'], ['a hash brown'], ['a cup of coffee']],
+  ])('s459 FG: a sized drink neither blocks nor takes the fill (%j ...)', (...rows: string[][]) => {
+    const r = fillRestaurantBrand(rows.map(([t, b]) => it(t, b ?? '')));
+    expect(r.fills).toBe(1);
+    expect(r.items.map(x => x.brand)).toEqual([rows[0][1], rows[0][1], '']);
+  });
+
+  test.each([
+    ['4 oz ground beef', 'food'], ['1 tbsp olive oil', 'food'], ['1 cup rice', 'food'], ['2 tsp sugar', 'food'],
+    ['100g chicken', 'food'], ['45 mL of soy sauce', 'food'], ['8 oz of milk', 'food'], ['2 cups of milk', 'food'],
+    ['16 oz water', 'food'], ['12 oz orange juice', 'food'], ['2 tbsp coffee creamer', 'food'], ['1 tsp instant coffee', 'food'],
+    ['16oz sweet tea', 'drink'], ['a cup of coffee', 'drink'], ['16 oz coke', 'drink'], ['32 oz diet coke', 'drink'],
+    ['20 oz mountain dew', 'drink'], ['16oz latte', 'drink'], ['500 ml sprite', 'drink'],
+    ['half an avocado', null], ['3 slices of pepperoni pizza', null], ['a serving of orange chicken', null],
+    ['medium fries', null], ['8 count nuggets', null], ['a 20 oz lemonade', null], ['shredded cheddar', null],
+    ['', null],
+  ])('s459 FG: measuredAs(%j) is %s', (t, want) => {
+    expect(measuredAs(t as string)).toBe(want);
   });
 });

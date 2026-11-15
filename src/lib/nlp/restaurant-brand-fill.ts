@@ -30,7 +30,30 @@
  * led by a sub fills olive oil, avocado and rice. Membership gates four things: this fill, the self-correction
  * brand carry, the `restaurant_chain` brand re-assert, and the chain-topping subtraction (RM-b, and RM-d's
  * `hold the` / `sin`). A bare initialism (`dq`, `bk`) is not listed.
+ *
+ * s459 row FG, the measured-line guard: a line that measures ANY later food by weight or volume (`4 oz ground beef`,
+ * `1 tbsp olive oil`, `1 cup rice`, `8 oz of milk`) is a home log, not a restaurant order, and gets no fill at all.
+ * Chain sides are ordered by count or size (`medium fries`, `8 count`, `a serving of`), never by the tablespoon. Without
+ * it, `taco bell crunchy taco shells, 4 oz ground beef and shredded cheddar` billed an AI-minted "Taco Bell Ground Beef"
+ * and "Taco Bell Cheddar Crisps", and a Subway line billed `1 tbsp olive oil` as "Subway, Avocado". Line-level, not
+ * per-item: an unmeasured home food beside a measured one (`a banana` before `8 oz of milk`) is filled too otherwise
+ * (it billed "Taco Bell, Breakfast Soft Taco"). The measure is `parseIngredientLine()`'s own unit, classed by
+ * `normalizeUnitToken()`: `mass` or `volume`; a count unit (`slice`, `serving`, `medium`) is not a measure. Item 1 is
+ * not read (a chain steak is weighed: `outback 8 oz sirloin`).
+ * A measured DRINK neither blocks nor fills: a chain sells a drink by its cup size (`16 oz coke`, `32 oz diet coke`,
+ * `16oz latte`, `a cup of coffee`: an item whose parsed name `resolveVolumeGrams()` classes `beverage`), so the line's
+ * sides keep the chain (`mcdonalds big mac, medium fries and a 16 oz coke` keeps "McDonald's Fries, Medium"), while the
+ * drink itself maps unbranded (filled, `16 oz coke` billed an AI-minted "McDonald's Coke" and `16oz latte` beside a
+ * Chick-fil-A biscuit billed "Chick-fil-A Icedream Cup" 521.6 kcal). Milk, water and juice class `liquid` and still
+ * block; a spoon always blocks (`2 tbsp coffee creamer`). Organic SegmentationCache rows this changes: 0 of 457
+ * (2026-11-15); the 2 rows the fill fires on keep it. Known cost: a measured chain item after item 1 (`a 12 oz ribeye`
+ * after a bloomin onion) loses the brand, and a home food whose line's only measure is a drink (`taco bell
+ * crunchwrap supreme, a banana and 16 oz coffee`) is still filled, as it is today.
  */
+
+import { parseIngredientLine } from '../parse/ingredient-line';
+import { normalizeUnitToken } from '../parse/unit';
+import { resolveVolumeGrams } from '../units/volume-density';
 
 export const RESTAURANT_CHAINS: readonly string[] = [
   'pizza hut', 'dominos', "domino's", 'mcdonald', "mcdonald's", 'burger king', 'wendy', "wendy's",
@@ -65,16 +88,35 @@ export function isRestaurantChain(brand: string): boolean {
   return false;
 }
 
-export function fillRestaurantBrand<T extends { brand?: string }>(
+/**
+ * s459 FG: how an item states its own amount - `food` (a weight or volume: `4 oz`, `1 tbsp`, `1 cup`, `100g`),
+ * `drink` (a drink's cup size: `16 oz coke`, `a cup of coffee`; a spoon is never a drink's size), or null (a count,
+ * a size word, none). See the header.
+ */
+export function measuredAs(rawText: string | undefined): 'food' | 'drink' | null {
+  if (!rawText?.trim()) return null;
+  const parsed = parseIngredientLine(rawText);
+  if (!parsed?.unit) return null;
+  const kind = normalizeUnitToken(parsed.unit).kind;
+  if (kind !== 'mass' && kind !== 'volume') return null;
+  if (parsed.unit === 'tbsp' || parsed.unit === 'tsp') return 'food';
+  return resolveVolumeGrams(parsed.name).volumeClass === 'beverage' ? 'drink' : 'food';
+}
+
+export function fillRestaurantBrand<T extends { brand?: string; rawText?: string }>(
   items: T[],
 ): { items: T[]; fills: number } {
   const first = items[0]?.brand;
   if (items.length < 2 || !first || !isRestaurantChain(first)) {
     return { items, fills: 0 };
   }
+  const measures = items.map(it => measuredAs(it.rawText));
+  if (measures.slice(1).includes('food')) {
+    return { items, fills: 0 };
+  }
   let fills = 0;
   const out = items.map((it, i) => {
-    if (i === 0 || (it.brand ?? '').trim() !== '') return it;
+    if (i === 0 || (it.brand ?? '').trim() !== '' || measures[i] === 'drink') return it;
     fills++;
     return { ...it, brand: first };
   });
