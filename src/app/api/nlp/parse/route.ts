@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
-    const { dropNegatedParts, stripSoloRemoval, itemRemovalClause } = await import('@/lib/nlp/negated-part-drop');
+    const { dropNegatedParts, stripSoloRemoval, itemRemovalClause, bunBuildClause } = await import('@/lib/nlp/negated-part-drop');
     const { foldModifierStutter } = await import('@/lib/nlp/modifier-stutter-fold');
     const { dropDishParts, readMadeWithHeads } = await import('@/lib/nlp/dish-part-drop');
     const { dropMeasuredRecipeHead } = await import('@/lib/nlp/measured-recipe-head-drop');
@@ -807,7 +807,8 @@ export async function POST(req: NextRequest) {
         // s447a: solo-path removal clause -> subtract ONE fixed portion of a CARRIED generic component.
         // Absent unless the dish carries it; `foodName`, `foodId`, `grams` are untouched.
         let sub: Extract<ReturnType<typeof applyComponentSubtraction>, { adjustments: unknown }> | null = null;
-        const itemClause = soloRemovedClause ? null : (itemRemovalClause(rawText)?.clause ?? null);
+        // s459 MF-a: a bun-replacing build (`lettuce wrap`, `bunless`, `protein style`) bills as `no bun`; the mapper input is unchanged.
+        const itemClause = soloRemovedClause ? null : (itemRemovalClause(rawText)?.clause ?? bunBuildClause(rawText)?.clause ?? null);
         const removalClause = soloRemovedClause ?? itemClause;
         if (removalClause) {
           const r = applyComponentSubtraction({

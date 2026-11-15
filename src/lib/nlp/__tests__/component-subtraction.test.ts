@@ -95,15 +95,21 @@ describe('applyComponentSubtraction', () => {
       .toEqual({ skipped: 'qty_out_of_range' });
   });
 
-  test('every field clamps at 0', () => {
+  // s459 MF-a: carbs / fat / protein can no longer go below the part (not_in_panel); fiber, sugar and sodium still clamp.
+  test('fiber, sugar and sodium clamp at 0', () => {
     const r = applyComponentSubtraction(base({
-      nutrition: bill({ protein: 1, carbs: 0, fat: 1, fiber: 0, sugar: 0, sodium: 0 }),
+      nutrition: bill({ fiber: 0, sugar: 0, sodium: 0 }),
     }));
     if (!('adjustments' in r)) throw new Error('skipped');
-    expect(r.nutrition.protein).toBe(0);
-    expect(r.nutrition.fat).toBe(0);
-    expect(r.nutrition.carbs).toBe(0);
+    expect(r.nutrition.fiber).toBe(0);
+    expect(r.nutrition.sugar).toBe(0);
     expect(r.nutrition.sodium).toBe(0);
+  });
+
+  test('not_in_panel: a part whose carbs, fat or protein exceed the billed panel', () => {
+    expect(applyComponentSubtraction(base({
+      nutrition: bill({ protein: 1, carbs: 0, fat: 1 }),
+    }))).toEqual({ skipped: 'not_in_panel' });
   });
 
   test('no_carrier: a waffle without syrup on a 180 kcal Waffles winner', () => {
@@ -123,7 +129,7 @@ describe('applyComponentSubtraction', () => {
   test('a winner that names the component itself passes the gate with no carrier', () => {
     const r = applyComponentSubtraction(base({
       head: 'a waffle', foodName: 'Waffle with Syrup', clause: 'without syrup', grams: 150,
-      nutrition: bill({ calories: 400 }),
+      nutrition: bill({ calories: 400, carbs: 60 }),
     }));
     expect('adjustments' in r && r.adjustments[0].component).toBe('syrup');
   });
@@ -243,10 +249,85 @@ describe('applyComponentSubtraction', () => {
     ['oatmeal', 'Rolled Oats', 'without the brown sugar', 40, 160, 'no_carrier'],
     ['a hot dog', 'Hot Dog with Bun', 'without the bun', 100, 290, 'bun'],
   ])('organic line %s (%s %s) -> %s', (head, foodName, clause, grams, calories, expected) => {
+    // s459 MF-a: carbs 24 g, so the 21 g-carb bun fits the panel (a real hot dog in a bun carries ~24 g).
     const r = applyComponentSubtraction(base({
-      head, foodName, clause, grams, nutrition: bill({ calories }),
+      head, foodName, clause, grams, nutrition: bill({ calories, carbs: 24 }),
     }));
     if ('adjustments' in r) expect(r.adjustments[0].component).toBe(expected);
     else expect(r.skipped).toBe(expected);
+  });
+});
+
+// s459 row RC: a winner from a chain the list newly holds passes RM-b's chain-topping carrier test. Frozen winners
+// from the seat's cold draws on build 9YR4B-3kkKA-hKzmYKt20 (2026-11-15); on 8ab177bb both skip `no_carrier`.
+describe('s459 RC: newly listed chains reach the chain-topping subtraction', () => {
+  test("jimmy johns turkey tom no mayo -> Turkey Tom (Unwich), Jimmy John's: mayo subtracts", () => {
+    const r = applyComponentSubtraction(base({
+      nutrition: { calories: 250, protein: 15, carbs: 5, fat: 17, fiber: 2, sugar: 3, sodium: 0.7 },
+      grams: 125, foodName: 'Turkey Tom (Unwich)', brandName: "Jimmy John's",
+      head: 'jimmy johns turkey tom', clause: 'no mayo', parsed: { qty: null, multiplier: null, unit: null },
+    }));
+    expect('adjustments' in r && r.adjustments.map(a => a.component)).toEqual(['mayo']);
+    expect('nutrition' in r && r.nutrition.calories).toBe(192.7);
+  });
+
+  test("culvers butterburger no pickles -> Butterburger - Single, Culver's: pickle subtracts", () => {
+    const r = applyComponentSubtraction(base({
+      nutrition: { calories: 390, protein: 20, carbs: 38, fat: 17, fiber: 1, sugar: 6, sodium: 0.5 },
+      grams: 195, foodName: 'Butterburger - Single', brandName: "Culver's",
+      head: 'culvers butterburger', clause: 'no pickles', parsed: { qty: null, multiplier: null, unit: null },
+    }));
+    expect('adjustments' in r && r.adjustments.map(a => a.component)).toEqual(['pickle']);
+    expect('nutrition' in r && r.nutrition.calories).toBe(388.6);
+  });
+
+  test("a grocery chain is still not a chain winner: Krispy Kreme + no mayo skips no_carrier", () => {
+    const r = applyComponentSubtraction(base({
+      grams: 125, foodName: 'Original Glazed', brandName: 'Krispy Kreme', clause: 'no mayo',
+    }));
+    expect(r).toEqual({ skipped: 'no_carrier' });
+  });
+});
+
+describe('s459 MF-a: bun on a chain winner, built-out names, panel fit', () => {
+  const base = { calories: 670, protein: 31, carbs: 54, fat: 39, fiber: 2, sugar: 11, sodium: 1 };
+  const run = (foodName: string, brandName: string | null, nutrition = base, grams = 270) =>
+    applyComponentSubtraction({ nutrition, grams, foodName, brandName, standardSource: 'fatsecret', head: foodName, clause: 'no bun' });
+  test('a chain winner carries its bun (Whopper)', () => {
+    const r = run('Whopper', 'Burger King');
+    expect('adjustments' in r && r.nutrition.calories).toBeCloseTo(550, 1);
+  });
+  test('a non-chain winner that names no carrier still skips', () => {
+    expect(run('Whopper', null)).toEqual({ skipped: 'no_carrier' });
+  });
+  test('a chain winner of a bunless form skips', () => {
+    expect(run('Grilled Chicken Cool Wrap', "Chick-fil-A")).toEqual({ skipped: 'no_carrier' });
+    expect(run('8 Count Nuggets', "Chick-fil-A")).toEqual({ skipped: 'no_carrier' });
+    expect(run('Pan Pizza - Pepperoni', 'Pizza Hut')).toEqual({ skipped: 'no_carrier' });
+    expect(run('Crunchwrap Supreme', 'Taco Bell')).toEqual({ skipped: 'no_carrier' });
+    expect(run('Egg McMuffin', "McDonald's")).toEqual({ skipped: 'no_carrier' });
+    expect(run("Croissan'wich - Egg & Cheese", 'Burger King')).toEqual({ skipped: 'no_carrier' });
+    expect(run('Corn Dog', 'Sonic', { ...base, calories: 210 }, 75)).toEqual({ skipped: 'no_carrier' });
+  });
+  test('a bread form keeps a non-chain carrier name (sausage), as before s459', () => {
+    expect('adjustments' in run("Croissan'wich - Sausage, Egg & Cheese", 'Burger King')).toBe(true);
+  });
+  test('RM-d `sin pan` on a chain burger subtracts the bun', () => {
+    const r = applyComponentSubtraction({ nutrition: base, grams: 270, foodName: 'Whopper', brandName: 'Burger King',
+      standardSource: 'fatsecret', head: 'un whopper sin pan', clause: 'sin pan' });
+    expect('adjustments' in r && r.adjustments.map(a => a.component)).toEqual(['bun']);
+  });
+  test('a bunless form never loses a bun even when it names a carrier (not a chain)', () => {
+    expect(run('Cheeseburger protein pockets', null, { calories: 226, protein: 16.1, carbs: 22.8, fat: 4.6, fiber: 0, sugar: 4.4, sodium: 0.3 }, 100))
+      .toEqual({ skipped: 'no_carrier' });
+  });
+  test('a winner whose name says the bun was replaced is already_removed', () => {
+    expect(run('Cheeseburger with Onion Protein Style (Bun replaced with Lettuce)', 'In-N-Out')).toEqual({ skipped: 'already_removed' });
+    expect(run('Shackburger - Single Lettuce Wrap', 'Shake Shack')).toEqual({ skipped: 'already_removed' });
+    expect(run('Turkey Tom (Unwich Lettuce Wrap)', "Jimmy John's")).toEqual({ skipped: 'already_removed' });
+  });
+  test('a panel without the part\'s carbs cannot hold it (patty record)', () => {
+    expect(run('Turkey Burger', null, { calories: 217, protein: 25.3, carbs: 0, fat: 12.2, fiber: 0, sugar: 0, sodium: 0.1 }, 93.25))
+      .toEqual({ skipped: 'not_in_panel' });
   });
 });

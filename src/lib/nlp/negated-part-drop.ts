@@ -37,6 +37,11 @@
  * s458 RM-a: itemRemovalClause() DETECTS a clause for billing; it never strips. Its item-only guards mirror removal-clause.ts F6a
  * (no salt peanut butter, no stir almond butter).
  *
+ * s459 MF-a: bunBuildClause() DETECTS a bun-replacing BUILD (`bunless`, `lettuce wrap`, `wrapped in lettuce`, `protein style`,
+ * `lettuce bun`) and names it as the clause `no bun` for billing. It never strips: the mapper still sees the line as typed, so a
+ * published variant (Five Guys `Bunless Bacon Cheeseburger`, In-N-Out `Protein Style`) can still win, and the subtraction gate's
+ * `already_removed` test skips it.
+ *
  * Pure; never mutates its input.
  */
 
@@ -331,4 +336,24 @@ function matchRemoval(rawText: string, negs: Set<string>, item = false): SoloRem
     if (TABLE_GATED.has(neg) && !parts.every(p => resolveComponentKey(p.join(' ')))) return null;
   }
   return { head, clause: raw.slice(k).join(' ') };
+}
+
+// s459 MF-a: a bun-replacing build, as typed. Matched on words() output, so `lettuce-wrapped` reads `lettuce wrapped`.
+// `in a lettuce (wrap)` only at the end of the item (`chicken in lettuce cups` is a dish, not a build).
+const BUN_BUILD = /(?:^| )(bunless|lettuce wrap(?:s|ped)?|lettuce wrapped|wrapped in (?:a )?lettuce(?: wraps?)?|in (?:a )?lettuce(?: wraps?)?(?=$)|protein style|lettuce buns?)(?= |$)/;
+export interface BunBuild {
+  /** The build phrase as matched (`lettuce wrap`). */
+  phrase: string;
+  /** Always `no bun`: the clause applyComponentSubtraction() reads. */
+  clause: 'no bun';
+}
+/** `five guys hamburger lettuce wrap` -> { phrase: 'lettuce wrap', clause: 'no bun' }; null when the rest names no food. */
+export function bunBuildClause(rawText: string): BunBuild | null {
+  const w = words(rawText).join(' ');
+  const m = BUN_BUILD.exec(w);
+  if (!m) return null;
+  const rest = (w.slice(0, m.index) + ' ' + w.slice(m.index + m[0].length)).split(' ').filter(Boolean);
+  // The rest must name something beyond filler and digits (`double double protein style` keeps `double double`).
+  if (!rest.some(x => !SOLO_HEAD_FILLER.has(x) && !/^[\d/.]+$/.test(x))) return null;
+  return { phrase: m[1], clause: 'no bun' };
 }
