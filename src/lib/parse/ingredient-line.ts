@@ -458,6 +458,48 @@ function rewriteDoublePortion(mergedTokens: string[]): void {
   }
 }
 
+// s459 AL-b2. `shot` became a count unit in #688 (normalizeUnitToken()), which is right for the pour (`a shot of
+// tequila`, `2 shots vodka`) and wrong for the two shapes below. Organic MEL (noCache=false, all time, 20 lines with
+// `shot`/`jigger`): every MEASURE use carries `of` or the plural (`a shot of X` x6 lines, `two shots of X` x2, `1 shot of
+// gin`), and every singular `shot` with no `of` names the drink (`a double shot latte`, `a triple shot americano`,
+// `starbucks triple shot energy`, `an extra shot`).
+//
+// (1) A COUNT above one, then a SINGULAR `shot`, then a word that is not `of` -- `2 shot latte`, `3 shot americano`,
+// `two shot latte`, `2shot latte`. English pluralises the measure after a count above one (`2 shots of vodka`), so the
+// singular there is the compound modifier of a 2-shot latte: ONE drink. #688 read 2 shots (60 g) of latte; before
+// #688 it read 2 lattes. Decided ONCE, before the quantity parse, and honoured at the quantity gate only -- the same
+// contract as startsWithDigitBrand: the count is not consumed, the line parses as its article twin `a 2 shot latte`
+// does (qty 1, the count kept in the name), and a digit at the cursor is no unit to any consumption site below.
+// `shot` only: `jigger` has no drink-size idiom. An INTEGER count >= 2, so `1 shot gin`, `1.5 shot vodka`, `half shot
+// espresso` keep the pour; a following WORD, so `2 shot` keeps it. KNOWN COST (0 organic): the sloppy singular `2 shot
+// vodka` now reads one drink named `2 shot vodka`; its grammatical forms `2 shots vodka` / `2 shots of vodka` do not move.
+// The follower is not a partitive (`of`, Spanish `de`: `2 shot de tequila` is a measure; its own row owns the `de`) and
+// not the vessel (`glass`/`glasses`: a bare `2 shot glasses` stays a measure like `a shot glass`, see rewriteShotGlassOf).
+const SHOT_NOT_MODIFIED = new Set(['of', 'de', 'glass', 'glasses']);
+function countIsShotModifier(tokens: string[], i: number): boolean {
+  const q = parseQuantityTokens(tokens.slice(i));
+  if (!q || !Number.isInteger(q.qty) || q.qty < 2) return false;
+  if (tokens[i + q.consumed]?.toLowerCase() !== 'shot') return false;
+  const next = tokens[i + q.consumed + 1];
+  return next !== undefined && !SHOT_NOT_MODIFIED.has(next.toLowerCase()) && /^\p{L}/u.test(next);
+}
+
+// (2) A pour measured in a shot glass: `a shot glass of whiskey`, `2 shot glasses of tequila` collapse IN PLACE to
+// their twins `a shot of whiskey` / `2 shots of tequila` (the unit read the shot and left `glass of whiskey` as the
+// food). Only with the partitive `of` AND a follower, like consumePartitiveOf(). A bare `shot glass` / `a shot glass`
+// is untouched. KNOWN COST (0 organic): it still reads unit `shot`, name `glass`.
+const SHOT_GLASS = new Map([['glass', 'shot'], ['glasses', 'shots']]);
+function rewriteShotGlassOf(tokens: string[]): void {
+  for (let k = 0; k + 3 < tokens.length; k++) {
+    const t = tokens[k].toLowerCase();
+    const glass = SHOT_GLASS.get(tokens[k + 1].toLowerCase());
+    if ((t === 'shot' || t === 'shots') && glass && tokens[k + 2].toLowerCase() === 'of') {
+      tokens.splice(k, 2, glass);
+      return;
+    }
+  }
+}
+
 // "a stack of pancakes" is a COUNT of pancakes, not one: it parsed as qty 1,
 // name "a stack of pancakes" and billed ONE 30 g pancake while its numeric twin
 // "3 pancakes" bills 114 g (measured, MEL). The shape collapses to that twin.
@@ -928,6 +970,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // first so the article strip and the decide-once reads below see "half cup".
   const brandDetection = detectBrandInQuery(normalizedLine); // hoisted (s457 P4): a pure read of normalizedLine
   rewriteSpanishNumeral(mergedTokens, brandDetection.matchedBrand);
+  rewriteShotGlassOf(mergedTokens);   // s459 AL-b2 (2)
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
   if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
@@ -1065,10 +1108,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // knows all three, and the defect is that the quantity parse runs first.
   const startsWithWordNumberBrand =
     matchWordNumberBrandTokens(mergedTokens, i, brandDetection.matchedBrand) > 0;
+  // s459 AL-b2 (1): `2 shot latte` is one 2-shot latte (see countIsShotModifier above).
+  const countIsDrinkSize = countIsShotModifier(mergedTokens, i);
 
   // Parse quantity (if not starting with a unit, or with a brand whose own
   // first token looks like a quantity)
-  if (!startsWithUnit && !startsWithDigitBrand && !startsWithWordNumberBrand && i !== hhCursor) {
+  if (!startsWithUnit && !startsWithDigitBrand && !startsWithWordNumberBrand && !countIsDrinkSize && i !== hhCursor) {
     const qtyResult = parseQuantityTokens(mergedTokens.slice(i));
     if (qtyResult) {
       qty = qtyResult.qty;
