@@ -1,5 +1,5 @@
 {
-  "about": "s458 pd-rm: frozen winners (hc battery draws on build 98T2T2gSRnq-9HiffElOW; organic MEL noCache=false latest winner, synthetic macros) -> expected billing under brief RM-a. Winners are fixed; only the clause feed and the subtraction gate are under test. | rf-rm r1: item grammar guards (absence-led part, absence word, <=2-word part, head names more than a count/unit/size); oatmeal-no-sugar-added moved to detectOnly; 13 detect pins added; A24 annotated.",
+  "about": "s458 pd-rm: frozen winners (hc battery draws on build 98T2T2gSRnq-9HiffElOW; organic MEL noCache=false latest winner, synthetic macros) -> expected billing under brief RM-a. Winners are fixed; only the clause feed and the subtraction gate are under test. | rf-rm r1: item grammar guards (absence-led part, absence word, <=2-word part, head names more than a count/unit/size); oatmeal-no-sugar-added moved to detectOnly; 13 detect pins added; A24 annotated. | pd-rmb r0 (s458 RM-b): org: rows carry MEL brandName; rmb: guard rows; expects re-derived with the chain-topping gate.",
   "cases": [
     {
       "src": "s458-hc",
@@ -95,8 +95,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 390
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 332.7
       }
     },
     {
@@ -193,8 +195,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 670
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 612.7
       }
     },
     {
@@ -225,8 +229,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 340
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 282.7
       }
     },
     {
@@ -385,8 +391,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 530
+        "subtracted": [
+          "sour cream"
+        ],
+        "calories": 467.9
       }
     },
     {
@@ -552,8 +560,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 520
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 462.7
       }
     },
     {
@@ -616,7 +626,7 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
+        "skipped": "too_large_grams",
         "calories": 34.7
       }
     },
@@ -891,7 +901,7 @@
       "expectItemClause": "no stir",
       "winner": {
         "foodName": "No Stir Almond Butter Creamy",
-        "brandName": null,
+        "brandName": "MaraNatha",
         "grams": 32,
         "source": "openfoodfacts",
         "nutrition": {
@@ -923,7 +933,7 @@
       "expectItemClause": "no butter",
       "winner": {
         "foodName": "Egg McMuffin",
-        "brandName": null,
+        "brandName": "McDonald's",
         "grams": 155,
         "source": "fatsecret",
         "nutrition": {
@@ -957,7 +967,7 @@
       "expectItemClause": null,
       "winner": {
         "foodName": "Turkey Club",
-        "brandName": null,
+        "brandName": "Charlie's",
         "grams": 244,
         "source": "openfoodfacts",
         "nutrition": {
@@ -991,7 +1001,7 @@
       "expectItemClause": null,
       "winner": {
         "foodName": "Turkey Sub",
-        "brandName": null,
+        "brandName": "Wegmans",
         "grams": 255,
         "source": "fatsecret",
         "nutrition": {
@@ -1025,7 +1035,7 @@
       "expectItemClause": null,
       "winner": {
         "foodName": "Waffles",
-        "brandName": null,
+        "brandName": "Fresh & Easy",
         "grams": 70,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1057,7 +1067,7 @@
       "expectItemClause": "no protein",
       "winner": {
         "foodName": "No Cow  protein bar",
-        "brandName": null,
+        "brandName": "No Cow",
         "grams": 60,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1121,7 +1131,7 @@
       "expectItemClause": "no cheese",
       "winner": {
         "foodName": "Whopper",
-        "brandName": null,
+        "brandName": "Burger King",
         "grams": 270,
         "source": "fatsecret",
         "nutrition": {
@@ -1185,7 +1195,7 @@
       "expectItemClause": "no whip",
       "winner": {
         "foodName": "Grande Cup - Caramel Macchiato Flavour",
-        "brandName": null,
+        "brandName": "Starbucks",
         "grams": 330,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1217,7 +1227,7 @@
       "expectItemClause": "no cheese",
       "winner": {
         "foodName": "McDouble",
-        "brandName": null,
+        "brandName": "McDonald's",
         "grams": 140,
         "source": "fatsecret",
         "nutrition": {
@@ -1249,7 +1259,7 @@
       "expectItemClause": null,
       "winner": {
         "foodName": "Rolled Oats",
-        "brandName": null,
+        "brandName": "Australian Creamy Style",
         "grams": 40,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1281,7 +1291,7 @@
       "expectItemClause": "w/o brown sugar",
       "winner": {
         "foodName": "Rolled Oats",
-        "brandName": null,
+        "brandName": "Australian Creamy Style",
         "grams": 40,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1313,7 +1323,7 @@
       "expectItemClause": "no sauce",
       "winner": {
         "foodName": "Taco Bell, Cheesy Gordita Crunch",
-        "brandName": null,
+        "brandName": "Taco Bell",
         "grams": 100,
         "source": "openfoodfacts",
         "nutrition": {
@@ -1345,7 +1355,7 @@
       "expectItemClause": "no mayo",
       "winner": {
         "foodName": "Baconator",
-        "brandName": null,
+        "brandName": "Wendy's",
         "grams": 450,
         "source": "fatsecret",
         "nutrition": {
@@ -1364,8 +1374,10 @@
         "unit": null
       },
       "expect": {
-        "skipped": "no_carrier",
-        "calories": 900
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 842.7
       }
     },
     {
@@ -1383,7 +1395,7 @@
         "nutrition": {
           "calories": 290,
           "protein": 14.5,
-          "carbs": 29.0,
+          "carbs": 29,
           "fat": 14.5,
           "fiber": null,
           "sugar": null,
@@ -1415,7 +1427,7 @@
         "nutrition": {
           "calories": 430,
           "protein": 21.5,
-          "carbs": 43.0,
+          "carbs": 43,
           "fat": 21.5,
           "fiber": null,
           "sugar": null,
@@ -1430,6 +1442,571 @@
       "expect": {
         "skipped": "already_removed",
         "calories": 430
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 68444864",
+      "id": "rmb:whopper-no-onion",
+      "line": "a whopper no onions",
+      "itemRawText": "a whopper no onions",
+      "soloStripClause": null,
+      "expectItemClause": "no onions",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 33.5,
+          "carbs": 67,
+          "fat": 33.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "onion"
+        ],
+        "calories": 664.1
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 68444864",
+      "id": "rmb:whopper-no-tomato-or-lettuce",
+      "line": "a whopper no tomato or lettuce",
+      "itemRawText": "a whopper no tomato or lettuce",
+      "soloStripClause": null,
+      "expectItemClause": "no tomato or lettuce",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 33.5,
+          "carbs": 67,
+          "fat": 33.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "tomato",
+          "lettuce"
+        ],
+        "calories": 664.3
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 68444864",
+      "id": "rmb:whopper-no-mayo-or-cheese",
+      "line": "a whopper no mayo or cheese",
+      "itemRawText": "a whopper no mayo or cheese",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo or cheese",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 33.5,
+          "carbs": 67,
+          "fat": 33.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 612.7
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 68444864",
+      "id": "rmb:whopper-no-bacon",
+      "line": "a whopper no bacon",
+      "itemRawText": "a whopper no bacon",
+      "soloStripClause": null,
+      "expectItemClause": "no bacon",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 33.5,
+          "carbs": 67,
+          "fat": 33.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 670
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 3145844",
+      "id": "rmb:big-mac-no-pickles",
+      "line": "a big mac no pickles",
+      "itemRawText": "a big mac no pickles",
+      "soloStripClause": null,
+      "expectItemClause": "no pickles",
+      "winner": {
+        "foodName": "Big Mac",
+        "brandName": "McDonald's",
+        "grams": 219,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 590,
+          "protein": 29.5,
+          "carbs": 59,
+          "fat": 29.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "pickle"
+        ],
+        "calories": 588.6
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 7235522",
+      "id": "rmb:mcchicken-no-bun",
+      "line": "a mcchicken no bun",
+      "itemRawText": "a mcchicken no bun",
+      "soloStripClause": null,
+      "expectItemClause": "no bun",
+      "winner": {
+        "foodName": "McChicken",
+        "brandName": "McDonald's",
+        "grams": 195,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 390,
+          "protein": 19.5,
+          "carbs": 39,
+          "fat": 19.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 390
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 68721802",
+      "id": "rmb:cfa-sandwich-no-pickles",
+      "line": "a chick-fil-a chicken sandwich no pickles",
+      "itemRawText": "a chick-fil-a chicken sandwich no pickles",
+      "soloStripClause": null,
+      "expectItemClause": "no pickles",
+      "winner": {
+        "foodName": "Chick-fil-A Chicken Sandwich",
+        "brandName": "Chick-fil-A",
+        "grams": 183,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 420,
+          "protein": 21,
+          "carbs": 42,
+          "fat": 21,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "pickle"
+        ],
+        "calories": 418.6
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 114710600-sibling",
+      "id": "rmb:innout-hamburger-without-spread",
+      "line": "in-n-out hamburger without spread",
+      "itemRawText": "in-n-out hamburger",
+      "soloStripClause": "without spread",
+      "expectItemClause": null,
+      "winner": {
+        "foodName": "Hamburger with Onion",
+        "brandName": "In-N-Out",
+        "grams": 243,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 390,
+          "protein": 19.5,
+          "carbs": 39,
+          "fat": 19.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "spread"
+        ],
+        "calories": 332.3
+      }
+    },
+    {
+      "src": "pd-rmb synthetic (McD Sausage Biscuit)",
+      "id": "rmb:sausage-biscuit-no-egg",
+      "line": "a sausage biscuit no egg",
+      "itemRawText": "a sausage biscuit no egg",
+      "soloStripClause": null,
+      "expectItemClause": "no egg",
+      "winner": {
+        "foodName": "Sausage Biscuit",
+        "brandName": "McDonald's",
+        "grams": 111,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 460,
+          "protein": 23,
+          "carbs": 46,
+          "fat": 23,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 460
+      }
+    },
+    {
+      "src": "pd-rmb synthetic: brandName null, the chain gate reads brandName only",
+      "id": "rmb:mcchicken-brand-null",
+      "line": "a mcchicken no mayo",
+      "itemRawText": "a mcchicken no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "McChicken",
+        "brandName": null,
+        "grams": 195,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 390,
+          "protein": 19.5,
+          "carbs": 39,
+          "fat": 19.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 390
+      }
+    },
+    {
+      "src": "pd-rmb synthetic: Starbucks is not in RESTAURANT_CHAINS",
+      "id": "rmb:starbucks-not-a-chain",
+      "line": "a starbucks turkey pesto panini no mayo",
+      "itemRawText": "a starbucks turkey pesto panini no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Turkey Pesto Panini",
+        "brandName": "Starbucks",
+        "grams": 240,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 520,
+          "protein": 26,
+          "carbs": 52,
+          "fat": 26,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 520
+      }
+    },
+    {
+      "src": "pd-rmb synthetic: a grocery brand is not a chain",
+      "id": "rmb:grocery-brand",
+      "line": "jimmy dean croissant no mayo",
+      "itemRawText": "jimmy dean croissant no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Sausage Egg & Cheese Croissant",
+        "brandName": "Jimmy Dean",
+        "grams": 128,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 410,
+          "protein": 20.5,
+          "carbs": 41,
+          "fat": 20.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "no_carrier",
+        "calories": 410
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 99475557 (KNOWN LIMIT: a patty has no mayo)",
+      "id": "rmb:whopper-patty-known-limit",
+      "line": "a whopper no mayo",
+      "itemRawText": "a whopper no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Whopper Patty",
+        "brandName": "Burger King",
+        "grams": 113,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 290,
+          "protein": 14.5,
+          "carbs": 29,
+          "fat": 14.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 232.7
+      }
+    },
+    {
+      "src": "pd-rmb synthetic (KNOWN LIMIT: a McD Hamburger has no mayo by default)",
+      "id": "rmb:mcd-hamburger-known-limit",
+      "line": "a mcdonalds hamburger no mayo",
+      "itemRawText": "a mcdonalds hamburger no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Hamburger",
+        "brandName": "McDonald's",
+        "grams": 100,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 250,
+          "protein": 12.5,
+          "carbs": 25,
+          "fat": 12.5,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 192.7
+      }
+    },
+    {
+      "src": "pd-rmb synthetic: chain + named absence",
+      "id": "rmb:chain-no-mayo-sibling",
+      "line": "a whopper no mayo",
+      "itemRawText": "a whopper no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Whopper Sandwich w/o Mayo",
+        "brandName": "Burger King",
+        "grams": 260,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 580,
+          "protein": 29,
+          "carbs": 58,
+          "fat": 29,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "skipped": "already_removed",
+        "calories": 580
+      }
+    },
+    {
+      "src": "pd-rmb synthetic macros; name+brand from FatSecretFood 7235522",
+      "id": "rmb:two-mcchickens-no-mayo",
+      "line": "2 mcchickens no mayo",
+      "itemRawText": "2 mcchickens no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "McChicken",
+        "brandName": "McDonald's",
+        "grams": 390,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 780,
+          "protein": 39,
+          "carbs": 78,
+          "fat": 39,
+          "fiber": null,
+          "sugar": null,
+          "sodium": null
+        }
+      },
+      "parsed": {
+        "qty": 2,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 665.3
+      }
+    },
+    {
+      "src": "deploy 32 (5pmZrrSqShCU0AUaNlr9b) winner fs_68444864; panel = pd-rmb draws/P5.json",
+      "id": "rmb:A29-deploy32",
+      "line": "whoppr no mayo",
+      "itemRawText": "whoppr no mayo",
+      "soloStripClause": null,
+      "expectItemClause": "no mayo",
+      "winner": {
+        "foodName": "Whopper",
+        "brandName": "Burger King",
+        "grams": 270,
+        "source": "fatsecret",
+        "nutrition": {
+          "calories": 670,
+          "protein": 31,
+          "carbs": 54,
+          "fat": 39,
+          "fiber": 3,
+          "sugar": 13,
+          "sodium": 1.2
+        }
+      },
+      "parsed": {
+        "qty": 1,
+        "multiplier": 1,
+        "unit": null
+      },
+      "expect": {
+        "subtracted": [
+          "mayo"
+        ],
+        "calories": 612.7
       }
     }
   ],

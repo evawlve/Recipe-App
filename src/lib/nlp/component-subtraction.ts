@@ -11,11 +11,18 @@
  * (s458 RM-a: the winner's own name already lacks the part). A multi-part clause may
  * partially subtract: success when >= 1 part subtracted, `partSkips` names the rest;
  * `{ skipped }` only when every part skips (the first part's reason).
+ *
+ * s458 RM-b: a CHAIN TOPPING (CHAIN_TOPPINGS) also passes the carrier test when the
+ * WINNER's `brandName` passes `isRestaurantChain()`: a menu-item name (`McChicken`,
+ * `Jumbo Jack`) does not list its toppings, and the user typing `no mayo` is the
+ * evidence. Never cheese, bacon, bun or egg (a Whopper has no cheese): those still
+ * need the record's name or a carrier. `already_removed` runs first, unchanged.
  */
 
 import { words } from './trailing-quantity-fold';
 import { per100gFromBilledMacros } from './resolve-payload';
 import { ALIASES, COMPONENT_TABLE } from './component-table';
+import { isRestaurantChain } from './restaurant-brand-fill';
 
 export type SkipReason =
   | 'unmapped'
@@ -62,6 +69,8 @@ export type SubtractionInput = {
   nutrition: BilledNutrition;
   grams: number;
   foodName: string;
+  /** The WINNER's brand (s458 RM-b); absent or null = no chain-topping carrier. */
+  brandName?: string | null;
   standardSource: string;
   head: string;
   clause: string;
@@ -84,6 +93,8 @@ const LEADING_DETERMINERS = new Set(['the', 'any', 'my', 'a', 'an']);
 const MAX_HEAD_QTY = 10;
 const MAX_KCAL_SHARE = 0.6;
 const MAX_GRAMS_SHARE = 0.6;
+/** s458 RM-b: the toppings a restaurant-chain winner carries without naming them. */
+const CHAIN_TOPPINGS = new Set(['mayo', 'sour cream', 'spread', 'lettuce', 'tomato', 'onion', 'pickle']);
 
 const r1 = (x: number) => Number(x.toFixed(1));
 
@@ -136,6 +147,7 @@ function headQtyOf(parsed: SubtractionInput['parsed']): number {
 
 export function applyComponentSubtraction(input: SubtractionInput): SubtractionResult {
   const { grams, foodName, standardSource, clause } = input;
+  const chainWinner = isRestaurantChain(input.brandName ?? '');
   if (standardSource === 'ai_estimated' || !(input.nutrition.calories > 0) || !(grams > 0)) {
     return { skipped: 'unmapped' };
   }
@@ -159,7 +171,7 @@ export function applyComponentSubtraction(input: SubtractionInput): SubtractionR
     const namesComponent =
       names(foodName, key) || Object.keys(ALIASES).some(a => ALIASES[a] === key && names(foodName, a));
     if (namesNegated(foodName, key)) { skip(key, 'already_removed'); continue; }
-    const namesCarrier = row.carriers.some(c => names(foodName, c));
+    const namesCarrier = row.carriers.some(c => names(foodName, c)) || (chainWinner && CHAIN_TOPPINGS.has(key));
     if (!namesComponent && !namesCarrier) { skip(key, 'no_carrier'); continue; }
 
     const compGrams = row.grams * headQty;
