@@ -465,6 +465,57 @@ const CONDIMENT_EXCLUDE_RE = new RegExp('\\b(?:' + [
 ].join('|') + ')\\b', 'i');
 
 /**
+ * WET FRESH DAIRY — the eighth slice (s459 DENS-2, 2026-11-15). `yogurt`,
+ * `cream cheese`, `sour cream` and `ricotta` are PASTE_RE tokens, but cottage
+ * cheese, skyr, quark, labneh and creme fraiche carried none, so a record
+ * NAMED for them was a `solid` at the dry 0.5 g/ml: `0.5 cup cottage cheese`
+ * billed 60 g on OFF `Cottage cheese` (cold, `volume_unit`), where the label
+ * reads 113 g. The paste cell (250 g/cup, 125 g the half cup) is what `1 cup
+ * greek yogurt` already bills.
+ *
+ * THIS IS NOT THE CATEGORY-DENSITY NOTE BELOW. "rice/grain/dairy stay at 0.5"
+ * in `resolveVolumeGrams()` keeps `dairy` / `cheese` out of
+ * DRY_GRANULE_DENSITY_CATEGORIES: a GRANULAR density must not reach a
+ * high-water food, which "should use liquid/paste/label servings" (the
+ * `density.ts` note). This slice is the paste route that note names, and
+ * the category gate is untouched.
+ *
+ * THE DENSITY, MEASURED (OFF servingSize labels + FatSecretServing +
+ * FdcServing volume rows, grams / millilitres, median [p25, p75]): cottage
+ * 0.94 [0.94, 0.94] n=596; skyr / quark / labneh 0.96 [0.94, 1.00] n=52;
+ * creme fraiche 1.00 n=9. Shredded / grated cheese reads 0.47 (n=2,007) and
+ * ice cream 0.57 (n=5,192), so neither is in this class. Re-derive: s459
+ * pd-cot `replay/dairydens.py`.
+ *
+ * WHY THE LAST SLOT. Like the slices above it tests only a name that is
+ * otherwise `solid`, so only `solid` -> `paste` can move and NO NUMBER moves.
+ * `cottage` is admitted only as `cottage cheese` (or `cheese, cottage` /
+ * `queso cottage`): alone it names Cottage Pie, Cottage Bread, Cottage Bacon.
+ *
+ * THE EXCLUDE LIST returns to BASE the dishes, bakes and dry forms that carry
+ * the token (pierogi, cottage-cheese-crust pizza, pancakes, bars, paneer named
+ * `Indian cottage cheese`, dry-curd cottage cheese at ~0.6 g/ml) and the
+ * token as an ACCOMPANIMENT (`Pancakes with cottage cheese`); the token before
+ * the connector keeps the class (`Cottage Cheese with Pineapple`).
+ */
+const WET_DAIRY_TOKENS = '(?:cottage\\s*ch(?:ee?|er)se|cheese,?\\s*cottage|queso cottage|skyr|quark|labneh?|cr[eè]me fra[iî]che|fromage (?:frais|blanc))';
+const WET_DAIRY_RE = new RegExp('\\b' + WET_DAIRY_TOKENS + '\\b', 'i');
+const WET_DAIRY_EXCLUDE_RE = new RegExp('\\b(?:' + [
+    // Dry and powdered forms.
+    'dry|dried|freeze[- ]dried|powder(?:ed)?|mix(?:es)?|whey|protein powder',
+    // Frozen desserts read ~0.57 g/ml (ice cream labels).
+    'ice ?cream|frozen|gelato',
+    // Paneer is a pressed cheese, sold as `Indian cottage cheese`.
+    'paneer|panir|panerir|indian|tikka',
+    // Dishes and bakes that carry the token as a filling, topping or crust.
+    'pierogi\\w*|perogies|erogies|dumplings?|vareniki|blintz\\w*|pancakes?|crepes?|cr[eê]pes?|pies?|crust|pizzas?|lasagn\\w*|ravioli|pasta|casserole|bake[ds]?|muffins?',
+    'breads?|buns?|rolls?|bagels?|toast|crackers?|chips|cookies?|cakes?|cheesecakes?|bars?|bites|balls|sandwich(?:es)?|wraps?|meatballs?|plates?|platters?|salads?',
+    'flatbreads?|sourdough|granola|snacks?|riegel|\\w*kuchen|torten?|baguels?|macaroni|teig\\w*|g[aâ]che|schogetten|potato(?:es)?|spinach|pinards|peas?|pressed|p[aâ]te ferme',
+    // The token as an accompaniment: AFTER `with` / `w/` / `avec` / `au(x)`.
+    '(?:with|avec|aux?)\\b.*\\b' + WET_DAIRY_TOKENS, 'w/.*\\b' + WET_DAIRY_TOKENS,
+].join('|') + ')\\b', 'i');
+
+/**
  * Light dry solids (s457 S1). A record name with no liquid/paste/beverage/category
  * token otherwise bills 240 x 0.5 = 120 g a cup, which is 3-12x too heavy for a
  * cup of dry cereal or popcorn. Per-class density (g/ml, so g per 240 ml cup):
@@ -554,7 +605,10 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     // Dressings, dips and condiment spreads, LAST — see CONDIMENT_RE.
     const isCondiment = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && !isEsPour
         && CONDIMENT_RE.test(name) && !CONDIMENT_EXCLUDE_RE.test(name);
-    const isPasteLike = isPaste || isEsPaste || isCondiment;
+    // Wet fresh dairy (cottage cheese, skyr, quark, labneh), LAST — see WET_DAIRY_RE.
+    const isWetDairy = !lightClass && !isLiquid && !isPaste && !isBeverage && !isEsPaste && !isEsPour && !isCondiment
+        && WET_DAIRY_RE.test(name) && !WET_DAIRY_EXCLUDE_RE.test(name);
+    const isPasteLike = isPaste || isEsPaste || isCondiment || isWetDairy;
 
     // Dry-solid density: prefer the food's category density (sugar 0.85, flour
     // 0.53, oats 0.36 …) over a flat 0.5, which under-weighted DENSE solids by
