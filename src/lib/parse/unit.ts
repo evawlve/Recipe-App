@@ -53,8 +53,10 @@ const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)
  * word as part of the food name and resolved to off_00073123 at 1,176 g / 6,915 kcal (label serving 588 g x 2).
  *
  * REACH: digit-led lines only (1 of 20 distinct organic Spanish-unit lines); numeral-led lines
- * (`una taza de arroz`) are unchanged by construction. EXCLUDED on purpose: the numerals `un/una/dos/media`
- * (the part of backend #422 that regressed and HELD it), `pieza(s)`, and `vaso` (`glass` is not a unit).
+ * (`una taza de arroz`) were unchanged by construction until ingredient-line.ts's rewriteSpanishNumeral() learned
+ * `dos..diez`/`media` (#630) and then `un/una/uno` (s459 ES-ART) before a word in this set. NOT members of this set: the
+ * numerals `un/una/dos/media` (quantities; the part of backend #422 that regressed and HELD it), `pieza(s)`, and `vaso`
+ * (`glass` is not a unit).
  * `gramo(s)`, `gr`, `grs`, `kilogramo(s)` are already mass units; they are listed here only so `100 gramos de
  * pollo` also drops its `de`. `g` is deliberately NOT in the set (not Spanish): `100 g de pollo` is unchanged.
  */

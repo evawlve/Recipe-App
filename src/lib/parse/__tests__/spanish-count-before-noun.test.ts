@@ -39,7 +39,7 @@ describe('names, brands, articles and excluded words are byte-identical to base 
     'dos equis', 'dos equis lager', 'siete tortilla chips',
     'doce de leite', 'cinco de mayo chocolates', 'dos de cabillaud', "dos d'eglefin",
     'quince paste', 'once upon a farm', 'uno pizza',
-    'una manzana', 'un platano', 'una medida de proteína ascent de vainilla', 'un vaso de agua', 'una taza de arroz',
+    'una manzana', 'un platano', 'una medida de proteína ascent de vainilla', 'un vaso de agua', // s459 ES-ART: `una taza de arroz` moved (spanish-article-units.test.ts)
     'dos', 'media', 'dos y medio', 'dos con queso', 'tres 8 oz steaks', 'dos y tres tacos',
     'dos pinos yogurt', 'tres agaves margarita mix', 'ocho candy bar', 'dos hombres mezcal',
     'dos onzas de queso', 'medio litro de leche', 'dos platos de arroz',
