@@ -427,6 +427,65 @@ function normalizeFractionalMeasure(mergedTokens: string[]): void {
   }
 }
 
+// s459 QTY-34. A spoken fraction WITH a numerator (or a bare fraction word) before a measure: `three quarters of a cup of
+// blueberries`, `two thirds of a cup`, `a third of a pound of ground beef`, `quarter of a cup of milk`, `two-thirds cup of
+// greek yogurt`, and the Spanish `tres cuartos de taza de leche`, `un cuarto de cucharadita de sal`. parseQuantityTokens()
+// read the numerator as a count and the fraction word as an unknown unit (`3 quarters` of `a cup of blueberries`: three
+// berries, 4.5 g, MEL noCache=false 2026-10-18), or read nothing and kept the whole line as the name (`a third of a cup of
+// rice`). The shape collapses to its digit twin (`3/4 cup of blueberries`, `3/4 taza de leche`), which already parses right.
+//
+// Same POSITIONAL + OWNER-GATED discipline as normalizeFractionalMeasure() above (same hedge offset): the fraction sits at
+// [0], or at [1] behind a leading hedge, and a measure the unit table owns must follow it. English: `of a|an` + a measure
+// or, only after a numerator, the measure directly (isMeasureToken(), so size words decline: `three quarters of a large
+// pizza`). A bare fraction word before a bare measure is left to parseQuantityTokens(): `half cup` / `third slice` already
+// read there, and `fourth slice of pizza` / `fourth bowl of cereal` are ordinals (my fourth slice), not a quarter. Spanish: `de` + a
+// SPANISH_UNIT_TOKENS word + `de|del` + a word. Those anchors are the whole food-name guard: `quarter pounder (with
+// cheese)`, `third street bagel`, `chicken quarters` and `three musketeers bar` have no measure after the fraction word, and
+// `cuarto de libra (con queso)` and `un cuarto de pollo` have no Spanish unit word after `de` (`libra` is not one).
+// Singular and plural are not policed (dictation writes `three quarter of a cup`, `tres cuarto de taza`), and neither is
+// a numerator at or above the denominator: the arithmetic stays right (`two halves of a cup` is one cup).
+// NOT this rule: a fraction of a FOOD (`a quarter of a pizza`, `three quarters of a banana`); it keeps its parse.
+// Runs before rewriteSpanishNumeral(), which would otherwise read `tres cuartos` as the count 3 of `cuartos`.
+// Measurement: s459 pd-qty34 (organic members, the adversarial list, the replay), carried in this PR body.
+const EN_FRACTION_NUMERATORS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3 };
+const EN_FRACTION_WORDS: Record<string, number> = {
+  half: 2, halves: 2, third: 3, thirds: 3, quarter: 4, quarters: 4, fourth: 4, fourths: 4,
+};
+const ES_FRACTION_NUMERATORS: Record<string, number> = { un: 1, una: 1, uno: 1, dos: 2, tres: 3 };
+const ES_FRACTION_WORDS: Record<string, number> = { cuarto: 4, cuartos: 4, tercio: 3, tercios: 3 };
+/** `<numerator> <fraction word>`, or a bare fraction word (numerator 1). */
+function readWordFraction(
+  w0: string, w1: string, nums: Record<string, number>, words: Record<string, number>,
+): { n: number; d: number; words: number } | null {
+  if (nums[w0] !== undefined && words[w1] !== undefined) return { n: nums[w0], d: words[w1], words: 2 };
+  if (words[w0] !== undefined) return { n: 1, d: words[w0], words: 1 };
+  return null;
+}
+function rewriteWordFractionOfMeasure(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[k]?.toLowerCase() ?? '';
+  const hy = /^([a-z]+)-([a-z]+)$/.exec(at(f));   // `three-quarters`, `two-thirds`: one token, the same two words
+  const en = hy ? readWordFraction(hy[1], hy[2], EN_FRACTION_NUMERATORS, EN_FRACTION_WORDS)
+    : readWordFraction(at(f), at(f + 1), EN_FRACTION_NUMERATORS, EN_FRACTION_WORDS);
+  if (en && (!hy || en.words === 2)) {
+    const k = f + (hy ? 1 : en.words);   // the first token after the fraction
+    if (at(k) === 'of' && LEADING_ARTICLES.has(at(k + 1)) && isMeasureToken(mergedTokens[k + 2])) {
+      mergedTokens.splice(f, k + 2 - f, `${en.n}/${en.d}`);
+    } else if (en.words === 2 && isMeasureToken(mergedTokens[k])) {   // a numerator is required here (ordinal `fourth slice`)
+      mergedTokens.splice(f, k - f, `${en.n}/${en.d}`);
+    }
+    return;
+  }
+  if (hy) return;
+  const es = readWordFraction(at(f), at(f + 1), ES_FRACTION_NUMERATORS, ES_FRACTION_WORDS);
+  if (!es) return;
+  const k = f + es.words;
+  if (at(k) === 'de' && SPANISH_UNIT_TOKENS.has(at(k + 1)) && (at(k + 2) === 'de' || at(k + 2) === 'del')
+      && mergedTokens[k + 3] !== undefined) {
+    mergedTokens.splice(f, k + 1 - f, `${es.n}/${es.d}`);
+  }
+}
+
 // A spoken multiplier on a portion: "a double portion of mashed potatoes".
 //
 // Nothing read `double`/`triple`, so the line parsed as qty 1, no unit, name
@@ -977,6 +1036,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
   const brandDetection = detectBrandInQuery(normalizedLine); // hoisted (s457 P4): a pure read of normalizedLine
+  rewriteWordFractionOfMeasure(mergedTokens);   // s459 QTY-34; before rewriteSpanishNumeral() (`tres cuartos`)
   rewriteSpanishNumeral(mergedTokens, brandDetection.matchedBrand);
   rewriteShotGlassOf(mergedTokens);   // s459 AL-b2 (2)
   const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
