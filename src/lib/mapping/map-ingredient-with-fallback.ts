@@ -1078,66 +1078,25 @@ async function mapIngredientWithFallbackCore(
         logger.debug('mapping.waiting_for_lock', { baseName, lockKey });
         await existingLock;  // Wait for the other thread to finish
 
-        // After lock released, check cache - the first thread should have saved
-        const normalizedForCache = normalizeIngredientName(baseName).cleaned || baseName;
-        const cachedAfterLock = await getValidatedMappingByNormalizedName(normalizedForCache, 'fatsecret', trimmed);
-        if (cachedAfterLock) {
-            logger.debug('mapping.cache_hit_after_lock', { baseName, foodName: cachedAfterLock.foodName });
-            const cachedCandidate: UnifiedCandidate = {
-                id: cachedAfterLock.foodId,
-                name: cachedAfterLock.foodName,
-                brandName: cachedAfterLock.brandName || undefined,
-                source: cachedAfterLock.source as any,
-                score: cachedAfterLock.confidence,
-                foodType: 'generic',
-                rawData: {},
-            };
-            const hydratedResult = await hydrateAndSelectServing(
-                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, aiHydrationBudget
-            );
-            if (hydratedResult) {
-                // Track and log cache hit
-                incrementCacheHit();
-                if (ENABLE_MAPPING_ANALYSIS) {
-                    logMappingAnalysis({
-                        rawIngredient: trimmed,
-                        parsed: {
-                            amount: parsed?.qty,
-                            unit: parsed?.unit,
-                            ingredient: parsed?.name,
-                        },
-                        topCandidates: [],
-                        rerankOutcome: null,
-                        rerankPool: null,
-                        rerankStage: null,
-                        selectedCandidate: {
-                            foodId: cachedAfterLock.foodId,
-                            foodName: cachedAfterLock.foodName,
-                            brandName: cachedAfterLock.brandName || '',
-                            confidence: cachedAfterLock.confidence,
-                            selectionReason: 'cache_hit_after_lock',
-                        },
-                        selectedNutrition: {
-                            calories: hydratedResult.kcal,
-                            protein: hydratedResult.protein,
-                            carbs: hydratedResult.carbs,
-                            fat: hydratedResult.fat,
-                            perGrams: hydratedResult.grams,
-                        },
-                        servingSelection: {
-                            servingDescription: hydratedResult.servingDescription || 'N/A',
-                            grams: hydratedResult.grams,
-                            backfillUsed: false,
-                        },
-                        finalResult: 'success',
-                        source: 'early_cache',
-                        aiCalls: undefined,
-                    });
-                }
-                return hydratedResult;
-            }
-        }
-        logger.warn('mapping.lock_released_but_no_cache', { baseName });
+        // The waiter does NOT re-read the cache itself. It falls through into the
+        // SAME path a request that arrived after the leader would take: the early
+        // cache check below, i.e. lookupValidatedMappingWithLegacyFallback() on the
+        // symmetric key (identity discriminators, brand prefix, unit hints, legacy
+        // fallback + brand guard) and then the full escape chain (corrupt_record,
+        // nutrition_invalid, count_label, grain_cooked, scoop_liquid, category,
+        // multi_ingredient, modifier, replacement, brand_guard, human-row trust).
+        // It also honours skipCache. If the leader saved, that check hits.
+        //
+        // WHY (s459 pd-waiter): the old bespoke re-read here was
+        // getValidatedMappingByNormalizedName(normalizeIngredientName(baseName))
+        // — the bare, unitless, brandless key with NONE of the above, and it read
+        // the cache even under skipCache. It served `egg white` the whole-egg row
+        // (7 of 58 corpus decisions), served the CACHE to 38 `nocache=1` requests
+        // (cold eval and probe draws), and would serve a `1 scoop` line the
+        // ready-to-drink row that scoop_liquid exists to escape. Its MEL rows
+        // carried no normalizedForm, cacheHit or funnelStage. A waiter is just a
+        // later request; it gets the later request's answer.
+        logger.debug('mapping.lock_released_reenter', { baseName, lockKey });
     }
 
     // Register lock - this thread will process this ingredient
