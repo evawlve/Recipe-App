@@ -13,7 +13,10 @@ import { assessRankTimePlausibility, nonAlcoholicDrinkReason } from './macro-pla
 import { CAFE_CUP_SIZE_WORDS, isPreparedDrinkLine } from './drink-cup-size';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
-import { applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair } from './brand-spelling-repair';
+import {
+    applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair,
+    applyBrandInitialismRepair, findBrandInitialismRepair, type BrandInitialismRepair,
+} from './brand-spelling-repair';
 
 export interface RerankCandidate {
     id: string;
@@ -174,6 +177,11 @@ export interface RerankOutcome {
      *  brand it was read as, and the record that anchored it. Null when none
      *  fired; absent on the short-circuit paths and on older log entries. */
     brandSpelling?: BrandSpellingRepair | null;
+    /** LOG-ONLY (2026-11-08, s453 row A). The brand-initialism repair applied
+     *  before scoring (`dq` -> `dairy queen`; brand-spelling-repair.ts). Null when
+     *  none fired or the spelling repair did; absent on the short-circuit paths and
+     *  on older log entries. */
+    brandInitialism?: BrandInitialismRepair | null;
 }
 
 // ============================================================
@@ -2153,6 +2161,18 @@ export function simpleRerank(
         logger.info('simple_rerank.brand_spelling_repaired', { ...brandSpelling, query, targetBrand });
     }
 
+    // Brand initialism (s453 row A): `dq` / `bk` read as the pool brand they spell.
+    // Only when the spelling repair did not fire. `isBranded` is deliberately untouched.
+    const brandInitialism = brandSpelling ? null : findBrandInitialismRepair(query, candidates);
+    if (brandInitialism) {
+        query = applyBrandInitialismRepair(query, brandInitialism);
+        if (rawLine) rawLine = applyBrandInitialismRepair(rawLine, brandInitialism);
+        if (!targetBrand?.trim() || targetBrand.trim().toLowerCase() === brandInitialism.from) {
+            targetBrand = brandInitialism.to;
+        }
+        logger.info('simple_rerank.brand_initialism_repaired', { ...brandInitialism, query, targetBrand });
+    }
+
     // Step 4: Extract modifier constraints from the raw line (or query)
     const constraints = extractModifierConstraints(rawLine || query);
 
@@ -2785,6 +2805,7 @@ export function simpleRerank(
         candidateCount: candidates.length,
         scoredCount: scored.length,
         brandSpelling,
+        brandInitialism,
     });
 
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
