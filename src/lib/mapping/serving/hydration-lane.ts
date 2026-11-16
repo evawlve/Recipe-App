@@ -8,6 +8,7 @@
  */
 
 import { type ParsedIngredient } from '../../parse/ingredient-line';
+import { Prisma } from '@prisma/client';
 import { type UnifiedCandidate } from '../gather-candidates';
 import { hasCriticalModifierMismatch } from '../filter-candidates';
 import { extractLeanPercentage, isGenericGroundMeatQuery } from '../simple-rerank';
@@ -2592,6 +2593,63 @@ async function borrowSiblingPackageGrams(
 }
 
 /**
+ * SIB-FORM (s459): a sibling median is a serving of the SAME PRODUCT FORM only
+ * when the siblings are about as dense as the record being billed. A dense
+ * record (a powder, a nut butter, heavy cream) whose siblings are mostly a
+ * lighter form (ready-to-drink cartons, a brand's milk line) borrowed the
+ * lighter form's serving at its own density: `meal replacement shake`, a
+ * 474 kcal/100 g powder, took the 325 g median of 21 same-name cartons
+ * (median 69 kcal/100 g) and billed 1,539.5 kcal; `muscle milk vanilla`, a
+ * 385 kcal/100 g powder, took the brand's 325 g bottle median (1,251 kcal).
+ *
+ * Gate: self >= SIBLING_FORM_DENSE_SELF_KCAL and the sibling kcal median below
+ * self / SIBLING_FORM_MISMATCH_RATIO. Then the borrow re-runs over siblings
+ * within [0.5x, 2x] of self's density and takes that median when >= 3 of them
+ * exist AND their median is LOWER than the unfiltered one: a re-scan never
+ * raises a bill (on a 1,500-record corpus sample of rung (C2) firings, 22 of
+ * 1,171 re-scans were higher, `BIO Salattopping Mix` 150 -> 230 g and
+ * `Raisins` 240 -> 354 g among them). Otherwise the helper KEEPS the
+ * unfiltered median; it never returns null for a group it answered before.
+ * A refusal hands the line to the rungs below, and at rung (C2) that is
+ * DNB-9's trap — measured: `shrimp tacos` refused fell to its own out-of-band
+ * 475 g label (1,908 -> 2,850 kcal). Rung (E) still applies its own admission
+ * rule to the same-form median; see the call site.
+ * Both thresholds are set on the measured all-time borrow population
+ * (s459 pd-sib findings): 250 sits above `Salmon Fillet` 202 (a correct
+ * 120 g borrow from a cod/haddock brand line) and `Fairlife core power elite`
+ * 230 (a per-bottle panel); 3 sits above `Charcuterie Tasting Board` 2.01
+ * (a correct 56 g). A plain density filter on EVERY borrow is refuted: it
+ * moves 21 name-group and 63 brand records, pad thai among them (pd-key).
+ * Light-self/dense-sibling pairs are deliberately NOT gated (a separate,
+ * larger, mostly retailer-median class).
+ */
+export const SIBLING_FORM_DENSE_SELF_KCAL = 250;
+export const SIBLING_FORM_MISMATCH_RATIO = 3;
+const SIBLING_FORM_BAND_LO = 0.5;
+const SIBLING_FORM_BAND_HI = 2;
+
+export interface SiblingFormBand { min: number; max: number; siblingKcal: number }
+
+/** Exported for tests. The kcal/100 g band a borrow must restrict its siblings to, or null when no form gate applies. */
+export function siblingFormBand(
+    selfKcalPer100g: number | null | undefined,
+    siblingKcalMedian: number | null | undefined,
+): SiblingFormBand | null {
+    const self = selfKcalPer100g == null ? NaN : Number(selfKcalPer100g);
+    const sib = siblingKcalMedian == null ? NaN : Number(siblingKcalMedian);
+    if (!Number.isFinite(self) || self < SIBLING_FORM_DENSE_SELF_KCAL) return null;
+    if (!Number.isFinite(sib) || sib < 0) return null;
+    if (sib * SIBLING_FORM_MISMATCH_RATIO >= self) return null;
+    return { min: self * SIBLING_FORM_BAND_LO, max: self * SIBLING_FORM_BAND_HI, siblingKcal: sib };
+}
+
+// A sibling's kcal/100 g, NULL unless the JSON value is a number (a cast of a
+// non-numeric string would throw and the catch would refuse every borrow).
+interface NameSiblingBorrow { grams: number; samples: number; p25: number; p75: number }
+
+const SIBLING_KCAL_SQL = Prisma.sql`(CASE WHEN jsonb_typeof("nutrientsPer100g"->'calories') = 'number' THEN ("nutrientsPer100g"->>'calories')::float8 END)`;
+
+/**
  * Median same-brand LABEL serving (bare-serving defaults, Track 3 Jul 2026).
  * Within a brand's line the single-serving size is near-constant (all 15
  * IQ Bar SKUs label 45g; 148 Snickers SKUs median 39.8g), so when the matched
@@ -2609,24 +2667,34 @@ async function borrowSiblingPackageGrams(
 async function borrowSiblingLabelServing(
     brandName: string | null | undefined,
     selfBarcode: string,
+    selfKcalPer100g?: number | null,
 ): Promise<{ grams: number; samples: number; p25?: number; p75?: number } | null> {
     const brand = brandName?.trim();
     if (!brand || brand.length < 2) return null;
     try {
         const { prisma } = await import('../../db');
-        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number; p25?: number | null; p75?: number | null }>>`
+        const scan = (band: SiblingFormBand | null) => prisma.$queryRaw<Array<{ med: number | null; n: number; p25?: number | null; p75?: number | null; kmed?: number | null }>>`
             SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
                    percentile_cont(0.25) WITHIN GROUP (ORDER BY "servingGrams") AS p25,
                    percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY ${SIBLING_KCAL_SQL}) AS kmed,
                    count(*)::int AS n
             FROM "OffFood"
             WHERE "brandName" ILIKE ${brand}
               AND barcode <> ${selfBarcode}
               AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
-              AND "servingGrams" <> 100`;
-        const row = rows[0];
+              AND "servingGrams" <> 100
+              AND (${band?.min ?? null}::float8 IS NULL OR ${SIBLING_KCAL_SQL} BETWEEN ${band?.min ?? null}::float8 AND ${band?.max ?? null}::float8)`;
+        let row = (await scan(null))[0];
         if (!row?.med || row.n < 3) return null;
-        return { grams: row.med, samples: row.n, p25: row.p25 ?? undefined, p75: row.p75 ?? undefined };
+        let med: number = row.med;
+        const band = siblingFormBand(selfKcalPer100g, row.kmed);
+        if (band) {
+            const same = (await scan(band))[0];
+            logger.info('off.build_result.sibling_form_band', { brand, selfKcalPer100g, siblingKcal: band.siblingKcal, sameForm: same?.n ?? 0 });
+            if (same?.med && same.n >= 3 && same.med < med) { row = same; med = same.med; }
+        }
+        return { grams: med, samples: row.n, p25: row.p25 ?? undefined, p75: row.p75 ?? undefined };
     } catch {
         return null;
     }
@@ -2665,37 +2733,58 @@ async function borrowSiblingLabelServing(
 async function borrowNameSiblingLabelServing(
     foodName: string | null | undefined,
     selfBarcode: string,
-): Promise<{ grams: number; samples: number; p25: number; p75: number } | null> {
+    selfKcalPer100g?: number | null,
+): Promise<(NameSiblingBorrow & { unbanded?: NameSiblingBorrow }) | null> {
     const nm = foodName?.trim();
     if (!nm || nm.length < 2) return null;
     try {
         const { prisma } = await import('../../db');
-        const rows = await prisma.$queryRaw<
-            Array<{ med: number | null; n: number; p25: number | null; p75: number | null }>
+        const scan = (band: SiblingFormBand | null) => prisma.$queryRaw<
+            Array<{ med: number | null; n: number; p25: number | null; p75: number | null; kmed?: number | null }>
         >`
             SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
                    count(*)::int AS n,
                    percentile_cont(0.25) WITHIN GROUP (ORDER BY "servingGrams") AS p25,
-                   percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75
+                   percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY ${SIBLING_KCAL_SQL}) AS kmed
             FROM "OffFood"
             WHERE lower(name) = lower(${nm})
               AND barcode <> ${selfBarcode}
               AND "duplicateOfBarcode" IS NULL
               AND "corruptReason" IS NULL
               AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
-              AND "servingGrams" <> 100`;
-        const row = rows[0];
+              AND "servingGrams" <> 100
+              AND (${band?.min ?? null}::float8 IS NULL OR ${SIBLING_KCAL_SQL} BETWEEN ${band?.min ?? null}::float8 AND ${band?.max ?? null}::float8)`;
+        const row = (await scan(null))[0];
         if (!row?.med || row.n < 3) return null;
         // p25/p75 come from the same aggregate as `med`, so a non-null med over
         // n >= 3 rows in a [3, 400] band implies both are non-null and >= 3. The
         // fallbacks exist so a NULL can never silently read as a TIGHT group
         // (p75 = Infinity, p25 = 0 both force isTightNameGroup false).
-        return {
+        const unbanded: NameSiblingBorrow = {
             grams: row.med,
             samples: row.n,
             p25: row.p25 ?? 0,
             p75: row.p75 ?? Number.POSITIVE_INFINITY,
         };
+        const band = siblingFormBand(selfKcalPer100g, row.kmed);
+        if (band) {
+            const same = (await scan(band))[0];
+            logger.info('off.build_result.sibling_form_band', { name: nm, selfKcalPer100g, siblingKcal: band.siblingKcal, sameForm: same?.n ?? 0 });
+            // LOWER-only, as in the brand borrow. The same-form median travels WITH
+            // today's unfiltered borrow, so rung (E) can keep a sub-floor borrow
+            // when it would not admit the same-form set (see the call site).
+            if (same?.med && same.n >= 3 && same.med < unbanded.grams) {
+                return {
+                    grams: same.med,
+                    samples: same.n,
+                    p25: same.p25 ?? 0,
+                    p75: same.p75 ?? Number.POSITIVE_INFINITY,
+                    unbanded,
+                };
+            }
+        }
+        return unbanded;
     } catch {
         return null;
     }
@@ -3610,7 +3699,8 @@ export async function buildOffResult(
             && !(hydrated.packageQuantityUnit === 'ml' && packageGrams != null)
         ) {
             const sibling = await borrowSiblingLabelServing(
-                hydrated.brandName, candidate.id.replace(/^off_/, '')
+                hydrated.brandName, candidate.id.replace(/^off_/, ''),
+                hydrated.nutrientsPer100g?.['calories'] ?? null,
             );
             if (sibling != null) {
                 grams = sibling.grams;
@@ -3843,9 +3933,22 @@ export async function buildOffResult(
         const barePlural = isBarePluralRequest(
             parsed, rawLine, parsed?.name || hydrated.foodName
         );
-        const nameSib = await borrowNameSiblingLabelServing(
-            hydrated.foodName, candidate.id.replace(/^off_/, '')
+        const borrowed = await borrowNameSiblingLabelServing(
+            hydrated.foodName, candidate.id.replace(/^off_/, ''),
+            hydrated.nutrientsPer100g?.['calories'] ?? null,
         );
+        // SIB-FORM (s459): a same-form median this rung would not admit (a
+        // non-tight set under the floor) leaves the 100 g floor. On a corpus sample
+        // of 321 rung-(E) firings that is LOWER than today's light-form raise in
+        // 106 of 107 (powder `lemonade` 240 -> 100 g, `Pina colada` 105 -> 100 g).
+        // The one exception, today's borrow already UNDER the floor (a tight group
+        // lowered it: `potato wedges` 85 g), keeps that borrow: never a raise.
+        const floorGrams: number = grams;
+        const admits = (s: NameSiblingBorrow): boolean => s.grams !== floorGrams
+            && (barePlural ? isTightNameGroup(s.p25, s.p75) : (s.grams > floorGrams || isTightNameGroup(s.p25, s.p75)));
+        const nameSib = borrowed?.unbanded && !admits(borrowed)
+            && admits(borrowed.unbanded) && borrowed.unbanded.grams < floorGrams
+            ? borrowed.unbanded : borrowed;
         const tightGroup = nameSib != null && isTightNameGroup(nameSib.p25, nameSib.p75);
         // SINGULAR: raise unconditionally, lower only into a tight group (#252).
         // PLURAL:   tight group only, either direction.
