@@ -47,8 +47,7 @@
  * no key carries a tag (evict-keys: none).
  *
  * KNOWN MISSES (declined on purpose, no population): a trailing or parenthesised `<N>x` (`(2x)`,
- * `eggs (2x)`, `red bull 2x`); a tag followed by punctuation (`tacos x3!`); an article-led line
- * (`a bagel x2`, `a short stack x2`); a leading-`x2` count (`at least x2 wings`).
+ * `eggs (2x)`, `red bull 2x`); a tag followed by punctuation (`tacos x3!`); a leading-`x2` count (`at least x2 wings`).
  *
  * A LEADING DIGIT COUNT plus a TRAILING tag multiplies (multiplyLeadingCount(), 2026-10-25, Diego's default
  * 2026-10-21 item 12: `2 eggs x2` = 4 eggs). Before it, guard (a) declined the line and the tag reached the name:
@@ -63,11 +62,19 @@
  * parsed.qty, and a multiplier set this early disables unit parsing). Population (MEL "rawLine", 90 d, measured
  * 2026-10-25 with `~* '^\s*\d+\s.*\s[x×]\s?\d{1,2}\s*$'`): 2 events, 1 line, both the probe.
  *
- * STILL DECLINED (the owner's parse, unchanged): a word-, hedge-, fraction- or article-led count plus a tag
- * (`dozen eggs x2`, `couple eggs x2`, `⅓ bagel x2`, `a bagel x2`, `about 2 eggs x2`; with #572 merged,
- * `at least 2 wings x2`, `upwards of 3 beers x2` and `at least a dozen wings x2` parse like their un-hedged twins
- * did BEFORE this branch: deploy-3 integration, MGR 2026-10-20T00:50Z, default A); a digit count with text after the
- * tag (`2 toast x2 w/ butter`); a fractional tag (`2 eggs x2.5`, TAIL_X's `\d{1,2}(?=\s|$)` declines it).
+ * s459 X2 replaced that string rewrite with splitTrailingCountTag(): parseIngredientLine() parses the HEAD and
+ * multiplies its PARSED qty by N. s459 X2c widened its trigger from "a digit integer count, not a mass/volume unit"
+ * to EVERY line opensWithOwnedQuantity() owns, plus the glued `<N>x` lead. Every line the owner parses keeps that
+ * parse for its head, so the old reason to decline (a string rewrite mangling `dozen` or `⅓`; the 2026-10-19 draft's
+ * 12 regressions) no longer applies. Before X2c these lines kept the tag in the NAME, and a name of `x2` retrieved
+ * the energy drink "Strong X2" (off_8935024159965): `dozen eggs x2` billed 600 g / 2,640 kcal, `three eggs x2`
+ * 660 kcal, `2x eggs x2` 440 kcal (cold probes, s459 rf-x2). A `<food> x2` name billed ONE portion (`200g chicken
+ * x2` 200 g, `a banana x2` 118 g; s459 pd-x2c). Now `dozen eggs x2` = 24 eggs, `⅓ bagel x2` = ⅔ bagel,
+ * `a banana x2` = 2 bananas, `at least 2 wings x2` = 4 wings, `200g chicken x2` = 400 g, `2 cups rice x2` = 4 cups.
+ * A WRONG head stays wrong ×N (`quarter pounder` parses as ¼ of a `pounder`; that is the head's row, not this one).
+ *
+ * STILL DECLINED: text after the tag (`2 toast x2 w/ butter`, `chicken x2 12 oz`); a fractional or 3-digit tag
+ * (`2 eggs x2.5`, `toast x100`); N = 0.
  */
 import { normalizeUnitToken } from './unit';
 import { parseQuantityTokens } from './quantity';
@@ -112,21 +119,18 @@ function opensWithOwnedQuantity(line: string): boolean {
   return parseQuantityTokens(tokens) !== null;
 }
 
-/** `2 eggs x2`: a DIGIT-led integer count, then a word (the food or its count noun). */
-const LEADING_INT_COUNT = /^(\s*)(\d+)\s+(?=\p{L})/u;
-
 /**
- * `<Q> <food> x<N>` with nothing after the tag -> `{ head: '<Q> <food>', n: N }` (header: "A LEADING DIGIT COUNT plus a
- * TRAILING tag"). parseIngredientLine() parses the HEAD and multiplies the PARSED qty by N, so the parser, not this
- * file, decides what the leading number is (s459 X2): `2 shot latte x2` -> 2 x (`2 shot latte` = one 2-shot drink),
+ * `<Q> <food> x<N>` with nothing after the tag -> `{ head: '<Q> <food>', n: N }` (header: "s459 X2 replaced that
+ * string rewrite"). parseIngredientLine() parses the HEAD and multiplies the PARSED qty by N, so the parser, not this
+ * file, decides what the leading quantity is (s459 X2): `2 shot latte x2` -> 2 x (`2 shot latte` = one 2-shot drink),
  * `7 up x2` -> 2 x (`7 up`), `2 eggs x2` -> 2 x (2 eggs) = 4 eggs as before. Folding N into the leading DIGIT string
- * (`4 shot latte`, `14 up`) let a downstream rule read the product as a size or a brand digit. Returns null when the
- * line is not that shape (or opens with the glued `<N>x`, which resolveCountTag() owns), so the line falls through.
+ * (`4 shot latte`, `14 up`) let a downstream rule read the product as a size or a brand digit. Q is any lead
+ * opensWithOwnedQuantity() owns (digits, units, fractions, `a`/`an`, quantity words, hedges and frames) or a glued
+ * `<N>x` (s459 X2c): `dozen eggs x2` -> 2 x (`dozen eggs`), `200g chicken x2` -> 2 x (`200g chicken`). Returns null
+ * when the line is not that shape, so the line falls through to resolveCountTag().
  */
 export function splitTrailingCountTag(line: string): { head: string; n: number } | null {
-  if (LEADING_GLUED_X.test(line)) return null;
-  const c = LEADING_INT_COUNT.exec(line);
-  if (!c || massOrVolumeFollows(line.slice(c[0].length))) return null;
+  if (!LEADING_GLUED_X.test(line) && !opensWithOwnedQuantity(line)) return null;
   const m = TAIL_X.exec(line);
   if (!m || m[4] !== '') return null;
   const n = Number(m[3]);
