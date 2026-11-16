@@ -327,8 +327,39 @@ function rewriteSpanishNumeral(mergedTokens: string[], detectedBrand: string | n
   if (mergedTokens.length < 2) return;
   const first = mergedTokens[0].toLowerCase();
   const d = SPANISH_NUMERAL_DIGITS[first];
+  // s459 ES-YMEDIA (numeral first): `una y media tazas de arroz`, `1 y media tazas` -> `1.5 tazas` (`dos y media tazas` already
+  // reads 2.5 through readSpanishCount()). Only a whole number and `y media|medio` directly before a SPANISH_UNIT_TOKENS word.
+  const whole = /^\d+$/.test(first) ? Number(first) : (d !== undefined && first !== 'media' && first !== 'medio' ? Number(d) : NaN);
+  if (!Number.isNaN(whole) && mergedTokens.length >= 4 && mergedTokens[1].toLowerCase() === 'y'
+      && ES_Y_FRACTIONS[mergedTokens[2].toLowerCase()] === 0.5 && SPANISH_UNIT_TOKENS.has(mergedTokens[3].toLowerCase())) {
+    mergedTokens.splice(0, 3, String(whole + 0.5));
+    return;
+  }
   if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase()) && !articleNamesOwnMeasure(first, mergedTokens)) { mergedTokens[0] = d; return; }
   rewriteSpanishCountBeforeNoun(mergedTokens, detectedBrand);
+}
+
+// s459 ES-YMEDIA: `una taza y media de arroz` is 1.5 cups. The Spanish twin of the English same-unit continuation
+// (`a cup and a half of rice`, SAME_UNIT_FRACTIONS in parseIngredientLine()): after a SPANISH_UNIT_TOKENS word, `y media` /
+// `y medio` adds 0.5, `y [un] cuarto` 0.25 and `y tres cuartos` 0.75 -- ONLY when `de`/`del` and a word follow the fraction.
+// That anchor is the whole food-name guard: `una taza y media luna`, `y media crema`, `y media taza de leche`, `y media
+// noche`, `y media docena de huevos` all decline (no `de` after the fraction), and `media luna`/`medianoche`/`half and half`
+// never reach it (no unit before the `y`). KNOWN COST, pinned: the anchor admits the `[un] cuarto de <food>` dish names when a unit
+// word sits right before the `y` -- `una taza y cuarto de libra` reads 1.25 cups of `libra`, `una taza y un cuarto de pollo` 1.25
+// cups of `pollo`. Lines with `y` reach the AI segmenter first, which split or rewrote those in 4 of 4 draws (s459 rf-ymedia).
+// MEASURED (s459 pd-ymedia): organic Spanish population 0 (MEL noCache=false, SegmentationCache, s457/s459 organic sets).
+const ES_Y_FRACTIONS: Record<string, number> = { media: 0.5, medio: 0.5, cuarto: 0.25 };
+/** At tokens[k] === `y`: the fraction and the index of the food word after `de`/`del`, or null. */
+function spanishFractionAfterY(tokens: string[], k: number): { frac: number; end: number } | null {
+  const at = (j: number): string => tokens[j]?.toLowerCase() ?? '';
+  if (at(k) !== 'y') return null;
+  let j = k + 1;
+  let frac: number | undefined;
+  if (at(j) === 'tres' && at(j + 1) === 'cuartos') { frac = 0.75; j += 2; }
+  else if (at(j) === 'un' && at(j + 1) === 'cuarto') { frac = 0.25; j += 2; }
+  else { frac = ES_Y_FRACTIONS[at(j)]; j += 1; }
+  if (frac === undefined || (at(j) !== 'de' && at(j) !== 'del') || !/^\p{L}/u.test(at(j + 1))) return null;
+  return { frac, end: j + 1 };
 }
 
 // s457 P4: a leading Spanish count word before a NOUN becomes its digit, so `dos huevos` parses exactly as `2 huevos`
@@ -661,6 +692,7 @@ function leadingMeasureWordIsName(mergedTokens: string[], hadLeadingArticle: boo
   if (lead.kind !== 'mass' && lead.kind !== 'volume') return false;
   const next = mergedTokens[1].toLowerCase();
   if (next === 'of' || LEADING_MEASURE_CONNECTORS.has(next)) return false;
+  if (SPANISH_UNIT_TOKENS.has(mergedTokens[0].toLowerCase()) && spanishFractionAfterY(mergedTokens, 1)) return false;   // s459 ES-YMEDIA
   return /^\p{L}/u.test(next);                         // not `(`, `,`, a digit or a symbol
 }
 
@@ -1365,6 +1397,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Must convert the second part to the first unit and add to qty
   if (unit && i < mergedTokens.length) {
     const connector = mergedTokens[i].toLowerCase();
+    // s459 ES-YMEDIA: `<unit> y media de <food>` continues the SAME unit (spanishFractionAfterY() above).
+    const esFraction = rawUnit && SPANISH_UNIT_TOKENS.has(rawUnit.toLowerCase()) ? spanishFractionAfterY(mergedTokens, i) : null;
+    if (esFraction) {
+      qty += esFraction.frac;
+      i = esFraction.end;
+    }
     if (connector === '&' || connector === '+' || connector === 'and' || connector === 'plus') {
       // SAME-UNIT FRACTIONAL CONTINUATION: "a scoop and a half of whey".
       //
