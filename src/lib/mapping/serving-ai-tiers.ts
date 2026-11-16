@@ -454,6 +454,11 @@ export const BORROWED_OR_DEFAULTED_SERVING_TIERS: readonly string[] = Object.fre
         // ("one serving of flaming hot cheetos") on a SKU with no label serving of
         // its own (#270, 2026-09-23). Another product's label by construction.
         'serving_unit_sibling_label',
+        // borrowDoseLabelGrams() — PKT-DOSE (s459): a dose word ("3 packets of
+        // sugar") on a SKU with no label serving bills the median label serving
+        // of OTHER same-name or same-brand OFF rows when the package answer is
+        // over 2x it. Another product's label by construction.
+        'package_dose_label',
         // borrowNameSiblingLabelServing() — the brandless twin: the median declared
         // serving of OTHER OFF rows sharing this row's NAME. Three tiers, one rung,
         // splitting on direction and request shape (its own producer comment in

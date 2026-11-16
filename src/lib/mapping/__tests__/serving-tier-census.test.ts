@@ -164,13 +164,14 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     fdc_volume_ai: 'NONDETERMINISTIC',
     ai_generated_serving: 'NONDETERMINISTIC',
 
-    // ============= BORROWED_OR_DEFAULTED — shipped set, 18 members ==============
+    // ============= BORROWED_OR_DEFAULTED — shipped set, 20 members ==============
     // Same deal: mirrors BORROWED_OR_DEFAULTED_SERVING_TIERS, pinned both ways.
     // That file's own comments own WHY each is a member; not restated here.
     bare_sibling_serving: 'BORROWED_OR_DEFAULTED',
     package_count_sibling: 'BORROWED_OR_DEFAULTED',
     package_quantity_sibling: 'BORROWED_OR_DEFAULTED',
     serving_unit_sibling_label: 'BORROWED_OR_DEFAULTED',
+    package_dose_label: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving_tight: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving_plural: 'BORROWED_OR_DEFAULTED',
@@ -533,8 +534,9 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // 56 -> 57 on 2026-10-20: buildOffResult() gained name_count_derived (C70 row 8)
         // 57 -> 58 on 2026-10-22: buildOffResult() gained label_count_band_derived (C70 row 10)
         // 58 -> 59 on 2026-11-12: buildOffResult() gained label_piece_estimate (s456 CXL-1)
-        expect(LIVE_TIERS).toHaveLength(59);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(59);
+        // 59 -> 60 on 2026-11-16: buildOffResult() gained package_dose_label (s459 PKT-DOSE)
+        expect(LIVE_TIERS).toHaveLength(60);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(60);
     });
 });
 
