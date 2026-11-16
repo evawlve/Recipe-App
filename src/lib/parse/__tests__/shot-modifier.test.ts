@@ -70,13 +70,13 @@ const CONTROLS: Array<[string, unknown]> = [
   ['2 shot glasses tequila', { qty: 2, multiplier: 1, unit: 'shot', rawUnit: 'shot', name: 'glasses tequila', notes: null, unitHint: null }],
 ];
 
-// KNOWN COSTS (0 organic): resolveCountTag() (count-tag.ts) rewrites the line BEFORE the guard, so the drink-size count is
-// read as a count it is not: `2x shot latte` loses its `x`, and a trailing tag multiplies the SIZE (`2 shot latte x2` -> one
-// `4 shot latte`, not two 2-shot lattes). Pinned so a count-tag change that fixes them shows up here.
-describe('count-tag interactions (known costs, pinned)', () => {
+// count-tag interactions (0 organic). KNOWN COST: resolveCountTag() rewrites the glued `2x` into a leading count BEFORE the
+// guard, so `2x shot latte` reads one 2-shot latte (an ambiguous line, left). FIXED s459 X2: a trailing tag multiplies the
+// PARSED qty (splitTrailingCountTag()), so `2 shot latte x2` is two 2-shot lattes, not one `4 shot latte`.
+describe('count-tag interactions (pinned)', () => {
   it.each([
     ['2x shot latte', one('2 shot latte')],
-    ['2 shot latte x2', one('4 shot latte')],
+    ['2 shot latte x2', { ...one('2 shot latte'), qty: 2 }],
   ])('%s', (line, expected) => {
     expect(parseIngredientLine(line)).toEqual(expected);
   });

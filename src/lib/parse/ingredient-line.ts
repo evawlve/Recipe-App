@@ -4,7 +4,7 @@ import { extractQualifiers, extractQualifiersFromParentheses } from './qualifier
 import { extractUnitHint } from './unit-hint';
 import { expandUnitAbbreviation } from './unit-abbreviations';
 import { resolveLoosePourMeasures } from './loose-measures';
-import { resolveCountTag } from './count-tag';
+import { resolveCountTag, splitTrailingCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
 import { isIdentityWholePhrase } from '../mapping/normalization-rules';
@@ -749,6 +749,14 @@ function stripQuantityHedges(line: string): string {
 
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
+
+  // s459 X2: a trailing count tag on a digit-led line multiplies the PARSED qty of the head (count-tag.ts,
+  // splitTrailingCountTag()), so `2 shot latte x2` is two 2-shot lattes and `7 up x2` is two 7 Ups.
+  const tagged = splitTrailingCountTag(stripClockTime(line));
+  if (tagged) {
+    const head = parseIngredientLine(tagged.head);
+    return head ? { ...head, qty: head.qty * tagged.n } : null;
+  }
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
   const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line)))));
