@@ -750,7 +750,7 @@ function stripQuantityHedges(line: string): string {
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
-  // s459 X2: a trailing count tag on a digit-led line multiplies the PARSED qty of the head (count-tag.ts,
+  // s459 X2/X2c: a trailing count tag on a quantity-led line multiplies the PARSED qty of the head (count-tag.ts,
   // splitTrailingCountTag()), so `2 shot latte x2` is two 2-shot lattes and `7 up x2` is two 7 Ups.
   const tagged = splitTrailingCountTag(stripClockTime(line));
   if (tagged) {

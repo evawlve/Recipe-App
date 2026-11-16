@@ -4,7 +4,9 @@
  * TARGETS deep-equal their numeric twin's WHOLE parse. CONTROLS pin the master parse, hard-coded
  * from master 081a3aef BEFORE the edit (the design's 13 controls, the refute's 12 regression lines
  * and the collision set). FN_CONTROLS pin resolveCountTag(line) === line: function-level, so they
- * stay valid whichever sibling parse PR lands first. KNOWN MISSES are pinned as unchanged.
+ * stay valid whichever sibling parse PR lands first. KNOWN MISSES are pinned as unchanged. OWNED_LEAD_TAGS (s459 X2c)
+ * pin the head x N reading of a tag after any lead the owner parses (the 2026-10-19 and deploy-3 pins they replace
+ * are cited above the table); SPLIT_DECLINES pin what splitTrailingCountTag() still leaves alone.
  */
 
 import { parseIngredientLine } from '../ingredient-line';
@@ -33,6 +35,8 @@ const TARGETS: Array<[string, string]> = [
   ['1 banana x3', '3 banana'],
   ['3 cookies x 2', '6 cookies'],
   ['2 eggs ×2', '4 eggs'],
+  // No owned lead: the tag still reaches resolveCountTag()'s rewrite, so `cup` reads as the unit (s459 X2c).
+  ['cup coffee x2', '2 cup coffee'],
 ];
 
 /** Master parses (081a3aef), unchanged by the edit. */
@@ -49,16 +53,6 @@ const CONTROLS: Array<[string, unknown]> = [
   ["oj 12oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"oj 12 oz","notes":null,"unitHint":null}],
   ["toast x0", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x0","notes":null,"unitHint":null}],
   ["2 eggs", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"eggs","notes":null,"unitHint":null}],
-  ["⅓ bagel x2", {"qty":0.3333333333333333,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
-  ["⅛ pizza x2", {"qty":0.125,"multiplier":1,"unit":null,"rawUnit":null,"name":"pizza x2","notes":null,"unitHint":null}],
-  ["couple eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
-  ["dozen eggs x2", {"qty":12,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
-  ["third bagel x2", {"qty":0.3333333333333333,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
-  ["quarter bagel x2", {"qty":0.25,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
-  ["quarter pounder x2", {"qty":0.25,"multiplier":1,"unit":null,"rawUnit":null,"name":"pounder x2","notes":null,"unitHint":null}],
-  ["about 2 eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
-  ["the last 2 slices of pizza x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"pizza x2","notes":null,"unitHint":null}],
-  ["the last 2 slices x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"x2","notes":null,"unitHint":null}],
   ["9x13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
   ["9 x 13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
   ["2 x 4", null],
@@ -67,8 +61,6 @@ const CONTROLS: Array<[string, unknown]> = [
   ["2xl shirt", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"shirt","notes":null,"qualifiers":["xl"],"unitHint":null}],
   ["xo sauce", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"xo sauce","notes":null,"unitHint":null}],
   ["x2o water", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2o water","notes":null,"unitHint":null}],
-  ["a bagel x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"a bagel x2","notes":null,"unitHint":null}],
-  ["a short stack x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"a stack x2","notes":null,"qualifiers":["short"],"unitHint":null}],
   ["toast x2 cups", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x2 cups","notes":null,"unitHint":null}],
   ["chicken x2 12 oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"chicken x2 12 oz","notes":null,"unitHint":null}],
   ["eggs x2 and toast x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs x2 and toast x2","notes":null,"unitHint":null}],
@@ -84,16 +76,74 @@ const CONTROLS: Array<[string, unknown]> = [
 ];
 
 /**
- * KNOWN MISS (deploy-3 integration, 2026-10-20): a HEDGED leading quantity plus a tag. The tag declines
- * (guard a/b/c) and the parse is the owner's, so the stray `x<N>` stays in the name. With #572 (approximator
- * before a bare count) merged these parsed like plain `2 wings x2` did then; since 2026-10-25 a DIGIT-led
- * count multiplies (TARGETS), and only the hedge/article-led lines below stay in this class.
+ * s459 X2c: a trailing tag after ANY lead opensWithOwnedQuantity() owns multiplies the head's PARSED qty
+ * (splitTrailingCountTag()). These lines were pinned as master parses (2026-10-19 CONTROLS, "the refute's 12
+ * regression lines") and as a KNOWN MISS (deploy-3 re-pin, 3e8de685: "the meaning of `N food xM` is a separate design
+ * row") because the only mechanism then was a STRING rewrite that mangled the lead (`dozen eggs x2` -> q2). The
+ * declined parse kept the tag in the NAME: a name of `x2` billed the energy drink "Strong X2" (`dozen eggs x2`
+ * 600 g / 2,640 kcal, cold, s459 rf-x2) and a `<food> x2` name billed ONE portion (`200g chicken x2` 200 g).
+ * resolveCountTag() still returns these lines unchanged: only the head x N path reads the tag.
+ * `quarter pounder` is a WRONG head (¼ of a `pounder`); x N keeps it proportional and the head is its own row.
  */
-const LEADING_QTY_TAG_CLASS: Array<[string, unknown]> = [
-  ["at least 2 wings x2", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
-  ["upwards of 3 beers x2", {"qty":3,"multiplier":1,"unit":null,"rawUnit":null,"name":"beers x2","notes":null,"unitHint":null}],
-  ["at least a dozen wings x2", {"qty":12,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
-  ["about 3 wings x2", {"qty":3,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings x2","notes":null,"unitHint":null}],
+const OWNED_LEAD_TAGS: Array<[string, string, number]> = [
+  ['⅓ bagel x2', '⅓ bagel', 2],
+  ['⅛ pizza x2', '⅛ pizza', 2],
+  ['couple eggs x2', 'couple eggs', 2],
+  ['dozen eggs x2', 'dozen eggs', 2],
+  ['third bagel x2', 'third bagel', 2],
+  ['quarter bagel x2', 'quarter bagel', 2],
+  ['quarter pounder x2', 'quarter pounder', 2],
+  ['about 2 eggs x2', 'about 2 eggs', 2],
+  ['the last 2 slices of pizza x2', 'the last 2 slices of pizza', 2],
+  ['the last 2 slices x2', 'the last 2 slices', 2],
+  ['a bagel x2', 'a bagel', 2],
+  ['a short stack x2', 'a short stack', 2],
+  ['at least 2 wings x2', 'at least 2 wings', 2],
+  ['upwards of 3 beers x2', 'upwards of 3 beers', 2],
+  ['at least a dozen wings x2', 'at least a dozen wings', 2],
+  ['about 3 wings x2', 'about 3 wings', 2],
+  ['2 cups rice x2', '2 cups rice', 2],
+  ['12 oz steak x2', '12 oz steak', 2],
+  ['2 1/2 bagels x2', '2 1/2 bagels', 2],
+  ['2 7up x2', '2 7up', 2],
+  ['three eggs x2', 'three eggs', 2],
+  ['a banana x2', 'a banana', 2],
+  ['200g chicken x2', '200g chicken', 2],
+  ['1.5 eggs x2', '1.5 eggs', 2],
+  ['7up x2', '7up', 2],
+  ['Half a bagel x2', 'Half a bagel', 2],
+  ['dozen eggs x 3', 'dozen eggs', 3],
+];
+
+/**
+ * s459 X2c: the tagged line deep-equals a tag-free twin (the first nine were billed cold in s459 pd-x2c). The twins
+ * are hard anchors: they hold the head's parse that the replaced literal CONTROLS held (s459 rf-x2c).
+ */
+const OWNED_LEAD_TWINS: Array<[string, string]> = [
+  ['dozen eggs x2', '24 eggs'],
+  ['three eggs x2', '6 eggs'],
+  ['couple eggs x2', '4 eggs'],
+  ['2x eggs x2', '4 eggs'],
+  ['⅓ bagel x2', '⅔ bagel'],
+  ['at least 2 wings x2', '4 wings'],
+  ['200g chicken x2', '400g chicken'],
+  ['2 cups rice x2', '4 cups rice'],
+  ['12 oz steak x2', '24 oz steak'],
+  ['about 2 eggs x2', '4 eggs'],
+  ['third bagel x2', '⅔ bagel'],
+  ['quarter bagel x2', '1/2 bagel'],
+  ['⅛ pizza x2', '¼ pizza'],
+  ['2 1/2 bagels x2', '5 bagels'],
+  ['the last 2 slices x2', '4 slices'],
+  ['the last 2 slices of pizza x2', '4 slices of pizza'],
+  ['a short stack x2', '6 pancakes'],
+  ['upwards of 3 beers x2', '6 beers'],
+  ['about 3 wings x2', '6 wings'],
+  ['at least a dozen wings x2', '24 wings'],
+  ['a few wings x2', '6 wings'],
+  ['1.5 eggs x2', '3 eggs'],
+  ['dozen eggs x 3', '36 eggs'],
+  ['2 7up x2', '4 7up'],
 ];
 
 /** Guard (g): N is a pack size, not a count of the food. */
@@ -141,6 +191,34 @@ const FN_CONTROLS: string[] = [
   "2x200g chicken",
 ];
 
+/** splitTrailingCountTag(line) must return null: no tag, text after the tag, a bad N, or no owned lead (TAIL_X owns it). */
+const SPLIT_DECLINES: string[] = [
+  "chicken x2 12 oz",
+  "eggs x2 and toast x2",
+  "toast x2 cups",
+  "toast x2.5",
+  "toast x100",
+  "eggs (2x)",
+  "red bull 2x",
+  "9x13 pan",
+  "2xl shirt",
+  "xo sauce",
+  "x2o water",
+  "xbox",
+  "x2 cups",
+  "2 toast x2 w/ butter",
+  "2 eggs x0",
+  "2 eggs x2.5",
+  "2 x 200g chicken",
+  "2x200g chicken",
+  "toast x2",
+  "eggs x2",
+  "couple eggs x2 w/ butter",
+  "dozen eggs x0",
+  "dozen eggs x2.5",
+  "200g chicken x2 and rice",
+];
+
 describe('count tag reads as a leading count', () => {
   it.each(TARGETS)('%s parses exactly as its twin %s', (target, twin) => {
     const t = parseIngredientLine(target);
@@ -171,9 +249,10 @@ describe('count tag reads as a leading count', () => {
     expect(parseIngredientLine(line)).toEqual({ ...h, qty: h!.qty * n });
   });
 
-  it('the leading-count branch leaves a glued <N>x line to resolveCountTag()', () => {
-    expect(splitTrailingCountTag('2x eggs x2')).toBeNull();
-    expect(splitTrailingCountTag('2 x eggs x2')).toBeNull();
+  it('a glued <N>x lead plus a trailing tag multiplies its head (s459 X2c): 2x eggs x2 = 4 eggs', () => {
+    expect(splitTrailingCountTag('2x eggs x2')).toEqual({ head: '2x eggs', n: 2 });
+    expect(splitTrailingCountTag('2 x eggs x2')).toEqual({ head: '2 x eggs', n: 2 });
+    expect(parseIngredientLine('2x eggs x2')).toEqual(parseIngredientLine('4 eggs'));
   });
 
   it('a tag reads the count the name used to carry', () => {
@@ -185,9 +264,17 @@ describe('count tag reads as a leading count', () => {
     expect(parseIngredientLine(line)).toEqual(expected);
   });
 
-  it.each(LEADING_QTY_TAG_CLASS)('known miss (leading quantity + tag) %s keeps the owner parse', (line, expected) => {
-    expect(parseIngredientLine(line)).toEqual(expected);
+  it.each(OWNED_LEAD_TAGS)('owned lead + tag: %s parses as %s with its qty times %i (s459 X2c)', (line, head, n) => {
+    const h = parseIngredientLine(head);
+    expect(h).not.toBeNull();
     expect(resolveCountTag(line)).toBe(line);
+    expect(splitTrailingCountTag(line)).toEqual({ head, n });
+    expect(parseIngredientLine(line)).toEqual({ ...h, qty: h!.qty * n });
+    expect(parseIngredientLine(line)!.name).not.toMatch(/[x×]\s?\d/i);
+  });
+
+  it.each(OWNED_LEAD_TWINS)('owned lead + tag: %s parses exactly as its twin %s (s459 X2c)', (line, twin) => {
+    expect(parseIngredientLine(line)).toEqual(parseIngredientLine(twin));
   });
 
   it.each(PACK_SIZE_DECLINES)('guard (g): %s is a pack size, the tag declines', (line) => {
@@ -199,12 +286,16 @@ describe('count tag reads as a leading count', () => {
     expect(parseIngredientLine(line)?.name).not.toMatch(/^(?:wine|beer|water|coffee) (?:glasses|cans|bottles|mugs)$/);
   });
 
-  it('a few wings x2 declines at the tag (an article-led line; with #583 it joins the leading-quantity class)', () => {
+  it('a few wings x2: resolveCountTag() declines it and the head x N path counts 6 wings (s459 X2c)', () => {
     expect(resolveCountTag('a few wings x2')).toBe('a few wings x2');
+    expect(splitTrailingCountTag('a few wings x2')).toEqual({ head: 'a few wings', n: 2 });
   });
 
   it.each(FN_CONTROLS)('resolveCountTag declines %s', (line) => {
     expect(resolveCountTag(line)).toBe(line);
+  });
+
+  it.each(SPLIT_DECLINES)('splitTrailingCountTag declines %s', (line) => {
     expect(splitTrailingCountTag(line)).toBeNull();
   });
 
@@ -220,7 +311,7 @@ describe('count tag reads as a leading count', () => {
   });
 
   it('known misses stay unchanged: (2x), trailing 2x, punctuation after the tag', () => {
-    for (const line of ['eggs (2x)', 'red bull 2x', 'tacos x3!', 'a bagel x2']) {
+    for (const line of ['eggs (2x)', 'red bull 2x', 'tacos x3!']) {
       expect(resolveCountTag(line)).toBe(line);
     }
   });
