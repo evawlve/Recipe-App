@@ -53,6 +53,7 @@ import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-
 import { classifyUnit } from './unit-type';
 import { shouldNormalizeLlm } from './normalize-gate';
 import { isSpanishLine } from './spanish-detect';
+import { isZeroCalorieName, lineNamesWaterOrIce } from './zero-calorie-identity';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
 import { extractPrepModifier } from './preemptive-backfill';
@@ -623,6 +624,46 @@ type PreflightOutcome =
     | { done: true; result: FatsecretMappedIngredient | null }
     | { done: false; parsed: ParsedIngredient | null; baseName: string };
 
+/**
+ * The zero-calorie result for a plain water / ice line (`water_default`, no record). Grams come from the
+ * parsed quantity and unit by standard volume conversions; an unknown or absent unit is one cup.
+ */
+function zeroCalorieResult(parsed: ParsedIngredient | null | undefined, rawLine: string): FatsecretMappedIngredient {
+    const WATER_UNIT_GRAMS: Record<string, number> = {
+        // Lane B1b large-volume family (pint/quart/gallon/litre) from the owner volume-density.ts; first so every private cell below wins unchanged.
+        ...pickVolumeUnits(VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS),
+        'cup': 237, 'cups': 237,
+        'ml': 1, 'milliliter': 1, 'milliliters': 1,
+        'l': 1000, 'liter': 1000, 'liters': 1000,
+        'oz': 29.57, 'ounce': 29.57, 'ounces': 29.57,
+        'fl oz': 29.57, 'floz': 29.57, 'fluid ounce': 29.57,
+        'tbsp': 14.79, 'tablespoon': 14.79,
+        'tsp': 4.93, 'teaspoon': 4.93,
+        'g': 1, 'gram': 1, 'grams': 1,
+    };
+    const unitLower = parsed?.unit?.toLowerCase() || 'cup';
+    const gramsPerUnit = WATER_UNIT_GRAMS[unitLower] || 237;  // Default to 1 cup
+    const qty = parsed ? parsed.qty * parsed.multiplier : 1;
+    const totalGrams = gramsPerUnit * qty;
+
+    return {
+        source: 'cache',
+        foodId: 'water_default',
+        foodName: 'Water',
+        brandName: null,
+        servingId: null,
+        servingDescription: `${qty} ${parsed?.unit || 'cup'}`,
+        grams: totalGrams,
+        kcal: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        confidence: 1.0,
+        quality: 'high',
+        rawLine,
+    };
+}
+
 async function preflightIngredientLine(
     rawLine: string,
     trimmed: string,
@@ -899,55 +940,12 @@ async function preflightIngredientLine(
     // IMPORTANT: the match is anchored to the WHOLE line (after qty/unit stripping) —
     // the old suffix/last-word matching made "canned tuna in water" bill 0 kcal.
     // Lines that merely CONTAIN water phrasing must proceed through normal mapping.
-    // Note: "liquid" added to handle ambiguous inputs like "100% liquid" that normalize to just "liquid"
-    const ZERO_CALORIE_INGREDIENTS = [
-        'ice', 'ice cubes', 'crushed ice', 'shaved ice',
-        'water', 'tap water', 'cold water', 'hot water', 'warm water', 'ice water', 'iced water',
-        'still water', 'sparkling water', 'mineral water', 'spring water', 'carbonated water',
-        'filtered water', 'drinking water',
-        'liquid',
-    ];
-    // Strip leading "100%"-style prefixes so "100% liquid" → "liquid" still matches whole-line
-    const baseNameLowerForWaterCheck = baseName.toLowerCase().trim().replace(/^\d+(?:\.\d+)?\s*%\s*/, '');
-    if (ZERO_CALORIE_INGREDIENTS.includes(baseNameLowerForWaterCheck)) {
-        logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName });
+    // The name list (English + Spanish) and the comparison live in zero-calorie-identity.ts;
+    // the same rule runs again on the normalized name, after the normalize step (seat 2).
+    if (isZeroCalorieName(baseName)) {
+        logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName, site: 'preflight' });
         markFunnel(telemetry, 'fast_path', 'zero_calorie');
-
-        // Calculate grams from parsed quantity using standard conversions
-        const WATER_UNIT_GRAMS: Record<string, number> = {
-            // Lane B1b large-volume family (pint/quart/gallon/litre) from the owner volume-density.ts; first so every private cell below wins unchanged.
-            ...pickVolumeUnits(VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS),
-            'cup': 237, 'cups': 237,
-            'ml': 1, 'milliliter': 1, 'milliliters': 1,
-            'l': 1000, 'liter': 1000, 'liters': 1000,
-            'oz': 29.57, 'ounce': 29.57, 'ounces': 29.57,
-            'fl oz': 29.57, 'floz': 29.57, 'fluid ounce': 29.57,
-            'tbsp': 14.79, 'tablespoon': 14.79,
-            'tsp': 4.93, 'teaspoon': 4.93,
-            'g': 1, 'gram': 1, 'grams': 1,
-        };
-        const unitLower = parsed?.unit?.toLowerCase() || 'cup';
-        const gramsPerUnit = WATER_UNIT_GRAMS[unitLower] || 237;  // Default to 1 cup
-        const qty = parsed ? parsed.qty * parsed.multiplier : 1;
-        const totalGrams = gramsPerUnit * qty;
-
-        const waterResult: FatsecretMappedIngredient = {
-            source: 'cache',
-            foodId: 'water_default',
-            foodName: 'Water',
-            brandName: null,
-            servingId: null,
-            servingDescription: `${qty} ${parsed?.unit || 'cup'}`,
-            grams: totalGrams,
-            kcal: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0,
-            confidence: 1.0,
-            quality: 'high',
-            rawLine,
-        };
-        return { done: true, result: waterResult };
+        return { done: true, result: zeroCalorieResult(parsed, rawLine) };
     }
 
     // NUTRITION-MODIFIER RESTORATION (site A). Placed LAST in preflight on
@@ -1869,6 +1867,20 @@ async function mapIngredientWithFallbackCore(
             if (!normalizedName.toLowerCase().includes('sweet')) {
                 normalizedName = normalizedName.replace(/\bcorn\b/gi, 'sweet corn');
             }
+        }
+
+        // Step 1-WATER, seat 2: the same whole-name zero-calorie identity, read on the NORMALIZED name.
+        // A line whose plain-water name only appears after the normalize step never reached seat 1:
+        // `un vaso de agua` -> `agua` (Costa water crackers won, 414 kcal/100 g), `hielo` -> `ice`
+        // (an ice-cream record won), `a glass of water` -> `water`. Measurements and the list:
+        // zero-calorie-identity.ts. Runs after every normalizedName rewrite above and before
+        // retrieval, so no candidate can outrank it; the finally below releases the in-flight lock.
+        // The name here is the MODEL's answer, so the user's own line must also say water or ice:
+        // a model answer of `agua` / `liquid` for `un electrolit` or `liquid iv` never bills 0 kcal.
+        if (isZeroCalorieName(normalizedName) && lineNamesWaterOrIce(trimmed)) {
+            logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName, normalizedName, site: 'post_normalize' });
+            markFunnel(telemetry, 'fast_path', 'zero_calorie');
+            return zeroCalorieResult(parsed, rawLine);
         }
 
         // Combine learned + AI synonyms (deduplicated)
