@@ -53,6 +53,7 @@ import { volumeToGrams, VOLUME_UNIT_ML } from '../units/volume-density';
 // there is no cycle back through map-ingredient-with-fallback.
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
 import { classifyUnit } from './unit-type';
+import { isPreparedDrinkLine, recordCupSizeClass } from './drink-cup-size';
 // Leading-quantity parsing for serving labels ("1/2 cup" -> 0.5, "1 1/4 cups"
 // -> 1.25). The ONE owner of that grammar; it has no imports of its own, so
 // there is no cycle risk here. Deliberately NOT a local copy: 40.1% of the
@@ -995,7 +996,23 @@ export async function buildFatSecretResult(
         const declaredUnitsPerServing = grams == null && panellessCountUnit && macroServingPick
             ? panellessUnitsPerServing(macroServingPick, foodName, singularizeUnit(unit!))
             : null;
-        if (grams == null && unit
+        // A CUP SIZE THE RECORD ITSELF IS (s459 LATTE-c): `a large matcha latte` on
+        // `Matcha Latte (Venti)` asks for exactly the cup the record describes, so its own serving
+        // answers and no estimate is asked for (live, deploy 40: `a large matcha latte` on the Tall
+        // record took a 250 g AI cup, below the record's own 340 g). Prepared-drink lines only, and
+        // only when the record name states that ONE size (recordCupSizeClass(): tall = small,
+        // grande = medium, venti = large); a size the record does not state keeps the estimate.
+        // The skip falls through to the declared default / macro-only serving below. The record must
+        // carry a per-100 g panel, so that serving's grams are the panel inversion; a panel-less
+        // record would bill the same kcal on fabricated 2.0 kcal/g grams (`a medium dunkin latte`
+        // displayed 50 g in replay r1), so it keeps the estimate.
+        const unitIsRecordCup = per100 != null && unit != null && /^(small|medium|large)$/i.test(unit)
+            && recordCupSizeClass(foodName) === unit.toLowerCase()
+            && isPreparedDrinkLine(parsed?.name || '', rawLine);
+        if (unitIsRecordCup) {
+            logger.info('fs.build_result.unit_is_record_cup', { foodId: candidate.id, unit, foodName });
+        }
+        if (grams == null && unit && !unitIsRecordCup
             && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
             const ambiguous = await getOrCreateAmbiguousServing(
                 candidate.id, foodName, unit, brandName

@@ -10,6 +10,7 @@ import { extractModifierConstraints, applyModifierConstraints, type ModifierCons
 import { COVERAGE_SPELLING_FOLD, detectGrainCookingContext, isExplicitCookedGrainVolumeLine } from './filter-candidates';
 import { DRY_GRAIN_PANEL_MIN_KCAL_PER_100G } from './estimate-state-guard';
 import { assessRankTimePlausibility, nonAlcoholicDrinkReason } from './macro-plausibility';
+import { CAFE_CUP_SIZE_WORDS, isPreparedDrinkLine } from './drink-cup-size';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
 import { applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair } from './brand-spelling-repair';
@@ -1764,12 +1765,17 @@ const VARIANT_STOPWORDS = new Set([
     'slices', 'piece', 'pieces', 'pc', 'pcs', 'ct', 'count', 'meal',
 ]);
 
-/** Resolve an explicit size class from free text, or null if none present. */
-function resolveVariantSize(text: string): string | null {
+/**
+ * Resolve an explicit size class from free text, or null if none present.
+ * `cupWords` also reads the cafe cup words (tall = small, grande = medium, venti = large, short,
+ * trenta; CAFE_CUP_SIZE_WORDS in drink-cup-size.ts). Callers pass it only on a prepared-drink
+ * line: `short` and `grande` are ordinary words elsewhere (`short ribs`, `burrito grande`).
+ */
+function resolveVariantSize(text: string, cupWords = false): string | null {
     const lower = text.toLowerCase();
     if (/\b(?:extra[\s-]?large|x[\s-]?large|xl)\b/.test(lower)) return 'xlarge';
     for (const tok of tokenize(text)) {
-        const mapped = VARIANT_SIZE_TOKENS[tok];
+        const mapped = VARIANT_SIZE_TOKENS[tok] ?? (cupWords ? CAFE_CUP_SIZE_WORDS[tok] : undefined);
         if (mapped) return mapped;
     }
     return null;
@@ -1820,13 +1826,16 @@ function computeBrandVariantAdjustment(
     rawText: string,
     candidate: RerankCandidate,
     targetBrand: string | undefined,
+    cupWords = false,
 ): BrandVariantBreakdown {
     let adjustment = 0;
     let sizeMismatch = false;
     let countMismatch = false;
 
-    const qSize = resolveVariantSize(rawText);
-    const cSize = resolveVariantSize(candidate.name);
+    // Cup words on the candidate are read only when the LINE named a size, so a sizeless
+    // branded drink line (`starbucks matcha latte`) scores exactly as before.
+    const qSize = resolveVariantSize(rawText, cupWords);
+    const cSize = resolveVariantSize(candidate.name, cupWords && qSize != null);
     if (qSize) {
         if (cSize === qSize) adjustment += VARIANT_SIZE_MATCH_BOOST;
         else if (cSize && cSize !== qSize) { adjustment -= VARIANT_SIZE_MISMATCH_PENALTY; sizeMismatch = true; }
@@ -1857,6 +1866,23 @@ function computeBrandVariantAdjustment(
     }
 
     return { adjustment, sizeMismatch, countMismatch, extraQualifiers };
+}
+
+/**
+ * The size half alone, for an UNBRANDED prepared-drink line that names a cup (s459 LATTE-c):
+ * a candidate whose name states a DIFFERENT size takes the mismatch penalty; nothing is boosted,
+ * so a size-named chain record never climbs over a generic one, and the count / qualifier halves
+ * stay branded-only. `a venti matcha latte`: Starbucks Tall / Short / Grande drop, Venti keeps its
+ * score (they tied within 0.001). The caller applies it only when a candidate of the asked size is in
+ * the pool.
+ */
+function computeDrinkCupSizeAdjustment(qSize: string, candidate: RerankCandidate): BrandVariantBreakdown {
+    const cSize = resolveVariantSize(candidate.name, true);
+    const sizeMismatch = cSize != null && cSize !== qSize;
+    return {
+        adjustment: sizeMismatch ? -VARIANT_SIZE_MISMATCH_PENALTY : 0,
+        sizeMismatch, countMismatch: false, extraQualifiers: [],
+    };
 }
 
 /**
@@ -2229,8 +2255,23 @@ export function simpleRerank(
     const emptyBrandVariant: BrandVariantBreakdown = {
         adjustment: 0, sizeMismatch: false, countMismatch: false, extraQualifiers: [],
     };
+    // Cafe cup sizes (s459 LATTE-c): on a prepared-drink line the cup words count as sizes, on a
+    // branded line inside the adjustment above, and on an UNBRANDED line as the size-mismatch
+    // penalty alone (computeDrinkCupSizeAdjustment()), only when the line names a size.
+    // Kill-switch: RANK_DRINK_CUP_SIZE="0" restores today's ordering.
+    const drinkCupActive = process.env.RANK_DRINK_CUP_SIZE !== '0' && process.env.RANK_BRAND_VARIANT !== '0'
+        && isPreparedDrinkLine(query, rawLine);
+    // A RE-PICK, never a demotion into another food: the unbranded penalty applies only when a
+    // candidate of the asked size is in this pool. `a large iced matcha latte` has Starbucks Tall /
+    // Grande in the window and Venti outside it; demoting the two let a canned RTD win (replay r1).
+    const lineCupSize = drinkCupActive && !brandVariantActive
+        ? resolveVariantSize(brandVariantRawText, true) : null;
+    const unbrandedCupSize = lineCupSize && candidates.some(c => resolveVariantSize(c.name, true) === lineCupSize)
+        ? lineCupSize : null;
     const brandVariantOf = (c: RerankCandidate): BrandVariantBreakdown =>
-        brandVariantActive ? computeBrandVariantAdjustment(brandVariantRawText, c, targetBrand) : emptyBrandVariant;
+        brandVariantActive ? computeBrandVariantAdjustment(brandVariantRawText, c, targetBrand, drinkCupActive)
+            : unbrandedCupSize ? computeDrinkCupSizeAdjustment(unbrandedCupSize, c)
+                : emptyBrandVariant;
 
     // Score all candidates (base score + nutrition score + modifier constraints)
     const scored = candidates
