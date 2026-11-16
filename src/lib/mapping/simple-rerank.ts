@@ -14,6 +14,7 @@ import { CAFE_CUP_SIZE_WORDS, isPreparedDrinkLine } from './drink-cup-size';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
 import { applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair } from './brand-spelling-repair';
+import { findScoopPowderRepick, SCOOP_POWDER_REPICK } from './scoop-powder-repick';
 
 export interface RerankCandidate {
     id: string;
@@ -2601,6 +2602,18 @@ export function simpleRerank(
         console.log();
     }
 
+    // Scoop re-pick (s459 SCOOP-PICK): on a scoop line, a ready-to-drink winner gives its seat to a
+    // powder record of the same product scored below it — a re-pick inside one product, never a
+    // demotion into another food. Pool, panel and confidence guards: scoop-powder-repick.ts.
+    // Kill-switch: RANK_SCOOP_POWDER="0".
+    const scoopRepickIndex = findScoopPowderRepick(scored, query, rawLine);
+    const scoopRepickFrom = scoopRepickIndex > 0 ? scored[0].candidate.id : null;
+    if (scoopRepickIndex > 0) {
+        const [repicked] = scored.splice(scoopRepickIndex, 1);
+        scored.unshift(repicked);
+        logger.info('simple_rerank.scoop_powder_repick', { query, rawLine, from: scoopRepickFrom, to: repicked.candidate.id });
+    }
+
     const top = scored[0];
     // Nullable ON PURPOSE. tsconfig has `strict` but NOT `noUncheckedIndexedAccess`,
     // so `scored[1]` types as non-optional and a future `second.foo` would compile
@@ -2733,6 +2746,11 @@ export function simpleRerank(
     // stronger reason already fired.
     if (soleSurvivor && (reason === 'simple_rerank' || reason === 'close_match')) {
         reason = 'sole_survivor';
+    }
+    // A scoop re-pick ALWAYS carries its own reason (confidence untouched): finalizeAndSaveResult()
+    // reads it to serve the powder without writing it under the unitless key.
+    if (scoopRepickFrom) {
+        reason = SCOOP_POWDER_REPICK;
     }
 
     logger.debug('simple_rerank.result', {

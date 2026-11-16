@@ -37,6 +37,7 @@ import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './reran
 import { servingAiCallForTier, isFloorTier } from './serving-ai-tiers';
 import { countedPieceNoun, servingLabelCountsPiece } from './count-label';
 import { isScoopOnLiquidRecord, isScoopLiquidEscape, SCOOP_LIQUID_ESCAPE } from './scoop-liquid-escape';
+import { SCOOP_POWDER_REPICK } from './scoop-powder-repick';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, targetKeyOfFoodId, type CacheLookupRejection, type ReadEscapeRecord } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { shouldRunCacheValidator, kickCacheValidation } from './cache-validator';
@@ -4387,6 +4388,15 @@ async function finalizeAndSaveResult(params: {
         if (scoopLiquidNoWriteBack) {
             markFunnel(telemetry, 'save_rejected', SCOOP_LIQUID_ESCAPE);
             logger.info('mapping.scoop_liquid_no_writeback', {
+                rawLine: trimmed,
+                cacheKey,
+                foodId: result.foodId,
+            });
+        } else if (selectionReason === SCOOP_POWDER_REPICK) {
+            // Scoop re-pick (s459 SCOOP-PICK, scoop-powder-repick.ts): served, never written under
+            // the unitless key, which a later bare line (`chocolate shake`) would then read.
+            markFunnel(telemetry, 'save_rejected', SCOOP_POWDER_REPICK);
+            logger.info('mapping.scoop_powder_repick_no_writeback', {
                 rawLine: trimmed,
                 cacheKey,
                 foodId: result.foodId,
