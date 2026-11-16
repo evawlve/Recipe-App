@@ -46,11 +46,10 @@
  *     draws (s459 rf-keyn F4/F4b). The name gate keeps all four members and
  *     narrows the OFF FoodMapping footprint from 297 rows to 107, all drinks.
  *
- * NOT CLOSED HERE (pre-existing): the in-flight lock waiter in
- * mapIngredientWithFallback() re-reads the unitless key and serves it with no
- * escape chain at all, so a scoop request that waits on a concurrent request
- * with the same baseName is still served the drink. 0 scoop lines among the
- * 58 `cache_hit_after_lock` decisions in the box corpus, all time (rf-keyn).
+ * IN-FLIGHT LOCK WAITERS: a scoop request that waits on a concurrent request
+ * with the same baseName falls through into the same early cache check after
+ * the lock (s459 pd-waiter), so this escape covers it too. Pinned by
+ * lock-waiter-reenters-main-path.test.ts.
  */
 
 /** Telemetry class for the escape and for the suppressed save. */
