@@ -2566,26 +2566,56 @@ function packageGramsInBand(qty: number | null | undefined, unitKind: string | n
  * Chobani's hundreds of 150g cups must outvote its handful of half-gallon
  * drinkables, and Gatorade's ml bottles outvote its powder tubs. Requires
  * >=2 sibling SKUs in the winning class.
+ *
+ * PKG-FORM (s459): the vote is FORM-aware in the SIB-FORM sense (see
+ * siblingFormBand() below). A dense record (a drink-mix powder, a hot cocoa
+ * mix, a nut butter, cheese) whose brand's winning class is mostly a lighter
+ * form borrowed that form's package at its own density: `2 kool aid tropical
+ * punch drink mix` (385 kcal/100 g) took Kool-Aid's 236.6 ml bottle median
+ * (sibling kcal median 13) and billed 1,820 kcal; `2 starbucks hot cocoa mix`
+ * took Starbucks' 473.2 ml cup median and billed 4,056 (live cold, deploy 42).
+ * When the gate applies, the vote re-runs over siblings within [0.5x, 2x] of
+ * self's density (Kool-Aid: 2 mix packets, median 31.8 g) and that winner is
+ * taken when it keeps the >= 2 minimum AND its median is LOWER than today's.
+ * Never a refusal: a null here hands the line to the floor / AI rungs below
+ * (DNB-9). Never a raise: of the 3,916 corpus records the gate reaches, 242
+ * re-votes were higher, and the graded raises were mostly wrong (Bertolli
+ * single-serve oil 101 -> 750 g, Birds Eye pancakes 109 -> 220 g).
+ * Callers: rung (D) always passes self's density; the package-unit path passes
+ * it only for a DOSE word (PACKAGE_DOSE_UNITS in buildOffResult()), so a
+ * container word ("1 package of", "a jar of") is never banded.
  */
 async function borrowSiblingPackageGrams(
-    brandName: string | null | undefined
+    brandName: string | null | undefined,
+    selfKcalPer100g?: number | null,
 ): Promise<number | null> {
     const brand = brandName?.trim();
     if (!brand) return null;
     try {
         const { prisma } = await import('../../db');
-        const rows = await prisma.$queryRaw<Array<{ unit: string; med: number | null; n: number }>>`
+        const vote = (band: SiblingFormBand | null) => prisma.$queryRaw<Array<{ unit: string; med: number | null; n: number; kmed?: number | null }>>`
             SELECT "packageQuantityUnit" AS unit,
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY "packageQuantity") AS med,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY ${SIBLING_KCAL_SQL}) AS kmed,
                    count(*)::int AS n
             FROM "OffFood"
             WHERE "brandName" ILIKE ${brand}
               AND (("packageQuantityUnit" = 'ml' AND "packageQuantity" BETWEEN ${PACKAGE_BAND.ml.min} AND ${PACKAGE_BAND.ml.max})
                 OR ("packageQuantityUnit" = 'g'  AND "packageQuantity" BETWEEN ${PACKAGE_BAND.g.min} AND ${PACKAGE_BAND.g.max}))
+              AND (${band?.min ?? null}::float8 IS NULL OR ${SIBLING_KCAL_SQL} BETWEEN ${band?.min ?? null}::float8 AND ${band?.max ?? null}::float8)
             GROUP BY 1
             ORDER BY count(*) DESC`;
-        const winner = rows[0];
+        const winner = (await vote(null))[0];
         if (!winner?.med || winner.n < 2) return null;
+        const band = siblingFormBand(selfKcalPer100g, winner.kmed);
+        if (band) {
+            const same = (await vote(band))[0];
+            logger.info('off.build_result.sibling_form_band', {
+                brand, borrow: 'package', selfKcalPer100g, siblingKcal: band.siblingKcal,
+                unit: winner.unit, sameFormUnit: same?.unit ?? null, sameForm: same?.n ?? 0,
+            });
+            if (same?.med && same.n >= 2 && same.med < winner.med) return same.med;
+        }
         return winner.med;
     } catch {
         return null;
@@ -2622,6 +2652,8 @@ async function borrowSiblingPackageGrams(
  * moves 21 name-group and 63 brand records, pad thai among them (pd-key).
  * Light-self/dense-sibling pairs are deliberately NOT gated (a separate,
  * larger, mostly retailer-median class).
+ * The package vote, borrowSiblingPackageGrams(), applies the same gate to its
+ * winning unit class (PKG-FORM, s459).
  */
 export const SIBLING_FORM_DENSE_SELF_KCAL = 250;
 export const SIBLING_FORM_MISMATCH_RATIO = 3;
@@ -3173,6 +3205,16 @@ export async function buildOffResult(
         'tub', 'tubs', 'box', 'boxes', 'bag', 'bags', 'sachet', 'sachets',
         'can', 'cans', 'carton', 'cartons',
     ]);
+    // PKG-FORM (s459): the package vote's same-density re-vote answers a DOSE
+    // word ("1 packet kool aid" = one mix packet) and a unitless count (rung (D)
+    // below), never a CONTAINER word: "1 package of darigold cheddar slices"
+    // names the retail pack (227 g), and the re-vote billed it 30 g. Replayed:
+    // 9 of the 29 movers were container-word lines that moved AWAY from the
+    // literal pack (s459 pd-pkg / rf-pkg). A container word keeps today's vote.
+    const PACKAGE_DOSE_UNITS = new Set([
+        'packet', 'packets', 'sachet', 'sachets', 'pouch', 'pouches',
+        'serving', 'servings', 'portion', 'portions',
+    ]);
 
     // SKU's own net quantity (OFF product_quantity backfill, 207k rows).
     // Used ONLY when the label serving is absent — for multipack SKUs
@@ -3236,7 +3278,8 @@ export async function buildOffResult(
     if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)
         && servingWordSibling == null) {
         packageFallbackGrams = packageGrams
-            ?? await borrowSiblingPackageGrams(brandForBorrow);
+            ?? await borrowSiblingPackageGrams(brandForBorrow,
+                PACKAGE_DOSE_UNITS.has(unit) ? (hydrated.nutrientsPer100g?.['calories'] ?? null) : null);
     }
 
     let nc: ReturnType<typeof nameCountPerPieceGrams> = null;
@@ -3728,7 +3771,7 @@ export async function buildOffResult(
             && pieceNounInName(itemNameForCount) == null
         ) {
             const pkg = packageGrams
-                ?? await borrowSiblingPackageGrams(brandForBorrow);
+                ?? await borrowSiblingPackageGrams(brandForBorrow, hydrated.nutrientsPer100g?.['calories'] ?? null);
             if (pkg != null) {
                 grams = qty * pkg;
                 servingDescription = `${qty} package (${pkg.toFixed(0)}g each)`;
