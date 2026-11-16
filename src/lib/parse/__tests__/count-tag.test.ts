@@ -8,7 +8,7 @@
  */
 
 import { parseIngredientLine } from '../ingredient-line';
-import { resolveCountTag } from '../count-tag';
+import { resolveCountTag, splitTrailingCountTag } from '../count-tag';
 
 const TARGETS: Array<[string, string]> = [
   ['toast x2', '2 toast'],
@@ -150,8 +150,30 @@ describe('count tag reads as a leading count', () => {
 
   it('a leading digit count times a trailing tag: 2 eggs x2 = 4 eggs, and the tag leaves the name', () => {
     expect(parseIngredientLine('2 eggs x2')).toMatchObject({ qty: 4, multiplier: 1, unit: 'egg', name: 'eggs' });
-    expect(resolveCountTag('2 eggs x2')).toBe('4 eggs');
-    expect(resolveCountTag('3 cookies x 2')).toBe('6 cookies');
+    expect(splitTrailingCountTag('2 eggs x2')).toEqual({ head: '2 eggs', n: 2 });
+    expect(splitTrailingCountTag('3 cookies x 2')).toEqual({ head: '3 cookies', n: 2 });
+  });
+
+  // s459 X2: the tag multiplies the PARSED qty of the head, so the parser decides what the leading number is. Folding
+  // N into the digit string read `2 shot latte x2` as ONE `4 shot latte` and `7 up x2` as 14 of `up`.
+  it.each([
+    ['2 shot latte x2', '2 shot latte', 2],
+    ['3 shot americano x2', '3 shot americano', 2],
+    ['2 shot vodka x2', '2 shot vodka', 2],
+    ['1 shot espresso x2', '1 shot espresso', 2],
+    ['7 up x2', '7 up', 2],
+    ['3 musketeers x2', '3 musketeers', 2],
+    ['2 eggs x2', '2 eggs', 2],
+    ['2 slices pizza x3', '2 slices pizza', 3],
+  ])('%s parses as %s with its qty times %i', (line, head, n) => {
+    const h = parseIngredientLine(head);
+    expect(h).not.toBeNull();
+    expect(parseIngredientLine(line)).toEqual({ ...h, qty: h!.qty * n });
+  });
+
+  it('the leading-count branch leaves a glued <N>x line to resolveCountTag()', () => {
+    expect(splitTrailingCountTag('2x eggs x2')).toBeNull();
+    expect(splitTrailingCountTag('2 x eggs x2')).toBeNull();
   });
 
   it('a tag reads the count the name used to carry', () => {
@@ -183,6 +205,7 @@ describe('count tag reads as a leading count', () => {
 
   it.each(FN_CONTROLS)('resolveCountTag declines %s', (line) => {
     expect(resolveCountTag(line)).toBe(line);
+    expect(splitTrailingCountTag(line)).toBeNull();
   });
 
   it('collisions: x inside words and dimensions decline', () => {
