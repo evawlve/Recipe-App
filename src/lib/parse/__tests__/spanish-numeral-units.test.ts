@@ -52,7 +52,7 @@ describe('numeral before a Spanish unit word == digit twin', () => {
 describe('everything else is byte-identical to BASE (captured on origin/master 41af7084)', () => {
   const same = (n: string) => ({ qty: 1, multiplier: 1, unit: null, rawUnit: null, name: n, unitHint: null, qualifiers: null });
   test.each([
-    'una taza de arroz', 'una cucharada de miel', 'un vaso de leche', 'tres leches',
+    'un vaso de leche', 'tres leches', // s459 ES-ART: `una taza de arroz`, `una cucharada de miel` moved (spanish-article-units.test.ts)
     'tres leches cake', 'dos equis', 'media crema', 'siete tortilla chips', 'once upon a farm', 'dos', 'media',
     'siete cucharadas de azucar', 'siete tazas de pollo fresh',
   ])('%s unchanged', (line) => {
