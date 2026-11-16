@@ -36,6 +36,7 @@ import type { RerankOutcome, RerankScoredCandidate } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
 import { servingAiCallForTier, isFloorTier } from './serving-ai-tiers';
 import { countedPieceNoun, servingLabelCountsPiece } from './count-label';
+import { isScoopOnLiquidRecord, isScoopLiquidEscape, SCOOP_LIQUID_ESCAPE } from './scoop-liquid-escape';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, targetKeyOfFoodId, type CacheLookupRejection, type ReadEscapeRecord } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { shouldRunCacheValidator, kickCacheValidation } from './cache-validator';
@@ -1442,6 +1443,17 @@ async function mapIngredientWithFallbackCore(
             const earlyGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
                 && !earlyCachedLooksCooked;
 
+            // Scoop-on-liquid escape (s459): a SCOOP line whose shared key holds a
+            // ready-to-drink OFF record re-resolves, and finalizeAndSaveResult()
+            // skips the write-back so the bare line keeps its row. Not a loop to
+            // bound — a measured per-request cost; see scoop-liquid-escape.ts.
+            const earlyScoopLiquidEscape = isScoopOnLiquidRecord(parsed?.unit, earlyCacheHit.foodId, {
+                name: earlyCacheHit.foodName,
+                servingSize: cachedOffServing?.servingSize,
+                servingGrams: cachedOffServing?.servingGrams,
+                kcalPer100g: cachedKcal100,
+            });
+
             // Escape reason doubles as the telemetry label (PR D pt3 split the
             // former catch-all 'filter_mismatch' into per-condition labels).
             // Same predicates, same evaluation order as the former || chain.
@@ -1451,6 +1463,7 @@ async function mapIngredientWithFallbackCore(
                 : earlyNutritionInvalid ? 'nutrition_invalid'
                 : earlyCountLabelEscape ? 'count_label'
                 : earlyGrainCookedEscape ? 'grain_cooked'
+                : earlyScoopLiquidEscape ? SCOOP_LIQUID_ESCAPE
                 : isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ? 'category_mismatch'
                 : isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ? 'multi_ingredient'
                 : hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ? 'modifier_mismatch'
@@ -3140,6 +3153,15 @@ async function lookupNormalizedCacheProducer(params: {
         const normalizedGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
             && !normalizedCachedLooksCooked;
 
+        // Scoop-on-liquid escape — same predicate as the early check; without it
+        // this layer would re-serve the drink the early check just escaped.
+        const normalizedScoopLiquidEscape = isScoopOnLiquidRecord(parsed?.unit, normalizedCache.foodId, {
+            name: normalizedCache.foodName,
+            servingSize: normalizedOffServing?.servingSize,
+            servingGrams: normalizedOffServing?.servingGrams,
+            kcalPer100g: normalizedCachedKcal100,
+        });
+
         // Escape reason doubles as the telemetry label (PR D pt3 split
         // the former catch-all 'filter_mismatch' into per-condition
         // labels). Same predicates, same order as the former || chain.
@@ -3149,6 +3171,7 @@ async function lookupNormalizedCacheProducer(params: {
             : normalizedNutritionInvalid ? 'nutrition_invalid'
             : normalizedCountLabelEscape ? 'count_label'
             : normalizedGrainCookedEscape ? 'grain_cooked'
+            : normalizedScoopLiquidEscape ? SCOOP_LIQUID_ESCAPE
             : isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ? 'category_mismatch'
             : isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ? 'multi_ingredient'
             // For branded queries: skip modifier mismatch when the cached food's brand
@@ -4355,7 +4378,20 @@ async function finalizeAndSaveResult(params: {
         // write" — a suppressed write is not a rejected one, and folding the
         // two together would corrupt the save_rejected counters the funnel
         // reads.
-        if (!skipSave) await saveValidatedMapping(rawLine, result, {
+        // Scoop-on-liquid (s459): this request escaped a ready-to-drink row that
+        // is RIGHT for the bare line sharing its key. Writing the powder back
+        // would take that key from the bare line (key capture, measured), so
+        // the scoop line is served and not memoized — a gate, hence
+        // save_rejected, so the event stays attributable in the funnel.
+        const scoopLiquidNoWriteBack = readEscapes.some(e => isScoopLiquidEscape(e.reason));
+        if (scoopLiquidNoWriteBack) {
+            markFunnel(telemetry, 'save_rejected', SCOOP_LIQUID_ESCAPE);
+            logger.info('mapping.scoop_liquid_no_writeback', {
+                rawLine: trimmed,
+                cacheKey,
+                foodId: result.foodId,
+            });
+        } else if (!skipSave) await saveValidatedMapping(rawLine, result, {
             approved: true,
             confidence,
             reason: selectionReason,

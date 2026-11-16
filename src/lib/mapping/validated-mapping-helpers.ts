@@ -201,6 +201,10 @@ const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
     'replacement_mismatch',
     'brand_guard',
     'core_token_mismatch',
+    // s459: a human repoint of a drink key (e.g. 'chocolate milk muscle' →
+    // the bottle) outranks the scoop-on-liquid identity heuristic — the
+    // escape never bypasses a human-triage row. See scoop-liquid-escape.ts.
+    'scoop_liquid',
 ]);
 
 export function isHumanTrustSkippableEscape(reason: string): boolean {
