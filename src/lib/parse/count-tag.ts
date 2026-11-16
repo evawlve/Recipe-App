@@ -116,24 +116,26 @@ function opensWithOwnedQuantity(line: string): boolean {
 const LEADING_INT_COUNT = /^(\s*)(\d+)\s+(?=\p{L})/u;
 
 /**
- * `<Q> <food> x<N>` with nothing after the tag -> `<Q*N> <food>` (header: "A LEADING DIGIT COUNT plus a TRAILING
- * tag"). Returns null when the line is not that shape, so resolveCountTag() falls through to its guards.
+ * `<Q> <food> x<N>` with nothing after the tag -> `{ head: '<Q> <food>', n: N }` (header: "A LEADING DIGIT COUNT plus a
+ * TRAILING tag"). parseIngredientLine() parses the HEAD and multiplies the PARSED qty by N, so the parser, not this
+ * file, decides what the leading number is (s459 X2): `2 shot latte x2` -> 2 x (`2 shot latte` = one 2-shot drink),
+ * `7 up x2` -> 2 x (`7 up`), `2 eggs x2` -> 2 x (2 eggs) = 4 eggs as before. Folding N into the leading DIGIT string
+ * (`4 shot latte`, `14 up`) let a downstream rule read the product as a size or a brand digit. Returns null when the
+ * line is not that shape (or opens with the glued `<N>x`, which resolveCountTag() owns), so the line falls through.
  */
-function multiplyLeadingCount(line: string): string | null {
+export function splitTrailingCountTag(line: string): { head: string; n: number } | null {
+  if (LEADING_GLUED_X.test(line)) return null;
   const c = LEADING_INT_COUNT.exec(line);
   if (!c || massOrVolumeFollows(line.slice(c[0].length))) return null;
   const m = TAIL_X.exec(line);
   if (!m || m[4] !== '') return null;
   const n = Number(m[3]);
   if (n < 1) return null;
-  const head = m[2].replace(/^\d+\s+/, '');
-  return `${m[1]}${Number(c[2]) * n} ${head}`;
+  return { head: `${m[1]}${m[2]}`, n };
 }
 
 export function resolveCountTag(line: string): string {
   if (LEADING_GLUED_X.test(line)) return line.replace(LEADING_GLUED_X, '$1$2 ');
-  const multiplied = multiplyLeadingCount(line);
-  if (multiplied !== null) return multiplied;
   if (opensWithOwnedQuantity(line)) return line;
 
   let m = PAREN_X_NOUN.exec(line);
