@@ -59,12 +59,26 @@ const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)
  * (`glass` is not a unit).
  * `gramo(s)`, `gr`, `grs`, `kilogramo(s)` are already mass units; they are listed here only so `100 gramos de
  * pollo` also drops its `de`. `g` is deliberately NOT in the set (not Spanish): `100 g de pollo` is unchanged.
+ * s459 ES-UNITSET-KILO: the kilo, the pound (`libra`) and the ounce (`onza`). `kilo(s)` were already mass units
+ * (S202 route 37) but not here, so `un kilo y medio de pollo` kept the article and the fraction in the name and `1 kilo de
+ * pollo` kept its `de`; `libra(s)`, `onza(s)` were no unit at all (`2 libras de pollo` read 2 of `libras de pollo`).
+ * The set's four parse consumers then apply as for `taza`: the article (`una libra` = 1), `y medio`, the word fraction
+ * (`tres cuartos de libra de carne`) and the dropped `de`. `un cuarto de libra con queso` (McDonald's) keeps its name: the
+ * word-fraction rule needs `de <word>` after the unit. `kilo(s)` is also English, so spanish-detect.ts does NOT count it as
+ * a Spanish marker (ENGLISH_UNIT_WORDS there): `a kilo of pasta` stays English.
+ * KNOWN COSTS, pinned in spanish-kilo-libra-units.test.ts: a chain after `cuarto de libra de` reads as the food
+ * (`[un] cuarto de libra de mcdonalds` = 0.25 lb of `mcdonalds`, 0 MEL events); and `onza(s)` before bare `agua` bills MORE
+ * cracker grams (`16 onzas de agua` 729 -> 1,878 kcal cold, s459 rf-kilo Q01/Q02), as `taza` already does (`2 tazas de agua`
+ * 1,987 kcal live, Q10). The fix for both is the water identity (WATER-PRODUCT), not this set.
+ * NOT `litro(s)` yet: bare `agua` resolves to a 414 kcal/100 g cracker record (OFF 7802215501838, s429 class WATER-PRODUCT), so a
+ * right litre count would bill `2 litros de agua` at 8,280 kcal where today's wrong 22 g bills 91 (s459 pd-kilo P11/P12).
  */
 export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
   'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 'taza', 'tazas', 'mililitro', 'mililitros',
   'rebanada', 'rebanadas', 'lata', 'latas', 'botella', 'botellas',
   'puñado', 'puñados', 'punado', 'punados',
   'gramo', 'gramos', 'gr', 'grs', 'kilogramo', 'kilogramos',
+  'kilo', 'kilos', 'libra', 'libras', 'onza', 'onzas',
 ]);
 
 export function normalizeUnitToken(tok: string): NormalizedUnit {
@@ -80,6 +94,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
     // S202 (route 37): `a kilo` / `half a kilo` / Spanish `kilogramo`. Exact tokens only.
     'kilo': 'kg', 'kilos': 'kg', 'kgs': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg',
+    // s459 ES-UNITSET-KILO: Spanish pound and ounce (see SPANISH_UNIT_TOKENS). Exact tokens only.
+    'libra': 'lb', 'libras': 'lb', 'onza': 'oz', 'onzas': 'oz',
     // British spellings (C70 S239): exact tokens only.
     'gramme': 'g', 'grammes': 'g', 'kilogramme': 'kg', 'kilogrammes': 'kg'
   };
