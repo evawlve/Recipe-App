@@ -588,6 +588,51 @@ const BARE_DRINK_CUP_GRAMS = 240;
 const BARE_DRINK_CUP_HEADS = new Set(['latte', 'cappuccino', 'mocha', 'frappe', 'frappuccino', 'flat white', 'london fog']);
 const NON_DRINK_WORDS = /\b(yogh?urts?|creamers?|ice cream|gelato|frozen)\b/i;
 
+// A NAMED CUP SIZE is that cup, not the bare 240 g (s459 LATTE). `small` / `medium` / `large`
+// parse as a count unit and went to getOrCreateAmbiguousServing(), which estimates a large
+// latte at 300 g and a medium at 240 g; `tall` / `grande` / `venti` are no unit at all, so a
+// grande billed the bare 240 g cup. The table is the hot cup in fl oz at ~1 g/ml: small = tall
+// = 12 oz, medium = grande = 16 oz, large = venti = 20 oz (Starbucks; Dunkin's
+// and McCafe's medium/large hot cups are 14-16 / 20 oz). Same seat and guards as the bare cup:
+// raise-only, OFF-only, prepared-drink head on both names, a drink panel. `short` (8 oz) is
+// left out: it IS the bare 240 g cup, and a 236 g entry would lower the bare rule's answer.
+// ICED lines are NOT sized: an iced cup's volume includes the ice (Starbucks' grande iced latte
+// is 130 kcal against 190 hot), so an iced line keeps exactly what it billed before.
+// A size also keeps today's bill (refute rf-latte) when the RECORD is iced / cold / frozen (a hot
+// `a double shot latte` already resolves to "Double Shot Iced Latte", a sweetened RTD panel), when
+// the panel is denser than any hot cafe drink (SIZED_CUP_MAX_KCAL: a venti white chocolate mocha
+// with whip and whole milk is ~98 kcal/100 g, so a 145 kcal/100 g "Mocha" is a mix, and 591 g of it
+// is ~860 kcal), and when the size word does not name the cup (`a small amount of latte`,
+// `medium roast latte`, `small batch latte`): NOT_THE_CUP is read on the drink's clause.
+const DRINK_CUP_SIZE_GRAMS: Record<string, number> = {
+    small: 355, tall: 355, medium: 473, grande: 473, large: 591, venti: 591,
+};
+const DRINK_SIZE_UNITS = new Set(['small', 'medium', 'large']);
+const ICED_DRINK = /\b(iced|ice|cold|frozen|blended)\b/i;
+const SIZED_CUP_MAX_KCAL = 100;
+const NOT_THE_CUP = /\b(of|roast|batch|blend)\b/;
+// `N shot` names the espresso in ONE drink (#690: `2 shot latte` parses qty 1, the count kept in
+// the name), so those digits are not a quantity; every other digit still refuses the cup.
+const ESPRESSO_SHOT_COUNT = /\b\d+\s*-?\s*shot\b(?!\s+(?:of|de|glass(?:es)?)\b)/gi;
+// The size word must sit in the drink's own clause, before with / and / plus / & / w/ / a comma.
+const DRINK_CLAUSE_BREAK = /\s(?:with|and|plus|&|\+)\s|\sw\/|,/;
+
+interface DrinkCup { grams: number; size: string | null }
+
+/** The cup a qty-1 prepared-drink line asks for: a named size, else the bare 240 g; null when the line carries another amount. */
+function drinkCupFor(parsed: ParsedIngredient | null, rawLine: string, foodName: string, kcal: number): DrinkCup | null {
+    if (!parsed || parsed.qty !== 1 || parsed.multiplier !== 1) return null;
+    const unit = parsed.unit ? parsed.unit.toLowerCase() : null;
+    if (unit && !DRINK_SIZE_UNITS.has(unit)) return null;
+    if (/\d/.test(rawLine.replace(ESPRESSO_SHOT_COUNT, ' '))) return null;
+    const clause = rawLine.toLowerCase().split(DRINK_CLAUSE_BREAK)[0];
+    const sizable = !ICED_DRINK.test(`${rawLine} ${foodName}`) && kcal <= SIZED_CUP_MAX_KCAL && !NOT_THE_CUP.test(clause);
+    if (!sizable) return unit ? null : { grams: BARE_DRINK_CUP_GRAMS, size: null };
+    if (unit) return { grams: DRINK_CUP_SIZE_GRAMS[unit], size: unit };
+    const word = clause.split(/[^a-z]+/).find((w) => DRINK_CUP_SIZE_GRAMS[w] != null);
+    return word ? { grams: DRINK_CUP_SIZE_GRAMS[word], size: word } : { grams: BARE_DRINK_CUP_GRAMS, size: null };
+}
+
 export interface BareDrinkCupInput {
     grams: number;
     parsed: ParsedIngredient | null;
@@ -600,14 +645,18 @@ export interface BareDrinkCupInput {
 export function bareDrinkCupOverride(input: BareDrinkCupInput): BareQueryGuardOverride | null {
     if (process.env.OFF_BARE_SERVING_GUARD === '0') return null;
     const { grams, parsed, rawLine, queryName, foodName, kcalPer100g } = input;
-    if (!isBareUnitlessQty1(parsed, rawLine)) return null;
-    if (!(grams < BARE_DRINK_CUP_GRAMS)) return null;
     const kcal = kcalPer100g == null ? NaN : Number(kcalPer100g);
+    const cup = drinkCupFor(parsed, rawLine, foodName, kcal);
+    if (!cup || !(grams < cup.grams)) return null;
     if (!Number.isFinite(kcal) || kcal <= 0 || kcal > PREPARED_DRINK_MAX_KCAL) return null;
     const head = preparedDrinkHeadWord(queryName) ?? preparedDrinkHeadWord(rawLine);
     if (!head || !BARE_DRINK_CUP_HEADS.has(head)) return null;
     // The RECORD must be a drink too: its own head is a prepared-drink word (`Latte`, `Hot Macchiato …`), never `Coconut Milk` or a creamer.
     if (preparedDrinkHeadWord(foodName) == null) return null;
     if (NON_DRINK_WORDS.test(`${rawLine} ${foodName}`)) return null;
-    return { grams: BARE_DRINK_CUP_GRAMS, servingTier: 'bare_prepared_drink_cup', servingDescription: `1 cup (~${BARE_DRINK_CUP_GRAMS}g)` };
+    return {
+        grams: cup.grams,
+        servingTier: 'bare_prepared_drink_cup',
+        servingDescription: cup.size ? `1 ${cup.size} (~${cup.grams}g)` : `1 cup (~${cup.grams}g)`,
+    };
 }
