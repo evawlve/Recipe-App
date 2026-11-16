@@ -45,6 +45,7 @@ import { FS_SERVING_MACROS_ONLY_EST_TIER } from './serving-ai-tiers';
 import {
     applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
     usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
+    drinkCupSizeRow,
 } from '../servings/bare-query-guard';
 import { volumeToGrams, VOLUME_UNIT_ML } from '../units/volume-density';
 // Ambiguous/count-unit resolution, shared with the OFF and FDC cascades. Safe
@@ -1257,6 +1258,24 @@ export async function buildFatSecretResult(
             servingDescription = bareOverride.servingDescription;
             servingTier = bareOverride.servingTier;
         }
+    }
+
+    // A cup word bills the record's OWN size row (s459 LATTE-b; the rule and its guards:
+    // drinkCupSizeRow() in bare-query-guard). `a grande chai latte` on fs_10975795 billed the
+    // `1 cup` 204 g default because `grande` is no unit; the record's `1 medium` row (408 g) is
+    // the cup it names. After every rung and the bare guard, so it is raise-only against all
+    // of them; a record without the row keeps today's bill. The tier is the one `a medium chai
+    // latte` already takes on the same row.
+    const cupRow = drinkCupSizeRow({ parsed, rawLine, foodName, kcalPer100g: per100?.kcal ?? null });
+    const cupRowServing = cupRow ? usableServings.find(s => servingMatchesNoun(s, cupRow)) : undefined;
+    if (cupRowServing && cupRowServing.grams! > grams) {
+        logger.info('fs.build_result.drink_cup_size_row', {
+            foodId: candidate.id, row: cupRowServing.description, previousTier: servingTier, previousGrams: grams,
+        });
+        grams = cupRowServing.grams!;
+        servingDescription = `1 ${cupRow} (${grams.toFixed(1)}g each)`;
+        servingTier = 'fs_label_count';
+        pickedServing = cupRowServing;
     }
 
     // 4. Macros: per-serving macros scaled by grams are the most accurate

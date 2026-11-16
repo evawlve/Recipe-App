@@ -660,3 +660,42 @@ export function bareDrinkCupOverride(input: BareDrinkCupInput): BareQueryGuardOv
         servingDescription: cup.size ? `1 ${cup.size} (~${cup.grams}g)` : `1 cup (~${cup.grams}g)`,
     };
 }
+
+// A CUP WORD PICKS A FATSECRET RECORD'S OWN SIZE ROW (s459 LATTE-b). FatSecret's generic drink
+// records declare their own cups: `Chai Latte` fs_10975795 carries `1 small` 306 g / `1 medium`
+// 408 g / `1 large` 485 g beside a `1 cup` 204 g default. `small` / `medium` / `large` parse as a
+// unit and already reach those rows (fs_label_count); `tall` / `grande` / `venti` parse as no unit,
+// so `a grande chai latte` billed the 204 g default. This names the row the cup word asks for, in
+// the DRINK_CUP_SIZE_GRAMS pairing (tall = small, grande = medium, venti = large); it never invents
+// grams, so a FatSecret record keeps FatSecret's own cup weights. Same line guards as the OFF cup
+// (drinkCupFor(): qty 1, no other amount, the size word in the drink's own clause, not iced on the
+// line or the record, no `of|roast|batch|blend`, panel <= SIZED_CUP_MAX_KCAL); the query head is a
+// BARE_DRINK_CUP_HEADS word that the record's own name also carries; NON_DRINK_WORDS on neither.
+// The caller bills the row only when the record HAS it and it RAISES the cascade's grams.
+const CUP_SIZE_ROW: Record<string, 'small' | 'medium' | 'large'> = {
+    small: 'small', tall: 'small', medium: 'medium', grande: 'medium', large: 'large', venti: 'large',
+};
+
+export interface DrinkCupSizeRowInput {
+    parsed: ParsedIngredient | null;
+    rawLine: string;
+    foodName: string;
+    kcalPer100g: number | null;
+}
+
+/** The record serving row (`small` / `medium` / `large`) a unitless sized prepared-drink line names, else null. */
+export function drinkCupSizeRow(input: DrinkCupSizeRowInput): 'small' | 'medium' | 'large' | null {
+    if (process.env.OFF_BARE_SERVING_GUARD === '0') return null;
+    const { parsed, rawLine, foodName } = input;
+    if (!parsed || parsed.unit) return null;
+    const kcal = input.kcalPer100g == null ? NaN : Number(input.kcalPer100g);
+    if (!Number.isFinite(kcal) || kcal <= 0) return null;
+    const cup = drinkCupFor(parsed, rawLine, foodName, kcal);
+    const row = cup?.size ? CUP_SIZE_ROW[cup.size] : undefined;
+    if (!row) return null;
+    const head = preparedDrinkHeadWord(parsed.name || '') ?? preparedDrinkHeadWord(rawLine);
+    if (!head || !BARE_DRINK_CUP_HEADS.has(head)) return null;
+    if (!new RegExp(`\\b${head}`, 'i').test(foodName)) return null;
+    if (NON_DRINK_WORDS.test(`${rawLine} ${foodName}`)) return null;
+    return row;
+}
