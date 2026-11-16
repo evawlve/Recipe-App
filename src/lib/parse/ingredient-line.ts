@@ -303,16 +303,31 @@ function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
 
 // C6970 D30: a leading Spanish numeral directly before a Spanish unit word becomes its digit, IN PLACE, so
 // `dos tazas de leche` reads exactly as `2 tazas de leche`. Gated on SPANISH_UNIT_TOKENS: noun-led lines
-// (`dos huevos`) are rewriteSpanishCountBeforeNoun()'s (s457 P4); `tres leches`, un/una/uno and `pieza` are not touched. NOT `siete` (a single-token brand;
+// (`dos huevos`) are rewriteSpanishCountBeforeNoun()'s (s457 P4); `tres leches` and `pieza` are not touched. NOT `siete` (a single-token brand;
 // detectBrandInQuery() reads the pre-rewrite line, so parity would break on brandLed).
+// s459 ES-ART: `un/una/uno` ARE rewritten to `1` here, before a unit word only: the article is the line's only quantity, and
+// left in place it costs the unit (`una cucharada de crema de cacahuate` billed the 588 g jar, 3,457 kcal, where `1 cucharada`
+// bills 16 g). The Spanish twin of leadingArticlePrecedesUnit(). Before a NOUN they stay untouched (pd-p4: `una manzana`).
 const SPANISH_NUMERAL_DIGITS: Record<string, string> = {
   dos: '2', tres: '3', cuatro: '4', cinco: '5', seis: '6', ocho: '8', nueve: '9', diez: '10',
   media: '0.5', medio: '0.5',
+  un: '1', una: '1', uno: '1',
 };
+// s459 rf-esart: `una botella de 600 ml de coca cola` names its OWN measure after the unit word, so the article stays untouched
+// there: base bills the in-name volume (cold: 600 g, 473 g, 372 g) where the unit bills the record's package (500 g, 355 g, 900 g).
+// Article only: the numeral-led form (`dos botellas de 600 ml`, #630) is unchanged.
+const SPANISH_ARTICLE_ONE: ReadonlySet<string> = new Set(['un', 'una', 'uno']);
+function articleNamesOwnMeasure(first: string, t: string[]): boolean {
+  if (!SPANISH_ARTICLE_ONE.has(first)) return false;
+  let i = 2;   // skip a `de`/`del` and a `(` (the tokenizer splits parentheses off): `una taza (240 ml) de leche`
+  while (i < 4 && t[i] !== undefined && (t[i] === '(' || /^(de|del)$/i.test(t[i]))) i += 1;
+  return t[i] !== undefined && /^\d+(?:[.,]\d+)?[a-z]*$/i.test(t[i]);
+}
 function rewriteSpanishNumeral(mergedTokens: string[], detectedBrand: string | null = null): void {
   if (mergedTokens.length < 2) return;
-  const d = SPANISH_NUMERAL_DIGITS[mergedTokens[0].toLowerCase()];
-  if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase())) { mergedTokens[0] = d; return; }
+  const first = mergedTokens[0].toLowerCase();
+  const d = SPANISH_NUMERAL_DIGITS[first];
+  if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase()) && !articleNamesOwnMeasure(first, mergedTokens)) { mergedTokens[0] = d; return; }
   rewriteSpanishCountBeforeNoun(mergedTokens, detectedBrand);
 }
 

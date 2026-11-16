@@ -258,7 +258,7 @@ describe('the residual — hydration exhaustion is a DELETION, and it is observa
 
 describe('MIGRATION GUARD — every hydration call site inside the mapper uses the hydration pool', () => {
     /**
-     * A structural guard, deliberately. The wiring under test is ten internal
+     * A structural guard, deliberately. The wiring under test is nine internal
      * `hydrateAndSelectServing(...)` calls and two self-recursive
      * `mapIngredientWithFallback(...)` calls inside ONE module; a local call
      * does not go through the module's export object, so it cannot be spied on,
@@ -296,7 +296,7 @@ describe('MIGRATION GUARD — every hydration call site inside the mapper uses t
 
     it('no hydrateAndSelectServing call passes the last-resort budget', () => {
         const calls = callArgs(SRC, 'hydrateAndSelectServing');
-        expect(calls.length).toBeGreaterThanOrEqual(10);   // 10 wired sites today
+        expect(calls.length).toBeGreaterThanOrEqual(9);    // 9 wired sites (s459 removed the lock waiter's own re-read and its hydration call)
         const wrong = calls.filter(a => a.includes('aiNutritionBudget'));
         expect(wrong).toEqual([]);
         // ...and every site that passes a budget at all passes the hydration one.

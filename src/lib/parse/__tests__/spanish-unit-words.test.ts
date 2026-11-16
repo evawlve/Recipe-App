@@ -112,6 +112,9 @@ describe('alias table', () => {
   });
 });
 
+// s459 ES-ART: the six article-led rows (`una taza de arroz`, `una lata de atun`, `una cucharada de aceite de oliva`, `una taza de
+// avena`, `una cucharada de miel`, `una botella de agua de jamaica`) left this list: they are that row's intended movers and are
+// pinned in spanish-article-units.test.ts.
 describe('CONTROLS: byte-identical to base (numerals, pieza, English units + de, brands, unknown words)', () => {
   test.each<[string, any]>([
     ["2 tbsp of peanut butter", {"qty": 2, "m": 1, "unit": "tbsp", "raw": "tbsp", "name": "peanut butter", "hint": null, "q": []}],
@@ -124,15 +127,9 @@ describe('CONTROLS: byte-identical to base (numerals, pieza, English units + de,
     ["2 tacos de pollo", {"qty": 2, "m": 1, "unit": null, "raw": null, "name": "tacos de pollo", "hint": null, "q": []}],
     ["2 c de aceite", {"qty": 2, "m": 1, "unit": null, "raw": null, "name": "c de aceite", "hint": null, "q": []}],
     ["100 g de pollo", {"qty": 100, "m": 1, "unit": "g", "raw": "g", "name": "de pollo", "hint": null, "q": []}],
-    ["una taza de arroz", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una taza de arroz", "hint": null, "q": []}],
     ["taza chocolate", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "taza chocolate", "hint": null, "q": []}],
-    ["una lata de atun", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una lata de atun", "hint": null, "q": []}],
     ["un vaso de leche", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "un vaso de leche", "hint": null, "q": []}],
-    ["una cucharada de aceite de oliva", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una cucharada de aceite de oliva", "hint": null, "q": []}],
-    ["una taza de avena", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una taza de avena", "hint": null, "q": []}],
-    ["una cucharada de miel", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una cucharada de miel", "hint": null, "q": []}],
     ["una coca cola de lata", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una coca cola de lata", "hint": null, "q": []}],
-    ["una botella de agua de jamaica", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "una botella de agua de jamaica", "hint": null, "q": []}],
     ["1 vaso de leche", {"qty": 1, "m": 1, "unit": null, "raw": null, "name": "vaso de leche", "hint": null, "q": []}],
     ["1 glass of milk", {"qty": 1, "m": 1, "unit": "glass", "raw": "glass", "name": "milk", "hint": null, "q": []}],
   ])('%s', (line, want) => {
