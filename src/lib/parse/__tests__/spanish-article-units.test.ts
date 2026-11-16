@@ -75,8 +75,9 @@ describe('everything else is byte-identical to base (qty 1, the whole line is th
   test('a percentage is not a measure: `una taza de 2% leche` reads 1 cup', () => {
     expect(core('una taza de 2% leche')).toMatchObject({ qty: 1, unit: 'cup', name: '2% leche' });
   });
-  test('KNOWN GAP, not this row: `una taza y media` reads 1 cup exactly as its digit twin does (the half is lost on both)', () => {
+  test('`una taza y media` reads 1.5 cups exactly as its digit twin does (s459 ES-YMEDIA, spanish-y-media.test.ts)', () => {
     expect(core('una taza y media de arroz')).toEqual(core('1 taza y media de arroz'));
+    expect(core('una taza y media de arroz').qty).toBe(1.5);
   });
   test('English article-led lines keep their own rule', () => {
     expect(core('a cup of rice')).toEqual({ qty: 1, multiplier: 1, unit: 'cup', rawUnit: 'cup', name: 'rice', unitHint: null, qualifiers: null });
