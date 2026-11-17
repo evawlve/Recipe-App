@@ -55,6 +55,7 @@ import { normalizeUnitToken } from '../../parse/unit';
 import { expandUnitAbbreviation } from '../../parse/unit-abbreviations';
 import { resolveVolumeGrams, pickVolumeUnits, LARGE_VOLUME_UNIT_SPELLINGS } from '../../units/volume-density';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
+import { isWriteSuppressed, noteRefusedWrite } from '../../write-policy';
 
 /**
  * The volume-unit SPELLINGS `buildOffResult()` accepts. UNCHANGED by the B1a
@@ -676,27 +677,41 @@ async function dispatchServing(
                     //
                     // AiGeneratedServing deliberately takes no filter: it has no `source` or
                     // `isAiEstimated` column because every row there is AI by construction.
-                    try {
-                        const { prisma: prismaDb } = await import('../../db');
-                        const staleId = `ai_${candidate.id}_${targetSizeUnit}`;
-                        if (candidate.id.startsWith('fdc_')) {
-                            const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
-                            await prismaDb.fdcServing.deleteMany({
-                                where: { fdcId, description: targetSizeUnit, isAiEstimated: true },
-                            });
-                        } else if (candidate.id.startsWith('off_')) {
-                            const barcode = candidate.id.replace('off_', '');
-                            await prismaDb.offServing.deleteMany({
-                                where: { barcode, description: targetSizeUnit, isAiEstimated: true },
-                            });
-                        } else {
-                            await prismaDb.aiGeneratedServing.deleteMany({
-                                where: { foodId: candidate.id, label: targetSizeUnit },
-                            });
+                    //
+                    // REQUEST-SCOPED WRITE SUPPRESSION (nosave=1). A delete is a write: a request that
+                    // persists nothing it computed must not remove a row an earlier request saved
+                    // either (segmentation-cache.ts skips its TTL sweep for the same reason). Same
+                    // key as the writers this branch sits beside (insertAiServing, upsertServing in
+                    // getOrCreateAmbiguousServing): 'aiServing'. The refusal moves no grams: the
+                    // implausible value is discarded for THIS request either way, only the row stays.
+                    if (isWriteSuppressed('aiServing')) {
+                        const staleTable = candidate.id.startsWith('fdc_') ? 'FdcServing'
+                            : candidate.id.startsWith('off_') ? 'OffServing' : 'AiGeneratedServing';
+                        noteRefusedWrite('aiServing', staleTable, `${candidate.id}:${targetSizeUnit}`);
+                        logger.info('hydrate.stale_ai_cache_delete_refused', { foodId: candidate.id, targetSizeUnit });
+                    } else {
+                        try {
+                            const { prisma: prismaDb } = await import('../../db');
+                            const staleId = `ai_${candidate.id}_${targetSizeUnit}`;
+                            if (candidate.id.startsWith('fdc_')) {
+                                const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
+                                await prismaDb.fdcServing.deleteMany({
+                                    where: { fdcId, description: targetSizeUnit, isAiEstimated: true },
+                                });
+                            } else if (candidate.id.startsWith('off_')) {
+                                const barcode = candidate.id.replace('off_', '');
+                                await prismaDb.offServing.deleteMany({
+                                    where: { barcode, description: targetSizeUnit, isAiEstimated: true },
+                                });
+                            } else {
+                                await prismaDb.aiGeneratedServing.deleteMany({
+                                    where: { foodId: candidate.id, label: targetSizeUnit },
+                                });
+                            }
+                            logger.info('hydrate.stale_ai_cache_deleted', { foodId: candidate.id, targetSizeUnit });
+                        } catch (e) {
+                            // Ignore delete errors
                         }
-                        logger.info('hydrate.stale_ai_cache_deleted', { foodId: candidate.id, targetSizeUnit });
-                    } catch (e) {
-                        // Ignore delete errors
                     }
 
                     // Don't use this result — fall through without setting servingResult
