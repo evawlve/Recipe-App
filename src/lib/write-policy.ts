@@ -90,8 +90,19 @@ import { AsyncLocalStorage } from 'node:async_hooks';
  * request. The OffServing row is the half that would outlive it either way — a label-derived
  * serving the cascade reads, the class the 2026-08-02 batch-rollback report measured moving
  * `15 pretzels` from 105 g to 45 g.
+ *
+ * `aiNormalizeCache` (2026-11-17, s461) is the AiNormalizeCache upsert in
+ * `saveAiNormalizeCache()` — the model's reading of a line (normalizedName, isBranded, the
+ * nutrition estimate). It is a row the request COMPUTED, not an upstream mirror, and it was
+ * never on the exempt list above; it was simply unguarded. A later request that misses
+ * FoodMapping and reaches normalize, simplify or the gate-skip read seat reads it, so an
+ * unguarded nosave probe could author the answer a live user gets (the deleted
+ * `una corona` -> onion row was minted by one). Refusing it costs the nosave request
+ * nothing — the answer is still used for that request — and costs the NEXT nosave
+ * request of the same line one normalize/simplify model call, because nothing was
+ * cached for it.
  */
-export type SuppressibleWrite = 'aiServing' | 'segmentationCache' | 'offMirror';
+export type SuppressibleWrite = 'aiServing' | 'segmentationCache' | 'offMirror' | 'aiNormalizeCache';
 
 /** One refused write. `line` is present when the refusal happened inside a per-line scope. */
 export interface WriteRefusal {
