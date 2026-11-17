@@ -398,6 +398,7 @@ const KNOWN_BRANDS: string[] = [
  */
 import brandLexicon from './brand-lexicon.json';
 import { matchDigitBrandPrefix } from './digit-brands';
+import { maskSpanishStaplePhrases } from './spanish-staple-names';
 
 /** Set of all brand names (lowercased, trimmed) for O(1) lookup */
 const BRAND_SET = new Set<string>([
@@ -444,7 +445,9 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
     // so "1 cup Heinz ketchup" → tokens ["cup", "heinz", "ketchup"].
     // Only a STANDALONE leading number is a quantity — digit-leading name
     // tokens ("7up") must survive to the n-gram scan below.
-    const cleaned = rawLine
+    // s459: a Spanish staple phrase is a food name, not a brand mention (`luna` in `media luna`);
+    // see maskSpanishStaplePhrases().
+    const cleaned = maskSpanishStaplePhrases(rawLine)
         .replace(/[⅛¼⅓⅜½⅝⅔¾⅞]/g, '')    // Unicode fractions
         .replace(/^\s*[\d./]+(?:\s+|$)/g, '')  // Leading qty (whole token only)
         .trim();

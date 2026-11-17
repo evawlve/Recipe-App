@@ -2623,6 +2623,107 @@ async function borrowSiblingPackageGrams(
 }
 
 /**
+ * PKT-DOSE (s459 wave 9): a DOSE word is a label-scale amount, never a retail
+ * package. A dose word ("3 packets of sugar", "1 packet starbucks hot cocoa
+ * mix", "a packet of fruit snacks") on a record with no label serving of its
+ * own was billed the package rung's answer: the SKU's own in-band package or
+ * the brand's package vote, and a package median is a retail unit. Live cold,
+ * deploy 44: `Granulated sugar` (Everyday) took the store brand's 155 g vote,
+ * `3 packets of sugar` 465 g / 1,855 kcal; `Starbucks Hot Cocoa Mix` 102 g a
+ * packet (its brand's envelopes are 28 g). The caller keeps a record's OWN gram
+ * package (this product's real pack) and caps an own millilitre one (a bottle).
+ *
+ * The dose is a SAME-FORM LABEL median (siblings within [0.5x, 2x] of self's
+ * kcal/100 g, the SIB-FORM band below): first the record's NAME group (the
+ * rung (E) predicate: `granulated sugar` n=29 median 4 g, `fruit snacks` n=64
+ * 23 g); else the brand key's rows whose own label names a dose word
+ * (DOSE_LABEL_WORDS_RE) and whose name carries the record's head noun
+ * (doseHeadNoun(): Starbucks' 9 same-form `mix` envelopes, median 28 g;
+ * Quaker's 67 `oatmeal` packets, 43 g). n >= 3 in either arm, as both label
+ * borrows require.
+ *
+ * The package answer stands unless it exceeds DOSE_PACKAGE_MAX_RATIO x the
+ * dose (doseOverPackage()). A brand that sells the product AS a single-serve
+ * packet already votes a dose-sized package, and there the vote is right where
+ * a label median is not: Swiss Miss's 39.1 g envelope vote vs its 29 g label
+ * median (1.35x), Kool-Aid's 31.8 g same-form packet vote vs 21 g (1.5x). So
+ * the rule only LOWERS, and only on a gross disagreement. A null (no same-form
+ * label group, a 0-kcal record) keeps today's answer: never a refusal (DNB-9).
+ */
+export const DOSE_PACKAGE_MAX_RATIO = 2;
+const DOSE_LABEL_WORDS_RE = '\\m(packets?|sachets?|envelopes?|sticks?|pouch(es)?)\\M';
+
+async function borrowDoseLabelGrams(
+    foodName: string | null | undefined,
+    brandKey: string | null | undefined,
+    selfBarcode: string,
+    selfKcalPer100g: number | null | undefined,
+): Promise<{ grams: number; samples: number; arm: 'name' | 'brand' } | null> {
+    const self = selfKcalPer100g == null ? NaN : Number(selfKcalPer100g);
+    if (!Number.isFinite(self) || self <= 0) return null;
+    const lo = self * SIBLING_FORM_BAND_LO;
+    const hi = self * SIBLING_FORM_BAND_HI;
+    try {
+        const { prisma } = await import('../../db');
+        const nm = foodName?.trim();
+        if (nm && nm.length >= 2) {
+            const row = (await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+                SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med, count(*)::int AS n
+                FROM "OffFood"
+                WHERE lower(name) = lower(${nm})
+                  AND barcode <> ${selfBarcode}
+                  AND "duplicateOfBarcode" IS NULL
+                  AND "corruptReason" IS NULL
+                  AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
+                  AND "servingGrams" <> 100
+                  AND ${SIBLING_KCAL_SQL} BETWEEN ${lo}::float8 AND ${hi}::float8`)[0];
+            if (row?.med && row.n >= 3) return { grams: row.med, samples: row.n, arm: 'name' };
+        }
+        const brand = brandKey?.trim();
+        const head = doseHeadNoun(foodName);
+        if (brand && brand.length >= 2 && head) {
+            const row = (await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+                SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med, count(*)::int AS n
+                FROM "OffFood"
+                WHERE "brandName" ILIKE ${brand}
+                  AND barcode <> ${selfBarcode}
+                  AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
+                  AND "servingGrams" <> 100
+                  AND "servingSize" ~* ${DOSE_LABEL_WORDS_RE}
+                  AND lower(name) LIKE ${'%' + head + '%'}
+                  AND ${SIBLING_KCAL_SQL} BETWEEN ${lo}::float8 AND ${hi}::float8`)[0];
+            if (row?.med && row.n >= 3) return { grams: row.med, samples: row.n, arm: 'brand' };
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Exported for tests. The record name's LAST word of >= 3 letters, which the
+ * brand arm requires in a sibling's name: a brand's packets are this product's
+ * dose only when they are the same kind of product. Without it, Annie's mac and
+ * cheese took the brand's 19 g fruit-snack pouches (replay, s459 pd-pkt), and 66
+ * of 70 brand-arm fires in a 600-record corpus sample were other product lines
+ * (Wegmans cake slice -> 28 g, Tesco cookie 6-pack -> 70 g).
+ */
+export function doseHeadNoun(foodName: string | null | undefined): string | null {
+    const words = (foodName ?? '').toLowerCase().match(/[a-z\u00e0-\u00ff]+/g) ?? [];
+    for (let i = words.length - 1; i >= 0; i--) {
+        if (words[i].length >= 3) return words[i];
+    }
+    return null;
+}
+
+/** Exported for tests. True when a package answer is too big to be the dose the line asked for. */
+export function doseOverPackage(packageGrams: number | null | undefined, doseGrams: number | null | undefined): boolean {
+    if (packageGrams == null || doseGrams == null) return false;
+    if (!(doseGrams > 0) || !Number.isFinite(packageGrams)) return false;
+    return packageGrams > DOSE_PACKAGE_MAX_RATIO * doseGrams;
+}
+
+/**
  * SIB-FORM (s459): a sibling median is a serving of the SAME PRODUCT FORM only
  * when the siblings are about as dense as the record being billed. A dense
  * record (a powder, a nut butter, heavy cream) whose siblings are mostly a
@@ -3281,6 +3382,28 @@ export async function buildOffResult(
             ?? await borrowSiblingPackageGrams(brandForBorrow,
                 PACKAGE_DOSE_UNITS.has(unit) ? (hydrated.nutrientsPer100g?.['calories'] ?? null) : null);
     }
+    // PKT-DOSE (s459 wave 9): a DOSE word bills a same-form label dose when the
+    // package answer above is more than DOSE_PACKAGE_MAX_RATIO x it (see
+    // borrowDoseLabelGrams()). Container words keep the package. So does a
+    // PACKET word (packet/sachet/pouch) on a record's OWN in-band GRAM package:
+    // that is this product's real pack, and in a 600-record corpus sample (s459
+    // rf-pkt) its 14 packet fires were all a literal pack (cheddar, ham, walnuts,
+    // prosciutto) or a single-serve pack eaten whole (a 50 g olive cup, a 113 g
+    // noodle-soup block), never a better answer. An own MILLILITRE package is a
+    // bottle (mayo, dressing, oil, sauce: 5 of 5 fixed), and a packet of a bottled
+    // liquid is a sachet. A SERVING word always means the label serving.
+    // Kill-switch: SERVING_PACKAGE_DOSE="0" restores the package answer (no build needed).
+    const ownGramPackage = packageGrams != null && hydrated.packageQuantityUnit === 'g'
+        && !(unit && SERVING_WORD_UNITS.has(unit));
+    let packageDose: Awaited<ReturnType<typeof borrowDoseLabelGrams>> = null;
+    if (unit && PACKAGE_DOSE_UNITS.has(unit) && packageFallbackGrams != null && !ownGramPackage
+        && process.env.SERVING_PACKAGE_DOSE !== '0') {
+        const dose = await borrowDoseLabelGrams(
+            hydrated.foodName, brandForBorrow, candidate.id.replace(/^off_/, ''),
+            hydrated.nutrientsPer100g?.['calories'] ?? null,
+        );
+        if (dose && doseOverPackage(packageFallbackGrams, dose.grams)) packageDose = dose;
+    }
 
     let nc: ReturnType<typeof nameCountPerPieceGrams> = null;
     if (unit && weightToGrams[unit]) {
@@ -3349,6 +3472,20 @@ export async function buildOffResult(
             samples: servingWordSibling.samples,
             p25: servingWordSibling.p25,
             p75: servingWordSibling.p75,
+        });
+    } else if (unit && packageDose != null) {
+        // PKT-DOSE — see packageDose above: a dose word on a SKU with no label
+        // serving whose package answer is a retail unit, not a dose.
+        grams = qty * packageDose.grams;
+        servingDescription = `${qty} ${unit} (~${packageDose.grams.toFixed(0)}g each, label dose)`;
+        servingTier = 'package_dose_label';
+        logger.info('off.build_result.package_dose_label', {
+            foodId: candidate.id,
+            unit,
+            arm: packageDose.arm,
+            doseGrams: packageDose.grams,
+            samples: packageDose.samples,
+            packageGrams: packageFallbackGrams,
         });
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && packageFallbackGrams != null) {
         // Package-like unit with NO label serving ("1 bottle gatorade" on a
