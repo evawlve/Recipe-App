@@ -2,7 +2,7 @@ import { parseQuantityTokens } from './quantity';
 import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE, SPANISH_UNIT_TOKENS } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
-import { expandUnitAbbreviation } from './unit-abbreviations';
+import { expandUnitAbbreviation, expandLeadingAbbreviation } from './unit-abbreviations';
 import { resolveLoosePourMeasures } from './loose-measures';
 import { resolveCountTag, splitTrailingCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
@@ -487,7 +487,8 @@ function normalizeFractionalMeasure(mergedTokens: string[]): void {
 // read there, and `fourth slice of pizza` / `fourth bowl of cereal` are ordinals (my fourth slice), not a quarter. Spanish: `de` + a
 // SPANISH_UNIT_TOKENS word + `de|del` + a word. Those anchors are the whole food-name guard: `quarter pounder (with
 // cheese)`, `third street bagel`, `chicken quarters` and `three musketeers bar` have no measure after the fraction word, and
-// `cuarto de libra (con queso)` and `un cuarto de pollo` have no Spanish unit word after `de` (`libra` is not one).
+// `cuarto de libra (con queso)` has no `de <word>` after its unit word (`libra` is one since s459 ES-UNITSET-KILO) and `un
+// cuarto de pollo` has no Spanish unit word after `de`.
 // Singular and plural are not policed (dictation writes `three quarter of a cup`, `tres cuarto de taza`), and neither is
 // a numerator at or above the denominator: the arithmetic stays right (`two halves of a cup` is one cup).
 // NOT this rule: a fraction of a FOOD (`a quarter of a pizza`, `three quarters of a banana`); it keeps its parse.
@@ -561,6 +562,38 @@ function rewriteDoublePortion(mergedTokens: string[]): void {
       PORTION_NOUNS.has(at(2)) && at(3) === 'of' && mergedTokens[f + 4] !== undefined) {
     mergedTokens.splice(f, 3, PORTION_MULTIPLIERS.get(at(1))!, 'servings');
   }
+}
+
+// s461 DOZEN. `dozen` after a stated quantity multiplies it: `half dozen wings` is 6 wings, `2 dozen cookies` 24, `1 doz eggs`
+// 12, `half a dozen eggs` / `a half dozen eggs` 6, `one and a half dozen eggs` 18, `a couple dozen wings` 24, `dos docenas de
+// huevos` 24. parseQuantityTokens() reads `dozen` as 12 only where it OPENS the line (`a dozen eggs`, `dozen eggs`); after a
+// quantity the word stayed in the name, so the line billed that quantity of a `dozen <food>` record: `1 doz eggs` Eggs
+// Benedict 300 g (MEL noCache=false, 2026-10-18 x2), `1 dozen eggs` one egg (50 g), `half dozen chicken wings` 21.5 g, `half a
+// dozen oysters` 24 g, `dos docenas de huevos` 100 g (s461 pd-dozen, live cold). The shape collapses to its digit twin
+// (`6 wings`, `12 eggs`, `24 huevos`), which already parses right.
+// Same POSITIONAL discipline as rewriteDoublePortion() (same hedge offset): a quantity at [0] (at [1] behind a hedge, or
+// behind `a|an` before a word fraction: `a half dozen`) that parseQuantityTokens() reads -- or readSpanishCount(), for a
+// Spanish numeral -- then a DOZEN_WORDS word, directly or after one article (`half a dozen`); an `of`/`de` after it goes too,
+// and a food must follow. NOT this rule, each keeps its parse: no food after the dozen word (`half dozen`, `2 dozen`), a
+// dozen and a half (`a dozen and a half eggs`, `una docena y media de huevos`), the one token `half-dozen`, `a baker's
+// dozen`, `dozens of cookies` (no quantity).
+// Runs before rewriteSpanishNumeral(), so a Spanish numeral before `docenas` is read here. trailing-quantity-fold.ts's stock
+// cap reads this parse (replaceStock(): it multiplies by 12 only while a dozen word is still in the name).
+const DOZEN_WORDS: ReadonlySet<string> = new Set(['dozen', 'dozens', 'doz', 'docena', 'docenas']);
+function rewriteDozenCount(mergedTokens: string[]): void {
+  const low = mergedTokens.map((t) => t.toLowerCase());
+  const f = low.length > 0 && LEADING_HEDGES.has(low[0]) ? 1 : 0;
+  const a = LEADING_ARTICLES.has(low[f] ?? '') && WORD_FRACTIONS.has(low[f + 1] ?? '') ? 1 : 0;   // `a half dozen`
+  const q = parseQuantityTokens(low.slice(f + a)) ?? (a === 0 ? readSpanishCount(mergedTokens.slice(f)) : null);
+  if (!q || !(q.qty > 0)) return;
+  let k = f + a + q.consumed;
+  if (LEADING_ARTICLES.has(low[k] ?? '') && DOZEN_WORDS.has(low[k + 1] ?? '')) k += 1;   // `half a dozen`
+  if (!DOZEN_WORDS.has(low[k] ?? '')) return;
+  k += 1;
+  if (low[k] === 'and' || low[k] === 'y') return;   // `a dozen and a half`, `una docena y media`: not read here
+  if (low[k] === 'of' || low[k] === 'de') k += 1;
+  if (k >= mergedTokens.length) return;
+  mergedTokens.splice(f, k - f, String(Math.round(q.qty * 12 * 1000) / 1000));
 }
 
 // s459 AL-b2. `shot` became a count unit in #688 (normalizeUnitToken()), which is right for the pour (`a shot of
@@ -1105,10 +1138,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
 
   if (mergedTokens.length === 0) return null;
+  expandLeadingAbbreviation(mergedTokens);   // s461 ABBREV: `half a t butter` reads as `half a tsp butter`
 
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
   const brandDetection = detectBrandInQuery(normalizedLine); // hoisted (s457 P4): a pure read of normalizedLine
+  rewriteDozenCount(mergedTokens);   // s461 DOZEN; before rewriteSpanishNumeral() (`dos docenas de huevos`)
   rewriteWordFractionOfMeasure(mergedTokens);   // s459 QTY-34; before rewriteSpanishNumeral() (`tres cuartos`)
   rewriteSpanishNumeral(mergedTokens, brandDetection.matchedBrand);
   rewriteShotGlassOf(mergedTokens);   // s459 AL-b2 (2)

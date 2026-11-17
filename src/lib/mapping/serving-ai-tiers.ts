@@ -224,6 +224,9 @@ export const REPLAY_NONDETERMINISTIC_SERVING_TIERS: readonly string[] = Object.f
         // Same shape: one name for cache hit AND miss of the 'piece' estimate
         // (serving/hydration-lane.ts, label_piece_estimate, s456 CXL-1).
         'label_piece_estimate',
+        // Same shape again: one name for cache hit AND miss of the 'whole' estimate
+        // (serving/hydration-lane.ts, `half a <item>` on a portion label, s461 WHOLE-ONE).
+        'fraction_whole_item',
 
         // --- getOrCreateFdcSizeServings() -> estimateAmbiguousServing() ---
         // Uncached by construction (its own docstring says caching is "a future

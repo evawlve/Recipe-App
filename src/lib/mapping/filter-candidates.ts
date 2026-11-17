@@ -1670,6 +1670,29 @@ const MUST_HAVE_CALORIES_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * A distilled spirit's panel IS ethanol energy: FatSecret's generic Rum, Vodka, Gin and Tequila carry 231-263 kcal/100 g
+ * with protein = carbs = fat = 0, because ethanol (7 kcal/g) is not a macro. hasNullOrInvalidMacros()' caloric branch
+ * reads exactly that shape ("P = 0, C = 0, fat explains < 50 %") as a missing macro and deleted every one of them at the
+ * token filter, so `rum` / `shot of rum` billed an OFF "Rum ckae" (398 kcal/100 g), `vodka` a Blue Ox record and
+ * `gin` a "Gin Gin" ginger candy (100 g / 378 kcal), while `whiskey` resolved to FatSecret's generic Whiskey only because its panel carries
+ * carbs 0.1 (s461 pd-ident). `ron` is the Spanish word (`un ron` normalizes to `rum`, but this check reads the raw
+ * line). The waiver needs BOTH sides to name a spirit (the line AND the candidate name) and a panel
+ * with fat = 0 too, so a corrupt caloric row named for anything else still fails, and a liqueur, beer, wine or cocktail
+ * never reaches this branch (they carry carbs). Admit-only: it never ranks anything. Same physics as
+ * nonAlcoholicDrinkReason() in macro-plausibility.ts (kcal minus Atwater = the alcohol share).
+ */
+export const SPIRIT_WORD_RE = /\b(?:vodka|whiske?y|rum|ron|gin|tequila|mezcal|brandy|cognac|bourbon|scotch|liquor|spirits?|schnapps|absinthe|grappa|pisco|cacha[cç]a|ouzo|soju|shochu|baijiu|aquavit)\b/i;
+export function isSpiritPanelForSpiritLine(
+    nutrients: { fat?: number | null },
+    candidateName?: string,
+    queryLine?: string
+): boolean {
+    if (!candidateName || queryLine == null) return false;
+    if ((nutrients.fat ?? 0) !== 0) return false;
+    return SPIRIT_WORD_RE.test(candidateName) && SPIRIT_WORD_RE.test(queryLine);
+}
+
+/**
  * A zero-calorie MARKER word: the label (or the user) is saying the product is
  * the diet / zero / sugar-free variant. On its own it proves nothing — "Zero
  * Sugar Creamer" still has calories — so it never waives anything by itself.
@@ -1843,7 +1866,8 @@ export function hasNullOrInvalidMacros(
         const fatValue = nutrients.fat ?? 0;
         const caloriesExplainedByFat = fatValue * 9;
         if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0
-            && caloriesExplainedByFat < calories * 0.5) {
+            && caloriesExplainedByFat < calories * 0.5
+            && !isSpiritPanelForSpiritLine(nutrients, candidateName, queryLine)) {
             return true;
         }
     }

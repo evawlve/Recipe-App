@@ -582,8 +582,11 @@ function replaceStock(item: Item, c: Clause): string | null {
   if (!food || /\d/.test(food) || fw.some(x => STOCK_FORM_BAD.has(x) || QTY_WORDS.has(x) || isUnit(x))) return null;
   const rw = words(item.rawText);
   let stockCount: number | null = null;
+  let dozenInName = true;   // s461 DOZEN: the parser multiplies `<qty> dozen <food>` itself; only a dozen word left in the name is ours
+  let parsedCount: number | null = null;   // the parser's count, the stock when it read the dozen word (`2 dozen large eggs` = 24)
   try {
     const p = parseIngredientLine(item.rawText.replace(/^\s*(a|an|one)\s+/i, '1 '));
+    if (p) { dozenInName = /\b(dozen|doz)\b/i.test(p.name ?? ''); parsedCount = p.qty * p.multiplier; }
     if (p && !p.unit) stockCount = p.qty * p.multiplier;
     // S240 (cloud-38 D13): the parser reads a count noun as its unit (`6 eggs` -> unit `egg`); when that unit IS the food's own
     // head, the stock is still a count (`6 eggs, had 2` -> `2 eggs`).
@@ -598,7 +601,9 @@ function replaceStock(item: Item, c: Clause): string | null {
   } else if (['large', 'medium', 'small'].includes(c.unit)) {
     return null;
   }
-  if (rw.includes('dozen') || rw.includes('doz')) stockCount = 12 * (stockCount && stockCount > 1 && stockCount < 12 ? stockCount : 1);
+  if (rw.includes('dozen') || rw.includes('doz')) {
+    stockCount = dozenInName ? 12 * (stockCount && stockCount > 1 && stockCount < 12 ? stockCount : 1) : (stockCount ?? parsedCount);
+  }
   const m = /(\d+)\s*pack\b/.exec(item.rawText.toLowerCase());
   if (m) stockCount = Number(m[1]);
   if (stockCount !== null && stockCount > 1 && c.value > stockCount) return null;
