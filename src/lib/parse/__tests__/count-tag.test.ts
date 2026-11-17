@@ -83,7 +83,7 @@ const CONTROLS: Array<[string, unknown]> = [
  * declined parse kept the tag in the NAME: a name of `x2` billed the energy drink "Strong X2" (`dozen eggs x2`
  * 600 g / 2,640 kcal, cold, s459 rf-x2) and a `<food> x2` name billed ONE portion (`200g chicken x2` 200 g).
  * resolveCountTag() still returns these lines unchanged: only the head x N path reads the tag.
- * `quarter pounder` is a WRONG head (¼ of a `pounder`); x N keeps it proportional and the head is its own row.
+ * `quarter pounder` is a fraction-word NAME (s461 QP-LEAD): the head parses as 1 `quarter pounder`, so x2 is two of them.
  */
 const OWNED_LEAD_TAGS: Array<[string, string, number]> = [
   ['⅓ bagel x2', '⅓ bagel', 2],

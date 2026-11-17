@@ -57,7 +57,7 @@ describe('controls: a size word or a non-measure after the article is untouched'
   });
 
   // `and` is not a measure, so this rule never fires. A leading "half and half"
-  // is the food's name (halfAndHalfCursor() in ingredient-line.ts), so
+  // is the food's name (fractionNameCursor() in ingredient-line.ts), so
   // "one half and half" keeps the quantity 1 and the three words as the name.
   test.each([
     ['a half and half creamer', { qty: 1, unit: null, name: 'a half and half creamer' }],
