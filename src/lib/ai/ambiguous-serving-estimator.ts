@@ -108,12 +108,61 @@ export function scoopMaxGrams(unit: string, foodName: string | null | undefined)
 }
 
 /**
+ * A PACKET OF FOOD IS NOT A PACKET OF SUGAR (s461 PKT-FOOD). `UNIT_MAX_GRAMS.packet` (10 g, and
+ * `envelope` 15 g) is a condiment / sweetener cap — "sweetener packet = 1g, ketchup packet = 9g max" —
+ * but it clamps every food, so the estimator's own answer for a single-serve food packet is thrown
+ * away. MEASURED in the box app log (`ambiguous_estimation.clamped` + the two per-unit guards,
+ * 2026-10-17 -> 2026-11-17): 38 packet/envelope clamps, 25 of them on meal-sized foods, e.g. instant
+ * oats 40 -> 10, ramen 85 -> 10, tuna 140 -> 10, hot cocoa 28 -> 10, crisps 30 -> 10, grits 28 -> 10,
+ * almond butter 32 -> 10 (truth: an instant oatmeal packet is 28-43 g, a tuna pouch 74-85 g, a ramen
+ * block 85 g; USDA FdcServing `packet` rows say the same, e.g. instant oats 28-45 g, onion soup mix
+ * 39 g). The other 13 (honey, jelly, coffee, sugar, ranch, and literal packs of bacon, tortillas and
+ * biscuits) keep the condiment cap below.
+ *
+ * So a record name that reads as a food sold in a meal-sized packet gets a food cap, by class: a
+ * POUCH food (tuna, salmon, chicken, ramen / instant noodles) POUCH_PACKET_MAX_GRAMS — the model
+ * reads "packet of tuna" as a 113-150 g can and "packet of chicken" as 227-500 g, and 85 g is a
+ * 3 oz pouch / a Maruchan block — and a DRY single-serve food (instant oats, grits, cocoa, crisps,
+ * nut butter, soup mix, ...) DRY_PACKET_MAX_GRAMS, because the model sometimes reads those as the
+ * retail tin (`Milo` drew 25, 40, 44, 240 and 250 g; a sachet is 22-33 g). A name that also reads as
+ * a small-dose packet (PACKET_DOSE_NAME_RE: `Chicken Bouillon`, `Ramen Seasoning`, `Coffee`) keeps
+ * the condiment cap, and so does every other name, so a miss keeps today's behaviour (the safe
+ * direction). A positive list on purpose: the model also answers 85 g for a `packet of jelly`
+ * (truth 14 g) and 340 g for a `packet of bacon`, so "everything but condiments" would bill those.
+ * The seed rung of getOrCreateAmbiguousServing() does not read this cap: a word-matched seed is a
+ * piece weight (nugget, wing, cookie), never a packet, so it keeps the condiment bound there.
+ * Kill-switch: SERVING_PACKET_FOOD_CAP="0" restores the condiment cap for every name (no build; the
+ * service reads it at the next restart).
+ */
+const PACKET_UNITS = new Set(['packet', 'packets', 'sachet', 'sachets', 'envelope', 'envelopes']);
+const POUCH_PACKET_NAME_RE = /\b(?:tuna|salmon|chicken|sardines?|ramen|noodles?|applesauce)\b/i;
+const DRY_PACKET_NAME_RE = /\b(?:oats?|oatmeal|porridge|grits|cream of wheat|farina|cocoa|hot chocolate|milo|ovaltine|chips|crisps|crackers?|pretzels?|popcorn|fruit snacks?|gummies|trail mix|nuts|almonds|peanuts|cashews|(?:peanut|almond|cashew|nut|sunflower(?: seed)?) butter|jerky|protein|gels?|soup)\b/i;
+const PACKET_DOSE_NAME_RE = /\b(?:seasonings?|bouillon|broth|stock|gravy|flavou?rings?|dressing|creamer|coffee)\b/i;
+export const POUCH_PACKET_MAX_GRAMS = 85;
+export const DRY_PACKET_MAX_GRAMS = 45;
+
+/** Per-unit cap for a packet-like unit on a food record. Null for every other unit or name (the unit cap applies). */
+export function packetMaxGrams(unit: string, foodName: string | null | undefined): number | null {
+    const u = unit.toLowerCase().trim();
+    if (!PACKET_UNITS.has(u) || foodName == null) return null;
+    if (process.env.SERVING_PACKET_FOOD_CAP === '0') return null;
+    if (PACKET_DOSE_NAME_RE.test(foodName)) return null;
+    if (POUCH_PACKET_NAME_RE.test(foodName)) return POUCH_PACKET_MAX_GRAMS;
+    if (DRY_PACKET_NAME_RE.test(foodName)) return DRY_PACKET_MAX_GRAMS;
+    return null;
+}
+
+/**
  * Sanity bounds for an ambiguous unit's per-unit grams; either side may be undefined.
- * `foodName` moves only the `scoop` cap (scoopMaxGrams); omitted, it reads as before.
+ * `foodName` moves only the `scoop` cap (scoopMaxGrams) and the packet-like caps (packetMaxGrams);
+ * omitted, it reads as before.
  */
 export function getAmbiguousUnitBounds(unit: string, foodName?: string | null): { min?: number; max?: number } {
     const u = unit.toLowerCase().trim();
-    return { min: UNIT_MIN_GRAMS[u], max: (foodName != null ? scoopMaxGrams(u, foodName) : null) ?? UNIT_MAX_GRAMS[u] };
+    return {
+        min: UNIT_MIN_GRAMS[u],
+        max: (foodName != null ? scoopMaxGrams(u, foodName) ?? packetMaxGrams(u, foodName) : null) ?? UNIT_MAX_GRAMS[u],
+    };
 }
 
 // Unit-specific weight sanity caps (safety net for AI hallucinations).
@@ -560,7 +609,7 @@ export async function estimateAmbiguousServing(
         // generously so a hallucinated weight can't produce absurd calories,
         // while still allowing legitimately large portions (bowl, plate, etc.).
         const GENERIC_UNKNOWN_MAX = 600;
-        const maxGrams = scoopMaxGrams(unit, foodName) ?? UNIT_MAX_GRAMS[unit.toLowerCase()]
+        const maxGrams = scoopMaxGrams(unit, foodName) ?? packetMaxGrams(unit, foodName) ?? UNIT_MAX_GRAMS[unit.toLowerCase()]
             ?? (isEstimableUnknownUnit(unit) ? GENERIC_UNKNOWN_MAX : undefined);
         let clampedGrams = estimatedGrams;
         if (maxGrams && estimatedGrams > maxGrams) {

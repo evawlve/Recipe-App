@@ -66,12 +66,13 @@ const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)
  * (`tres cuartos de libra de carne`) and the dropped `de`. `un cuarto de libra con queso` (McDonald's) keeps its name: the
  * word-fraction rule needs `de <word>` after the unit. `kilo(s)` is also English, so spanish-detect.ts does NOT count it as
  * a Spanish marker (ENGLISH_UNIT_WORDS there): `a kilo of pasta` stays English.
- * KNOWN COSTS, pinned in spanish-kilo-libra-units.test.ts: a chain after `cuarto de libra de` reads as the food
- * (`[un] cuarto de libra de mcdonalds` = 0.25 lb of `mcdonalds`, 0 MEL events); and `onza(s)` before bare `agua` bills MORE
- * cracker grams (`16 onzas de agua` 729 -> 1,878 kcal cold, s459 rf-kilo Q01/Q02), as `taza` already does (`2 tazas de agua`
- * 1,987 kcal live, Q10). The fix for both is the water identity (WATER-PRODUCT), not this set.
- * NOT `litro(s)` yet: bare `agua` resolves to a 414 kcal/100 g cracker record (OFF 7802215501838, s429 class WATER-PRODUCT), so a
- * right litre count would bill `2 litros de agua` at 8,280 kcal where today's wrong 22 g bills 91 (s459 pd-kilo P11/P12).
+ * KNOWN COST, pinned in spanish-kilo-libra-units.test.ts: a chain after `cuarto de libra de` reads as the food
+ * (`[un] cuarto de libra de mcdonalds` = 0.25 lb of `mcdonalds`, 0 MEL events). `16 onzas de agua` is 16 oz of bare `agua`,
+ * which bills water at 0 kcal since #710 (WATER-PRODUCT; deploy 46 cold: 473 g / 0 kcal, s461 pd-litro C02).
+ * s461 ES-UNITSET-LITRO: the litre, volume `l` (as `liter`). `litro(s)` was no unit at all: `2 litros de leche` read 2 of `litros
+ * de leche` and billed 500 g, `dos litros de refresco` 240 g (deploy 46 cold); with it, each reads as its twin `2 liters leche`
+ * (2,000 g). It was held out of ES-UNITSET-KILO only while bare `agua` resolved to a 414 kcal/100 g cracker record; #710 made
+ * `agua` water. The trailing bottle size stays in the name (`una botella de 1 litro de agua`, `coca cola 2 litros`).
  */
 export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
   'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 'taza', 'tazas', 'mililitro', 'mililitros',
@@ -79,6 +80,7 @@ export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
   'puñado', 'puñados', 'punado', 'punados',
   'gramo', 'gramos', 'gr', 'grs', 'kilogramo', 'kilogramos',
   'kilo', 'kilos', 'libra', 'libras', 'onza', 'onzas',
+  'litro', 'litros',
 ]);
 
 export function normalizeUnitToken(tok: string): NormalizedUnit {
@@ -120,7 +122,9 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'cucharada': 'tbsp', 'cucharadas': 'tbsp',
     'cucharadita': 'tsp', 'cucharaditas': 'tsp',
     'taza': 'cup', 'tazas': 'cup',
-    'mililitro': 'ml', 'mililitros': 'ml'
+    'mililitro': 'ml', 'mililitros': 'ml',
+    // s461 ES-UNITSET-LITRO: the Spanish litre (see SPANISH_UNIT_TOKENS). Exact tokens only.
+    'litro': 'l', 'litros': 'l',
   };
 
   if (volumeUnits[token]) {
