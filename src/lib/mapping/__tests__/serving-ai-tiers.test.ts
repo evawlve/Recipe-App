@@ -390,8 +390,9 @@ describe('isBorrowedOrDefaultedTier — weights that are not this food\'s', () =
         // the same brand-median label borrow as `bare_sibling_serving`, reached
         // from a set `serving`/`portion` unit instead of a bare line.
         // 18 -> 19 on 2026-10-18: bare_prepared_drink_cup (S202), a hardcoded 240 g cup for a bare prepared drink — a table number, not this food's weight.
-        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(19);
-        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(19);
+        // 19 -> 20 on 2026-11-16: package_dose_label (s459 PKT-DOSE), another product's label serving billed for a dose word.
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(20);
+        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(20);
     });
 });
 
