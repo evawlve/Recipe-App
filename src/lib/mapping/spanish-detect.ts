@@ -78,7 +78,13 @@ export const SPANISH_ENGLISH_ANCHORS: readonly string[] = [
   'wrap', 'burrito', 'tacos', 'style', 'bar',
 ];
 
-const MARKERS: ReadonlySet<string> = new Set([...SPANISH_MARKER_WORDS, ...Array.from(SPANISH_UNIT_TOKENS).map(fold)]);
+/** SPANISH_UNIT_TOKENS members that are also English words: never a marker (`a kilo of pasta`). s459 ES-UNITSET-KILO. */
+export const ENGLISH_UNIT_WORDS: readonly string[] = ['kilo', 'kilos'];
+
+const MARKERS: ReadonlySet<string> = new Set([
+  ...SPANISH_MARKER_WORDS,
+  ...Array.from(SPANISH_UNIT_TOKENS).map(fold).filter((t) => !ENGLISH_UNIT_WORDS.includes(t)),
+]);
 const WEAK: ReadonlySet<string> = new Set(WEAK_FOR_SHARED_MARKERS);
 const EXCLUDED: ReadonlySet<string> = new Set(SPANISH_EXCLUDED_WORDS);
 const STRONG: ReadonlySet<string> = new Set(SPANISH_STRONG_NOUNS);
