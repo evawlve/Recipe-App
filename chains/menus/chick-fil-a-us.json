@@ -1,0 +1,6959 @@
+{
+  "chain": "chick-fil-a-us",
+  "chainName": "Chick-fil-A",
+  "components": [
+    {
+      "key": "american-cheese",
+      "name": "American Cheese",
+      "portions": [
+        {
+          "grams": 14,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 15,
+            "fatG": 4.5,
+            "fiberG": 0,
+            "kcal": 50,
+            "proteinG": 3,
+            "satFatG": 2.5,
+            "sodiumMg": 230,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "american cheese"
+      ]
+    },
+    {
+      "key": "avocado-lime-ranch-dressing",
+      "name": "Avocado Lime Ranch Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 3,
+            "cholesterolMg": 25,
+            "fatG": 32,
+            "fiberG": 1,
+            "kcal": 310,
+            "proteinG": 1,
+            "satFatG": 5,
+            "sodiumMg": 520,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "avocado lime ranch dressing"
+      ]
+    },
+    {
+      "key": "bacon",
+      "name": "Bacon",
+      "portions": [
+        {
+          "grams": 10,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 10,
+            "fatG": 3.5,
+            "fiberG": 0,
+            "kcal": 50,
+            "proteinG": 3,
+            "satFatG": 1.5,
+            "sodiumMg": 135,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "bacon"
+      ]
+    },
+    {
+      "key": "barbeque-sauce",
+      "name": "Barbeque Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 11,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 45,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 200,
+            "sugarG": 9,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "barbeque sauce"
+      ]
+    },
+    {
+      "key": "blue-cheese-crumbles",
+      "name": "Blue Cheese Crumbles",
+      "portions": [
+        {
+          "grams": 9,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 10,
+            "fatG": 2.5,
+            "fiberG": 0,
+            "kcal": 30,
+            "proteinG": 2,
+            "satFatG": 1.5,
+            "sodiumMg": 110,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "blue cheese crumbles"
+      ]
+    },
+    {
+      "key": "buttery-white-bun",
+      "name": "Buttery White Bun",
+      "portions": [
+        {
+          "grams": 60,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 29,
+            "cholesterolMg": 0,
+            "fatG": 6,
+            "fiberG": 1,
+            "kcal": 180,
+            "proteinG": 5,
+            "satFatG": 1,
+            "sodiumMg": 240,
+            "sugarG": 4,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "buttery white bun"
+      ]
+    },
+    {
+      "key": "chick-fil-a-breakfast-filet",
+      "name": "Chick-fil-A Breakfast Filet",
+      "portions": [
+        {
+          "grams": 71,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 8,
+            "cholesterolMg": 45,
+            "fatG": 8,
+            "fiberG": 0,
+            "kcal": 160,
+            "proteinG": 15,
+            "satFatG": 1.5,
+            "sodiumMg": 750,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "chick-fil-a breakfast filet"
+      ]
+    },
+    {
+      "key": "chick-fil-a-filet",
+      "name": "Chick-fil-A Filet",
+      "portions": [
+        {
+          "grams": 115,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 12,
+            "cholesterolMg": 70,
+            "fatG": 12,
+            "fiberG": 0,
+            "kcal": 250,
+            "proteinG": 24,
+            "satFatG": 2.5,
+            "sodiumMg": 1120,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "chick-fil-a filet"
+      ]
+    },
+    {
+      "key": "chick-fil-a-sauce",
+      "name": "Chick-fil-A Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 6,
+            "cholesterolMg": 10,
+            "fatG": 13,
+            "fiberG": 0,
+            "kcal": 140,
+            "proteinG": 0,
+            "satFatG": 2,
+            "sodiumMg": 170,
+            "sugarG": 6,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "chick-fil-a sauce"
+      ]
+    },
+    {
+      "key": "chili-lime-pepitas",
+      "name": "Chili Lime Pepitas",
+      "portions": [
+        {
+          "grams": 14,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 2,
+            "cholesterolMg": 0,
+            "fatG": 7,
+            "fiberG": 1,
+            "kcal": 80,
+            "proteinG": 4,
+            "satFatG": 1,
+            "sodiumMg": 50,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "chili lime pepitas"
+      ]
+    },
+    {
+      "key": "classic-syrup",
+      "name": "Classic Syrup",
+      "portions": [
+        {
+          "grams": 23,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 16,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 60,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 0,
+            "sugarG": 12,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "classic syrup"
+      ]
+    },
+    {
+      "key": "colby-jack-cheese",
+      "name": "Colby Jack Cheese",
+      "portions": [
+        {
+          "grams": 21,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 20,
+            "fatG": 7,
+            "fiberG": 0,
+            "kcal": 80,
+            "proteinG": 5,
+            "satFatG": 4,
+            "sodiumMg": 140,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "colby jack cheese"
+      ]
+    },
+    {
+      "key": "creamy-salsa-dressing",
+      "name": "Creamy Salsa Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 2,
+            "cholesterolMg": 25,
+            "fatG": 31,
+            "fiberG": 0,
+            "kcal": 290,
+            "proteinG": 1,
+            "satFatG": 5,
+            "sodiumMg": 630,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "creamy salsa dressing"
+      ]
+    },
+    {
+      "key": "crispy-bell-peppers",
+      "name": "Crispy Bell Peppers",
+      "portions": [
+        {
+          "grams": 14,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 6,
+            "cholesterolMg": 0,
+            "fatG": 6,
+            "fiberG": 0,
+            "kcal": 80,
+            "proteinG": 1,
+            "satFatG": 0,
+            "sodiumMg": 75,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "crispy bell peppers"
+      ]
+    },
+    {
+      "key": "fat-free-honey-mustard-dressing",
+      "name": "Fat-Free Honey Mustard Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 22,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 1,
+            "kcal": 90,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 330,
+            "sugarG": 18,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "fat-free honey mustard dressing"
+      ]
+    },
+    {
+      "key": "garden-herb-ranch-dressing",
+      "name": "Garden Herb Ranch Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 2,
+            "cholesterolMg": 25,
+            "fatG": 29,
+            "fiberG": 0,
+            "kcal": 280,
+            "proteinG": 1,
+            "satFatG": 5,
+            "sodiumMg": 440,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "garden herb ranch dressing"
+      ]
+    },
+    {
+      "key": "garden-herb-ranch-sauce",
+      "name": "Garden Herb Ranch Sauce",
+      "portions": [
+        {
+          "grams": 21,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 10,
+            "fatG": 11,
+            "fiberG": 0,
+            "kcal": 100,
+            "proteinG": 0,
+            "satFatG": 2,
+            "sodiumMg": 170,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "garden herb ranch sauce"
+      ]
+    },
+    {
+      "key": "gluten-free-bun",
+      "name": "Gluten Free Bun",
+      "portions": [
+        {
+          "grams": 79,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 37,
+            "cholesterolMg": 0,
+            "fatG": 3.5,
+            "fiberG": 2,
+            "kcal": 180,
+            "proteinG": 3,
+            "satFatG": 0,
+            "sodiumMg": 400,
+            "sugarG": 7,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "gluten free bun"
+      ]
+    },
+    {
+      "key": "grilled-breakfast-filet",
+      "name": "Grilled Breakfast Filet",
+      "portions": [
+        {
+          "grams": 50,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 40,
+            "fatG": 1,
+            "fiberG": 0,
+            "kcal": 60,
+            "proteinG": 13,
+            "satFatG": 0,
+            "sodiumMg": 420,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "grilled breakfast filet"
+      ]
+    },
+    {
+      "key": "grilled-filet",
+      "name": "Grilled Filet",
+      "portions": [
+        {
+          "grams": 84,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 70,
+            "fatG": 2,
+            "fiberG": 0,
+            "kcal": 110,
+            "proteinG": 21,
+            "satFatG": 0,
+            "sodiumMg": 370,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "grilled filet"
+      ]
+    },
+    {
+      "key": "harvest-nut-granola",
+      "name": "Harvest Nut Granola",
+      "portions": [
+        {
+          "grams": 14,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 10,
+            "cholesterolMg": 0,
+            "fatG": 2,
+            "fiberG": 0,
+            "kcal": 70,
+            "proteinG": 1,
+            "satFatG": 0,
+            "sodiumMg": 35,
+            "sugarG": 4,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "harvest nut granola"
+      ]
+    },
+    {
+      "key": "honey-mustard-sauce",
+      "name": "Honey Mustard Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 11,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 50,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 160,
+            "sugarG": 10,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "honey mustard sauce"
+      ]
+    },
+    {
+      "key": "honey-roasted-bbq-sauce",
+      "name": "Honey Roasted BBQ Sauce",
+      "portions": [
+        {
+          "grams": 12,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 3,
+            "cholesterolMg": 5,
+            "fatG": 5,
+            "fiberG": 0,
+            "kcal": 60,
+            "proteinG": 0,
+            "satFatG": 1,
+            "sodiumMg": 75,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "honey roasted bbq sauce"
+      ]
+    },
+    {
+      "key": "lettuce",
+      "name": "Lettuce",
+      "portions": [
+        {
+          "grams": 20,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 5,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 5,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "lettuce"
+      ]
+    },
+    {
+      "key": "light-balsamic-vinaigrette-dressing",
+      "name": "Light Balsamic Vinaigrette Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 10,
+            "cholesterolMg": 0,
+            "fatG": 4,
+            "fiberG": 0,
+            "kcal": 80,
+            "proteinG": 0,
+            "satFatG": 0.5,
+            "sodiumMg": 360,
+            "sugarG": 9,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "light balsamic vinaigrette dressing"
+      ]
+    },
+    {
+      "key": "light-italian-dressing",
+      "name": "Light Italian Dressing",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 3,
+            "cholesterolMg": 0,
+            "fatG": 1,
+            "fiberG": 0,
+            "kcal": 25,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 470,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "light italian dressing"
+      ]
+    },
+    {
+      "key": "multigrain-brioche-bun",
+      "name": "Multigrain Brioche Bun",
+      "portions": [
+        {
+          "grams": 71,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 38,
+            "cholesterolMg": 0,
+            "fatG": 4.5,
+            "fiberG": 3,
+            "kcal": 210,
+            "proteinG": 7,
+            "satFatG": 1,
+            "sodiumMg": 310,
+            "sugarG": 7,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "multigrain brioche bun"
+      ]
+    },
+    {
+      "key": "pepper-jack-cheese",
+      "name": "Pepper Jack Cheese",
+      "portions": [
+        {
+          "grams": 21,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 20,
+            "fatG": 6,
+            "fiberG": 0,
+            "kcal": 80,
+            "proteinG": 4,
+            "satFatG": 4,
+            "sodiumMg": 140,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "pepper jack cheese"
+      ]
+    },
+    {
+      "key": "polynesian-sauce",
+      "name": "Polynesian Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 14,
+            "cholesterolMg": 0,
+            "fatG": 6,
+            "fiberG": 0,
+            "kcal": 110,
+            "proteinG": 0,
+            "satFatG": 1,
+            "sodiumMg": 210,
+            "sugarG": 13,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "polynesian sauce"
+      ]
+    },
+    {
+      "key": "roasted-nut-blend",
+      "name": "Roasted Nut Blend",
+      "portions": [
+        {
+          "grams": 10,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 2,
+            "cholesterolMg": 0,
+            "fatG": 6,
+            "fiberG": 1,
+            "kcal": 70,
+            "proteinG": 1,
+            "satFatG": 0.5,
+            "sodiumMg": 0,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "roasted nut blend"
+      ]
+    },
+    {
+      "key": "saltines",
+      "name": "Saltines",
+      "portions": [
+        {
+          "grams": 12,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 9,
+            "cholesterolMg": 0,
+            "fatG": 1,
+            "fiberG": 0,
+            "kcal": 50,
+            "proteinG": 1,
+            "satFatG": 0,
+            "sodiumMg": 180,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "saltines"
+      ]
+    },
+    {
+      "key": "sausage",
+      "name": "Sausage",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 35,
+            "fatG": 22,
+            "fiberG": 0,
+            "kcal": 240,
+            "proteinG": 11,
+            "satFatG": 8,
+            "sodiumMg": 430,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "sausage"
+      ]
+    },
+    {
+      "key": "seasoned-tortilla-strips",
+      "name": "Seasoned Tortilla Strips",
+      "portions": [
+        {
+          "grams": 14,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 8,
+            "cholesterolMg": 0,
+            "fatG": 4,
+            "fiberG": 1,
+            "kcal": 70,
+            "proteinG": 1,
+            "satFatG": 0,
+            "sodiumMg": 55,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "seasoned tortilla strips"
+      ]
+    },
+    {
+      "key": "spicy-breakfast-filet",
+      "name": "Spicy Breakfast Filet",
+      "portions": [
+        {
+          "grams": 71,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 7,
+            "cholesterolMg": 40,
+            "fatG": 7,
+            "fiberG": 1,
+            "kcal": 150,
+            "proteinG": 15,
+            "satFatG": 1.5,
+            "sodiumMg": 810,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "spicy breakfast filet"
+      ]
+    },
+    {
+      "key": "spicy-chick-fil-a-sauce",
+      "name": "Spicy Chick-fil-A Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 6,
+            "cholesterolMg": 10,
+            "fatG": 12,
+            "fiberG": 0,
+            "kcal": 130,
+            "proteinG": 0,
+            "satFatG": 2,
+            "sodiumMg": 210,
+            "sugarG": 6,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "spicy chick-fil-a sauce"
+      ]
+    },
+    {
+      "key": "spicy-filet",
+      "name": "Spicy Filet",
+      "portions": [
+        {
+          "grams": 120,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 16,
+            "cholesterolMg": 65,
+            "fatG": 13,
+            "fiberG": 1,
+            "kcal": 280,
+            "proteinG": 23,
+            "satFatG": 2.5,
+            "sodiumMg": 1390,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "spicy filet"
+      ]
+    },
+    {
+      "key": "sweet-spicy-sriracha-sauce",
+      "name": "Sweet & Spicy Sriracha Sauce",
+      "portions": [
+        {
+          "grams": 28,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 11,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 45,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 380,
+            "sugarG": 10,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "sweet & spicy sriracha sauce"
+      ]
+    },
+    {
+      "key": "tomato",
+      "name": "Tomato",
+      "portions": [
+        {
+          "grams": 30,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 5,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 0,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "tomato"
+      ]
+    },
+    {
+      "key": "white-bun-unbuttered",
+      "name": "White Bun (Unbuttered)",
+      "portions": [
+        {
+          "grams": 54,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 28,
+            "cholesterolMg": 0,
+            "fatG": 1,
+            "fiberG": 1,
+            "kcal": 150,
+            "proteinG": 5,
+            "satFatG": 0,
+            "sodiumMg": 240,
+            "sugarG": 4,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "white bun (unbuttered)"
+      ]
+    },
+    {
+      "key": "zesty-apple-cider-vinaigrette-dressing",
+      "name": "Zesty Apple Cider Vinaigrette Dressing",
+      "portions": [
+        {
+          "grams": 56,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 16,
+            "cholesterolMg": 0,
+            "fatG": 19,
+            "fiberG": 0,
+            "kcal": 230,
+            "proteinG": 0,
+            "satFatG": 3,
+            "sodiumMg": 450,
+            "sugarG": 14,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "zesty apple cider vinaigrette dressing"
+      ]
+    },
+    {
+      "key": "zesty-buffalo-sauce",
+      "name": "Zesty Buffalo Sauce",
+      "portions": [
+        {
+          "grams": 21,
+          "label": "1 serving",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 5,
+            "fatG": 2.5,
+            "fiberG": 0,
+            "kcal": 25,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 570,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "zesty buffalo sauce"
+      ]
+    }
+  ],
+  "country": "US",
+  "items": [
+    {
+      "aliases": [],
+      "key": "1-chocolate-milk",
+      "name": "1% Chocolate Milk",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 10,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 7,
+        "satFatG": 1.5,
+        "sodiumMg": 160,
+        "sugarG": 21,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 198,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "1-milk",
+      "name": "1% Milk",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 10,
+        "cholesterolMg": 10,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 7,
+        "satFatG": 1.5,
+        "sodiumMg": 105,
+        "sugarG": 10,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 213,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "10-ct-chick-fil-a-chick-n-minis",
+      "name": "10 ct Chick-fil-A Chick-n-Minis",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 103,
+        "cholesterolMg": 150,
+        "fatG": 34,
+        "fiberG": 6,
+        "kcal": 910,
+        "proteinG": 49,
+        "satFatG": 10,
+        "sodiumMg": 2640,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 318,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "10-ct-chick-fil-a-chick-n-strips",
+      "name": "10 ct Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 250,
+        "fatG": 46,
+        "fiberG": 0,
+        "kcal": 1020,
+        "proteinG": 96,
+        "satFatG": 9,
+        "sodiumMg": 2870,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 452,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "12-ct-chick-fil-a-nuggets",
+      "name": "12 ct Chick-fil-A Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 125,
+        "fatG": 17,
+        "fiberG": 0,
+        "kcal": 380,
+        "proteinG": 40,
+        "satFatG": 3.5,
+        "sodiumMg": 1820,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 170,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "12-ct-grilled-nuggets",
+      "name": "12 ct Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 130,
+        "fatG": 4.5,
+        "fiberG": 0,
+        "kcal": 200,
+        "proteinG": 38,
+        "satFatG": 1,
+        "sodiumMg": 660,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 142,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "2-ct-chick-fil-a-chick-n-strips",
+      "name": "2 ct Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 50,
+        "fatG": 9,
+        "fiberG": 0,
+        "kcal": 200,
+        "proteinG": 19,
+        "satFatG": 2,
+        "sodiumMg": 580,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 91,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "2-ct-chick-n-strips-kids-meal",
+      "name": "2 Ct Chick-n-Strips Kid's Meal",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 50,
+        "fatG": 9,
+        "fiberG": 0,
+        "kcal": 200,
+        "proteinG": 19,
+        "satFatG": 2,
+        "sodiumMg": 580,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 91,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "3-ct-chick-fil-a-chick-n-strips",
+      "name": "3 ct Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 75,
+        "fatG": 14,
+        "fiberG": 0,
+        "kcal": 310,
+        "proteinG": 29,
+        "satFatG": 2.5,
+        "sodiumMg": 870,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 136,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "30-ct-chick-fil-a-nuggets",
+      "name": "30 ct Chick-fil-A Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 315,
+        "fatG": 43,
+        "fiberG": 0,
+        "kcal": 950,
+        "proteinG": 100,
+        "satFatG": 9,
+        "sodiumMg": 4550,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 425,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "30-ct-grilled-nuggets",
+      "name": "30 ct Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 4,
+        "cholesterolMg": 335,
+        "fatG": 11,
+        "fiberG": 1,
+        "kcal": 510,
+        "proteinG": 98,
+        "satFatG": 3,
+        "sodiumMg": 1710,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "4-ct-chick-fil-a-chick-n-minis",
+      "name": "4 ct Chick-fil-A Chick-n-Minis",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 60,
+        "fatG": 13,
+        "fiberG": 2,
+        "kcal": 360,
+        "proteinG": 20,
+        "satFatG": 4,
+        "sodiumMg": 1060,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 127,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "4-ct-chick-fil-a-chick-n-strips",
+      "name": "4 ct Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 22,
+        "cholesterolMg": 100,
+        "fatG": 19,
+        "fiberG": 0,
+        "kcal": 410,
+        "proteinG": 39,
+        "satFatG": 3.5,
+        "sodiumMg": 1150,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 181,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "4-ct-mini-yeast-rolls",
+      "name": "4 ct Mini Yeast Rolls",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 20,
+        "fatG": 8,
+        "fiberG": 2,
+        "kcal": 300,
+        "proteinG": 6,
+        "satFatG": 2.5,
+        "sodiumMg": 450,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 70,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "5-ct-grilled-nuggets-kids-meal",
+      "name": "5 Ct Grilled Nuggets Kid's Meal",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 55,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 16,
+        "satFatG": 0,
+        "sodiumMg": 270,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 59,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "5-ct-nuggets-kids-meal",
+      "name": "5 Ct Nuggets Kid's Meal",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 7,
+        "cholesterolMg": 50,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 17,
+        "satFatG": 1.5,
+        "sodiumMg": 760,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 71,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "6-pack-chocolate-chunk-cookie",
+      "name": "6 pack Chocolate Chunk Cookie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 15,
+        "fatG": 17,
+        "fiberG": 3,
+        "kcal": 370,
+        "proteinG": 5,
+        "satFatG": 9,
+        "sodiumMg": 230,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 78,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "8-ct-chick-fil-a-nuggets",
+      "name": "8 ct Chick-fil-A Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 85,
+        "fatG": 11,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 27,
+        "satFatG": 2.5,
+        "sodiumMg": 1210,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 113,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "8-ct-grilled-nuggets",
+      "name": "8 ct Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 85,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 25,
+        "satFatG": 0.5,
+        "sodiumMg": 440,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 95,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bacon-egg-cheese-biscuit",
+      "name": "Bacon, Egg & Cheese Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 180,
+        "fatG": 23,
+        "fiberG": 2,
+        "kcal": 420,
+        "proteinG": 15,
+        "satFatG": 11,
+        "sodiumMg": 1220,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 145,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bacon-egg-cheese-muffin",
+      "name": "Bacon, Egg & Cheese Muffin",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 180,
+        "fatG": 13,
+        "fiberG": 1,
+        "kcal": 300,
+        "proteinG": 16,
+        "satFatG": 6,
+        "sodiumMg": 710,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 126,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bag-of-ice",
+      "name": "Bag of Ice",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 28,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "berry-parfait",
+      "name": "Berry Parfait",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 20,
+        "fatG": 9,
+        "fiberG": 1,
+        "kcal": 270,
+        "proteinG": 13,
+        "satFatG": 3.5,
+        "sodiumMg": 85,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 206,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "berry-parfait-w-cookie-crumbs",
+      "name": "Berry Parfait w/ Cookie Crumbs",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 20,
+        "fatG": 8,
+        "fiberG": 1,
+        "kcal": 240,
+        "proteinG": 12,
+        "satFatG": 3.5,
+        "sodiumMg": 85,
+        "sugarG": 25,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 195,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "berry-parfait-w-granola",
+      "name": "Berry Parfait w/ Granola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 20,
+        "fatG": 9,
+        "fiberG": 1,
+        "kcal": 270,
+        "proteinG": 13,
+        "satFatG": 3.5,
+        "sodiumMg": 85,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 206,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bottled-diet-lemonade",
+      "name": "Bottled Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 17,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 492,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bottled-lemonade",
+      "name": "Bottled Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 73,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 69,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 520,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bottled-sweet-tea",
+      "name": "Bottled Sweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 49,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 506,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bottled-unsweet-tea",
+      "name": "Bottled Unsweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 486,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "bowl-of-chicken-noodle-soup",
+      "name": "Bowl of Chicken Noodle Soup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 60,
+        "fatG": 8,
+        "fiberG": 3,
+        "kcal": 320,
+        "proteinG": 20,
+        "satFatG": 2,
+        "sodiumMg": 2280,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 476,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "breakfast-breads",
+      "name": "Breakfast Breads",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 0,
+        "fatG": 15,
+        "fiberG": 2,
+        "kcal": 350,
+        "proteinG": 4,
+        "satFatG": 6,
+        "sodiumMg": 760,
+        "sugarG": 16,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 81,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "buddy-fruits-apple-sauce",
+      "name": "Buddy Fruits Apple Sauce",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 45,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 90,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "buttery-biscuit",
+      "name": "Buttery Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 0,
+        "fatG": 15,
+        "fiberG": 2,
+        "kcal": 350,
+        "proteinG": 4,
+        "satFatG": 6,
+        "sodiumMg": 760,
+        "sugarG": 16,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 81,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "caramel-cream-cold-brew",
+      "name": "Caramel Cream Cold Brew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 80,
+        "fatG": 22,
+        "fiberG": 0,
+        "kcal": 520,
+        "proteinG": 9,
+        "satFatG": 14,
+        "sodiumMg": 440,
+        "sugarG": 71,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 700,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "caramel-frosted-coffee",
+      "name": "Caramel Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 63,
+        "cholesterolMg": 40,
+        "fatG": 10,
+        "fiberG": 0,
+        "kcal": 370,
+        "proteinG": 7,
+        "satFatG": 6,
+        "sodiumMg": 190,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 406,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "caramel-iced-coffee",
+      "name": "Caramel Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 35,
+        "fatG": 9,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 8,
+        "satFatG": 6,
+        "sodiumMg": 190,
+        "sugarG": 34,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 672,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-chick-n-minis",
+      "name": "Chick-fil-A Chick-n-Minis",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 60,
+        "fatG": 13,
+        "fiberG": 2,
+        "kcal": 360,
+        "proteinG": 20,
+        "satFatG": 4,
+        "sodiumMg": 1060,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 127,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-chicken-biscuit",
+      "name": "Chick-fil-A Chicken Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 45,
+        "fatG": 23,
+        "fiberG": 2,
+        "kcal": 460,
+        "proteinG": 19,
+        "satFatG": 8,
+        "sodiumMg": 1510,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 153,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-chicken-sandwich",
+      "name": "Chick-fil-A Chicken Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 70,
+        "fatG": 16,
+        "fiberG": 1,
+        "kcal": 420,
+        "proteinG": 29,
+        "satFatG": 3.5,
+        "sodiumMg": 1470,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 183,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-cool-wrap",
+      "name": "Chick-fil-A Cool Wrap",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 32,
+        "cholesterolMg": 110,
+        "fatG": 45,
+        "fiberG": 14,
+        "kcal": 660,
+        "proteinG": 43,
+        "satFatG": 9,
+        "sodiumMg": 1420,
+        "sugarG": 5,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 231,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-deluxe-sandwich",
+      "name": "Chick-fil-A Deluxe Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 85,
+        "fatG": 21,
+        "fiberG": 1,
+        "kcal": 490,
+        "proteinG": 32,
+        "satFatG": 6,
+        "sodiumMg": 1710,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 247,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-deluxe-sandwich-w-american",
+      "name": "Chick-fil-A Deluxe Sandwich w/ American",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 85,
+        "fatG": 21,
+        "fiberG": 1,
+        "kcal": 490,
+        "proteinG": 32,
+        "satFatG": 6,
+        "sodiumMg": 1710,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 247,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-deluxe-sandwich-w-colby-jack",
+      "name": "Chick-fil-A Deluxe Sandwich w/ Colby Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 90,
+        "fatG": 23,
+        "fiberG": 1,
+        "kcal": 510,
+        "proteinG": 34,
+        "satFatG": 8,
+        "sodiumMg": 1620,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 254,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-deluxe-sandwich-w-no-cheese",
+      "name": "Chick-fil-A Deluxe Sandwich w/ No Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 70,
+        "fatG": 16,
+        "fiberG": 1,
+        "kcal": 430,
+        "proteinG": 29,
+        "satFatG": 3.5,
+        "sodiumMg": 1480,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 233,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-deluxe-sandwich-w-pepper-jack",
+      "name": "Chick-fil-A Deluxe Sandwich w/ Pepper Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 90,
+        "fatG": 23,
+        "fiberG": 1,
+        "kcal": 510,
+        "proteinG": 34,
+        "satFatG": 8,
+        "sodiumMg": 1620,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 254,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-diet-lemonade",
+      "name": "Chick-fil-A Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 612,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-grilled-chicken-club-sandwich",
+      "name": "Chick-fil-A Grilled Chicken Club Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 105,
+        "fatG": 22,
+        "fiberG": 3,
+        "kcal": 520,
+        "proteinG": 37,
+        "satFatG": 8,
+        "sodiumMg": 1055,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 237,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-icedream-cone",
+      "name": "Chick-fil-A Icedream Cone",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 32,
+        "cholesterolMg": 15,
+        "fatG": 4,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 4,
+        "satFatG": 2.5,
+        "sodiumMg": 90,
+        "sugarG": 25,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 135,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-icedream-cup",
+      "name": "Chick-fil-A Icedream Cup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 24,
+        "cholesterolMg": 15,
+        "fatG": 3.5,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 4,
+        "satFatG": 2.5,
+        "sodiumMg": 75,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 122,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-lemonade",
+      "name": "Chick-fil-A Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 66,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 612,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-nuggets",
+      "name": "Chick-fil-A Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 85,
+        "fatG": 11,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 27,
+        "satFatG": 2.5,
+        "sodiumMg": 1210,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 113,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-sauce-flavored-waffle-potato-chips",
+      "name": "Chick-fil-A Sauce Flavored Waffle Potato Chips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 12,
+        "fiberG": 2,
+        "kcal": 210,
+        "proteinG": 3,
+        "satFatG": 3,
+        "sodiumMg": 330,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 43,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-fil-a-waffle-potato-fries",
+      "name": "Chick-fil-A Waffle Potato Fries",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 24,
+        "fiberG": 5,
+        "kcal": 420,
+        "proteinG": 5,
+        "satFatG": 4,
+        "sodiumMg": 240,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 125,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chick-n-strips",
+      "name": "Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 75,
+        "fatG": 14,
+        "fiberG": 0,
+        "kcal": 310,
+        "proteinG": 29,
+        "satFatG": 2.5,
+        "sodiumMg": 870,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 136,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chicken-egg-cheese-biscuit",
+      "name": "Chicken, Egg & Cheese Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 215,
+        "fatG": 28,
+        "fiberG": 3,
+        "kcal": 550,
+        "proteinG": 27,
+        "satFatG": 12,
+        "sodiumMg": 1870,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 211,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chicken-egg-cheese-muffin",
+      "name": "Chicken, Egg & Cheese Muffin",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 36,
+        "cholesterolMg": 215,
+        "fatG": 18,
+        "fiberG": 1,
+        "kcal": 410,
+        "proteinG": 27,
+        "satFatG": 6,
+        "sodiumMg": 1320,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 187,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chicken-noodle-soup",
+      "name": "Chicken Noodle Soup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 30,
+        "fatG": 4.5,
+        "fiberG": 2,
+        "kcal": 190,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 1290,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 252,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chicken-tortilla-soup",
+      "name": "Chicken Tortilla Soup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 50,
+        "fatG": 11,
+        "fiberG": 18,
+        "kcal": 350,
+        "proteinG": 25,
+        "satFatG": 2.5,
+        "sodiumMg": 1115,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 265,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chilled-grilled-chicken-sub-sandwich",
+      "name": "Chilled Grilled Chicken Sub Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 95,
+        "fatG": 17,
+        "fiberG": 5,
+        "kcal": 500,
+        "proteinG": 36,
+        "satFatG": 6,
+        "sodiumMg": 1055,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 230,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chocolate-chunk-cookie",
+      "name": "Chocolate Chunk Cookie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 15,
+        "fatG": 17,
+        "fiberG": 3,
+        "kcal": 370,
+        "proteinG": 5,
+        "satFatG": 9,
+        "sodiumMg": 230,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 78,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chocolate-fudge-brownie",
+      "name": "Chocolate Fudge Brownie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 65,
+        "fatG": 21,
+        "fiberG": 2,
+        "kcal": 370,
+        "proteinG": 4,
+        "satFatG": 8,
+        "sodiumMg": 140,
+        "sugarG": 35,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 85,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "chocolate-milkshake",
+      "name": "Chocolate Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 93,
+        "cholesterolMg": 85,
+        "fatG": 22,
+        "fiberG": 1,
+        "kcal": 600,
+        "proteinG": 12,
+        "satFatG": 14,
+        "sodiumMg": 350,
+        "sugarG": 90,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 409,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad",
+      "name": "Cobb Salad",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 225,
+        "fatG": 60,
+        "fiberG": 5,
+        "kcal": 830,
+        "proteinG": 41,
+        "satFatG": 13,
+        "sodiumMg": 2180,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 411,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-chick-fil-a-chick-n-strips",
+      "name": "Cobb Salad w/ Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 215,
+        "fatG": 56,
+        "fiberG": 5,
+        "kcal": 810,
+        "proteinG": 43,
+        "satFatG": 12,
+        "sodiumMg": 1750,
+        "sugarG": 9,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 420,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-grilled-filet-cold",
+      "name": "Cobb Salad w/ Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 210,
+        "fatG": 44,
+        "fiberG": 5,
+        "kcal": 610,
+        "proteinG": 35,
+        "satFatG": 10,
+        "sodiumMg": 1260,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-grilled-filet-warm",
+      "name": "Cobb Salad w/ Grilled Filet (Warm)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 210,
+        "fatG": 44,
+        "fiberG": 5,
+        "kcal": 600,
+        "proteinG": 35,
+        "satFatG": 10,
+        "sodiumMg": 1260,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 368,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-grilled-nuggets",
+      "name": "Cobb Salad w/ Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 225,
+        "fatG": 45,
+        "fiberG": 5,
+        "kcal": 630,
+        "proteinG": 39,
+        "satFatG": 10,
+        "sodiumMg": 1330,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 378,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-no-chicken",
+      "name": "Cobb Salad w/ No Chicken",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 140,
+        "fatG": 42,
+        "fiberG": 5,
+        "kcal": 500,
+        "proteinG": 14,
+        "satFatG": 9.5,
+        "sodiumMg": 890,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 284,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-nuggets",
+      "name": "Cobb Salad w/ Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 225,
+        "fatG": 60,
+        "fiberG": 5,
+        "kcal": 830,
+        "proteinG": 41,
+        "satFatG": 13,
+        "sodiumMg": 2180,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 411,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cobb-salad-w-spicy-grilled-filet-cold",
+      "name": "Cobb Salad w/ Spicy Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 205,
+        "fatG": 45,
+        "fiberG": 5,
+        "kcal": 600,
+        "proteinG": 33,
+        "satFatG": 10,
+        "sodiumMg": 1610,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "coca-cola",
+      "name": "Coca-Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 584,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "coffee",
+      "name": "Hot Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cookies-cream-milkshake",
+      "name": "Cookies & Cream Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 91,
+        "cholesterolMg": 85,
+        "fatG": 25,
+        "fiberG": 1,
+        "kcal": 630,
+        "proteinG": 13,
+        "satFatG": 15,
+        "sodiumMg": 430,
+        "sugarG": 84,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 409,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cream-cold-brew",
+      "name": "Cream Cold Brew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 77,
+        "cholesterolMg": 65,
+        "fatG": 17,
+        "fiberG": 0,
+        "kcal": 480,
+        "proteinG": 8,
+        "satFatG": 11,
+        "sodiumMg": 390,
+        "sugarG": 64,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 695,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cream-cold-brew-2",
+      "name": "Cream Cold Brew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 65,
+        "fatG": 17,
+        "fiberG": 0,
+        "kcal": 370,
+        "proteinG": 8,
+        "satFatG": 10,
+        "sodiumMg": 360,
+        "sugarG": 47,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 652,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "cup-of-chicken-noodle-soup",
+      "name": "Cup of Chicken Noodle Soup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 30,
+        "fatG": 4.5,
+        "fiberG": 2,
+        "kcal": 190,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 1290,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 252,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "dasani-bottled-water",
+      "name": "DASANI Bottled Water",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 479,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "dr-pepper",
+      "name": "Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 584,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "dr-pepper-float",
+      "name": "Dr Pepper Float",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "egg-white-grill",
+      "name": "Egg White Grill",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 65,
+        "fatG": 8,
+        "fiberG": 1,
+        "kcal": 300,
+        "proteinG": 27,
+        "satFatG": 4,
+        "sodiumMg": 990,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 172,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "english-muffin",
+      "name": "English Muffin",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 0,
+        "fatG": 1,
+        "fiberG": 1,
+        "kcal": 200,
+        "proteinG": 5,
+        "satFatG": 0,
+        "sodiumMg": 190,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 58,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "freshly-brewed-iced-tea-sweetened",
+      "name": "Freshly-Brewed Sweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 120,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 604,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "freshly-brewed-iced-tea-unsweetened",
+      "name": "Freshly-Brewed Unsweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 604,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-barqs-red-flash",
+      "name": "Frosted Barq’s Red Flash",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-barqs-root-beer",
+      "name": "Frosted Barq’s Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-caffeine-free-barqs-root-beer",
+      "name": "Frosted Caffeine Free Barq’s Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 62,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 61,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-caffeine-free-diet-coke",
+      "name": "Frosted Caffeine Free Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-coca-cola-cherry",
+      "name": "Frosted Coca-Cola Cherry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-coffee",
+      "name": "Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 78,
+        "cholesterolMg": 25,
+        "fatG": 9,
+        "fiberG": 1,
+        "kcal": 410,
+        "proteinG": 7,
+        "satFatG": 6,
+        "sodiumMg": 170,
+        "sugarG": 66,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-coffee-2",
+      "name": "Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 140,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 374,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-coke",
+      "name": "Frosted Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-coke-zero-sugar",
+      "name": "Frosted Coke Zero Sugar",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-diet-coke",
+      "name": "Frosted Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-diet-dr-pepper",
+      "name": "Frosted Diet Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-dr-pepper",
+      "name": "Frosted Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-fanta-orange",
+      "name": "Frosted Fanta Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-fanta-strawberry",
+      "name": "Frosted Fanta Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 170,
+        "sugarG": 61,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-hi-c-fruit-punch",
+      "name": "Frosted Hi-C Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 140,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-hi-c-orange",
+      "name": "Frosted Hi-C Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 58,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 310,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 57,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-lemonade",
+      "name": "Frosted Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 67,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 350,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 135,
+        "sugarG": 65,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 383,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-lemonade-w-diet-lemonade",
+      "name": "Frosted Lemonade w/ Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 140,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 383,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-mello-yello",
+      "name": "Frosted Mello Yello",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 62,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 61,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-peppermint-chip-coffee",
+      "name": "Peppermint Chip Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 78,
+        "cholesterolMg": 25,
+        "fatG": 9,
+        "fiberG": 1,
+        "kcal": 410,
+        "proteinG": 7,
+        "satFatG": 6,
+        "sodiumMg": 170,
+        "sugarG": 66,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-powerade-mountain-berry-blast",
+      "name": "Frosted Powerade Mountain Berry Blast",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 180,
+        "sugarG": 52,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-sodas",
+      "name": "Frosted Sodas",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "frosted-sprite",
+      "name": "Frosted Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 59,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 160,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "fruit-cup",
+      "name": "Fruit Cup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 2,
+        "kcal": 70,
+        "proteinG": 1,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 125,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-12-sweet-tea-12-lemonade",
+      "name": "Gallon Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-beverages",
+      "name": "Gallon Beverages",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-chick-fil-a-diet-lemonade",
+      "name": "Gallon Chick-fil-A Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 40,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-chick-fil-a-iced-tea-1-2-sweet-tea-1-2-unsweet-tea",
+      "name": "Gallon Chick-fil-A Iced Tea (1/2 Sweet Tea, 1/2 Unsweet Tea)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 18,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-chick-fil-a-lemonade",
+      "name": "Gallon Chick-fil-A Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-chick-fil-a-lemonade-1-2-lemonade-1-2-diet-lemonade",
+      "name": "Gallon Chick-fil-A Lemonade (1/2 Lemonade, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 33,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 120,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-freshly-brewed-iced-tea-sweetened",
+      "name": "Gallon Freshly-Brewed Iced Tea Sweetened",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 33,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 33,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-freshly-brewed-iced-tea-unsweetened",
+      "name": "Gallon Freshly-Brewed Iced Tea Unsweetened",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-diet-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 210,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 22,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-sunjoy-1-2-sweet-tea-1-2-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 10,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 45,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Gallon Pineapple Dragonfruit Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 20,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-sweet-tea",
+      "name": "Gallon Pineapple Dragonfruit Sweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 37,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 33,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-pineapple-dragonfruit-unsweet-tea",
+      "name": "Gallon Pineapple Dragonfruit Unsweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 25,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Gallon Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 21,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Gallon Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 6,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 20,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "gallon-sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Gallon Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-chicken-club-w-american",
+      "name": "Grilled Chicken Club w/ American",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 100,
+        "fatG": 19,
+        "fiberG": 3,
+        "kcal": 490,
+        "proteinG": 34,
+        "satFatG": 6,
+        "sodiumMg": 1145,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 230,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-chicken-club-w-colby-jack",
+      "name": "Grilled Chicken Club w/ Colby Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 105,
+        "fatG": 22,
+        "fiberG": 3,
+        "kcal": 520,
+        "proteinG": 37,
+        "satFatG": 8,
+        "sodiumMg": 1055,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 237,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-chicken-club-w-no-cheese",
+      "name": "Grilled Chicken Club w/ No Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 85,
+        "fatG": 15,
+        "fiberG": 3,
+        "kcal": 440,
+        "proteinG": 31,
+        "satFatG": 4,
+        "sodiumMg": 905,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 216,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-chicken-club-w-pepper-jack",
+      "name": "Grilled Chicken Club w/ Pepper Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 105,
+        "fatG": 22,
+        "fiberG": 3,
+        "kcal": 520,
+        "proteinG": 37,
+        "satFatG": 8,
+        "sodiumMg": 1045,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 237,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-chicken-sandwich",
+      "name": "Grilled Chicken Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 75,
+        "fatG": 11,
+        "fiberG": 3,
+        "kcal": 390,
+        "proteinG": 28,
+        "satFatG": 2.5,
+        "sodiumMg": 765,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 206,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "grilled-nuggets",
+      "name": "Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 85,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 25,
+        "satFatG": 0.5,
+        "sodiumMg": 440,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 95,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl",
+      "name": "Hash Brown Scramble Bowl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 415,
+        "fatG": 30,
+        "fiberG": 2,
+        "kcal": 470,
+        "proteinG": 29,
+        "satFatG": 9,
+        "sodiumMg": 1350,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 233,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-bacon",
+      "name": "Hash Brown Scramble Bowl w/ Bacon",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 395,
+        "fatG": 32,
+        "fiberG": 2,
+        "kcal": 450,
+        "proteinG": 23,
+        "satFatG": 11,
+        "sodiumMg": 1060,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 200,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-bacon-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ Bacon - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 395,
+        "fatG": 22,
+        "fiberG": 0,
+        "kcal": 300,
+        "proteinG": 22,
+        "satFatG": 10,
+        "sodiumMg": 810,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 158,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-grilled-filet",
+      "name": "Hash Brown Scramble Bowl w/ Grilled Filet",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 420,
+        "fatG": 26,
+        "fiberG": 2,
+        "kcal": 410,
+        "proteinG": 30,
+        "satFatG": 8,
+        "sodiumMg": 1200,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 230,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-grilled-filet-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ Grilled Filet - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 420,
+        "fatG": 16,
+        "fiberG": 0,
+        "kcal": 270,
+        "proteinG": 29,
+        "satFatG": 7,
+        "sodiumMg": 960,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 187,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-no-meat",
+      "name": "Hash Brown Scramble Bowl w/ No Meat",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 330,
+        "fatG": 24,
+        "fiberG": 3,
+        "kcal": 350,
+        "proteinG": 17,
+        "satFatG": 8,
+        "sodiumMg": 770,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 180,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-no-meat-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ No Meat - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 330,
+        "fatG": 14,
+        "fiberG": 2,
+        "kcal": 200,
+        "proteinG": 16,
+        "satFatG": 6,
+        "sodiumMg": 530,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 137,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-nuggets",
+      "name": "Hash Brown Scramble Bowl w/ Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 415,
+        "fatG": 30,
+        "fiberG": 2,
+        "kcal": 470,
+        "proteinG": 29,
+        "satFatG": 9,
+        "sodiumMg": 1350,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 233,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-nuggets-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ Nuggets - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 7,
+        "cholesterolMg": 415,
+        "fatG": 20,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": 28,
+        "satFatG": 8,
+        "sodiumMg": 1100,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 190,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-sausage",
+      "name": "Hash Brown Scramble Bowl w/ Sausage",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 395,
+        "fatG": 37,
+        "fiberG": 2,
+        "kcal": 480,
+        "proteinG": 23,
+        "satFatG": 12,
+        "sodiumMg": 1020,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 212,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-sausage-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ Sausage - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 395,
+        "fatG": 27,
+        "fiberG": 0,
+        "kcal": 340,
+        "proteinG": 21,
+        "satFatG": 11,
+        "sodiumMg": 780,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 169,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-spicy-chicken",
+      "name": "Hash Brown Scramble Bowl w/ Spicy Chicken",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 420,
+        "fatG": 32,
+        "fiberG": 3,
+        "kcal": 500,
+        "proteinG": 32,
+        "satFatG": 9,
+        "sodiumMg": 1590,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 251,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-bowl-w-spicy-chicken-no-hash-browns",
+      "name": "Hash Brown Scramble Bowl w/ Spicy Chicken - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 9,
+        "cholesterolMg": 420,
+        "fatG": 22,
+        "fiberG": 1,
+        "kcal": 350,
+        "proteinG": 31,
+        "satFatG": 8,
+        "sodiumMg": 1340,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 208,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito",
+      "name": "Hash Brown Scramble Burrito",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 51,
+        "cholesterolMg": 415,
+        "fatG": 40,
+        "fiberG": 3,
+        "kcal": 700,
+        "proteinG": 34,
+        "satFatG": 12,
+        "sodiumMg": 1770,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 304,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-bacon",
+      "name": "Hash Brown Scramble Burrito w/ Bacon",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 395,
+        "fatG": 42,
+        "fiberG": 3,
+        "kcal": 680,
+        "proteinG": 30,
+        "satFatG": 14,
+        "sodiumMg": 1630,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 271,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-bacon-no-hash-browns",
+      "name": "Hash Brown Scramble Burrito w/ Bacon - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 395,
+        "fatG": 32,
+        "fiberG": 2,
+        "kcal": 540,
+        "proteinG": 27,
+        "satFatG": 13,
+        "sodiumMg": 1230,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 228,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-grilled-filet",
+      "name": "Hash Brown Scramble Burrito w/ Grilled Filet",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 420,
+        "fatG": 36,
+        "fiberG": 3,
+        "kcal": 650,
+        "proteinG": 35,
+        "satFatG": 12,
+        "sodiumMg": 1630,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 301,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-grilled-filet-no-hash-brown",
+      "name": "Hash Brown Scramble Burrito w/ Grilled Filet - no hash brown",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 420,
+        "fatG": 26,
+        "fiberG": 2,
+        "kcal": 500,
+        "proteinG": 34,
+        "satFatG": 10,
+        "sodiumMg": 1380,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-no-meat",
+      "name": "Hash Brown Scramble Burrito w/ No Meat",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 330,
+        "fatG": 34,
+        "fiberG": 5,
+        "kcal": 580,
+        "proteinG": 22,
+        "satFatG": 11,
+        "sodiumMg": 1200,
+        "sugarG": 1,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 251,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-no-meat-no-hash-browns",
+      "name": "Hash Brown Scramble Burrito w/ No Meat - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 330,
+        "fatG": 24,
+        "fiberG": 3,
+        "kcal": 440,
+        "proteinG": 21,
+        "satFatG": 10,
+        "sodiumMg": 950,
+        "sugarG": 1,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 208,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-nuggets",
+      "name": "Hash Brown Scramble Burrito w/ Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 51,
+        "cholesterolMg": 415,
+        "fatG": 40,
+        "fiberG": 3,
+        "kcal": 700,
+        "proteinG": 34,
+        "satFatG": 12,
+        "sodiumMg": 1770,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 304,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-nuggets-no-hash-browns",
+      "name": "Hash Brown Scramble Burrito w/ Nuggets - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 415,
+        "fatG": 30,
+        "fiberG": 2,
+        "kcal": 550,
+        "proteinG": 33,
+        "satFatG": 11,
+        "sodiumMg": 1530,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 261,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-sausage",
+      "name": "Hash Brown Scramble Burrito w/ Sausage",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 395,
+        "fatG": 47,
+        "fiberG": 3,
+        "kcal": 720,
+        "proteinG": 28,
+        "satFatG": 16,
+        "sodiumMg": 1450,
+        "sugarG": 1,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 283,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-sausage-no-hash-browns",
+      "name": "Hash Brown Scramble Burrito w/ Sausage - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 395,
+        "fatG": 37,
+        "fiberG": 2,
+        "kcal": 570,
+        "proteinG": 26,
+        "satFatG": 14,
+        "sodiumMg": 1200,
+        "sugarG": 1,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 240,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-spicy-chicken",
+      "name": "Hash Brown Scramble Burrito w/ Spicy Chicken",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 420,
+        "fatG": 42,
+        "fiberG": 4,
+        "kcal": 740,
+        "proteinG": 37,
+        "satFatG": 13,
+        "sodiumMg": 2020,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 322,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-brown-scramble-burrito-w-spicy-chicken-no-hash-browns",
+      "name": "Hash Brown Scramble Burrito w/ Spicy Chicken - no hash browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 420,
+        "fatG": 32,
+        "fiberG": 2,
+        "kcal": 590,
+        "proteinG": 36,
+        "satFatG": 11,
+        "sodiumMg": 1770,
+        "sugarG": 2,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 279,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "hash-browns",
+      "name": "Hash Browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 18,
+        "fiberG": 3,
+        "kcal": 270,
+        "proteinG": 3,
+        "satFatG": 2.5,
+        "sodiumMg": 440,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 77,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "honest-kids-apple-juice",
+      "name": "Honest Kids Apple Juice",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 9,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 170,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "iced-coffee",
+      "name": "Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 20,
+        "fatG": 4.5,
+        "fiberG": 0,
+        "kcal": 240,
+        "proteinG": 8,
+        "satFatG": 3.5,
+        "sodiumMg": 160,
+        "sugarG": 29,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 695,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "iced-coffee-2",
+      "name": "Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 15,
+        "fatG": 4,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 7,
+        "satFatG": 3,
+        "sodiumMg": 115,
+        "sugarG": 10,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 624,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "iced-coffee-sm",
+      "name": "Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 15,
+        "fatG": 4,
+        "fiberG": 0,
+        "kcal": 200,
+        "proteinG": 7,
+        "satFatG": 3,
+        "sodiumMg": 115,
+        "sugarG": 34,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 661,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "kale-crunch-side",
+      "name": "Kale Crunch Side",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 12,
+        "fiberG": 4,
+        "kcal": 170,
+        "proteinG": 4,
+        "satFatG": 1.5,
+        "sodiumMg": 250,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 112,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-chick-fil-a-diet-lemonade",
+      "name": "Large Chick-fil-A Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 17,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 916,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-chick-fil-a-lemonade",
+      "name": "Large Chick-fil-A Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 98,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 380,
+        "proteinG": 1,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 90,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 916,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-chick-fil-a-waffle-potato-fries",
+      "name": "Large Chick-fil-A Waffle Potato Fries",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 35,
+        "fiberG": 7,
+        "kcal": 600,
+        "proteinG": 7,
+        "satFatG": 5,
+        "sodiumMg": 340,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 179,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-coca-cola",
+      "name": "Large Coca-Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 68,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 65,
+        "sugarG": 68,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 859,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-dr-pepper",
+      "name": "Large Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 64,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 64,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 859,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-freshly-brewed-iced-tea-sweetened",
+      "name": "Large Freshly-Brewed Sweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 893,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-freshly-brewed-iced-tea-unsweetened",
+      "name": "Large Freshly-Brewed Unsweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 893,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-fruit-cup",
+      "name": "Large Fruit Cup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 4,
+        "kcal": 120,
+        "proteinG": 1,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 21,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 215,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-hash-browns",
+      "name": "Large Hash Browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 29,
+        "fiberG": 4,
+        "kcal": 420,
+        "proteinG": 4,
+        "satFatG": 4,
+        "sodiumMg": 700,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 121,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Large Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 36,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 944,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-sunjoy-1-2-sweet-tea-1-2-lemonade",
+      "name": "Large Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 91,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 350,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 85,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 944,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Large Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 944,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "large-sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Large Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 66,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 944,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "mac-cheese",
+      "name": "Mac & Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 70,
+        "fatG": 29,
+        "fiberG": 3,
+        "kcal": 450,
+        "proteinG": 20,
+        "satFatG": 16,
+        "sodiumMg": 1190,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 227,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "mac-cheese-kids-meal",
+      "name": "Mac & Cheese Kid’s Meal",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 70,
+        "fatG": 29,
+        "fiberG": 3,
+        "kcal": 450,
+        "proteinG": 20,
+        "satFatG": 16,
+        "sodiumMg": 1190,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 227,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad",
+      "name": "Market Salad",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 80,
+        "fatG": 31,
+        "fiberG": 5,
+        "kcal": 550,
+        "proteinG": 28,
+        "satFatG": 6,
+        "sodiumMg": 1010,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 326,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-chick-fil-a-chick-n-strips",
+      "name": "Market Salad w/ Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 57,
+        "cholesterolMg": 85,
+        "fatG": 43,
+        "fiberG": 5,
+        "kcal": 750,
+        "proteinG": 36,
+        "satFatG": 8,
+        "sodiumMg": 1500,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 377,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-grilled-filet-cold",
+      "name": "Market Salad w/ Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 80,
+        "fatG": 31,
+        "fiberG": 5,
+        "kcal": 550,
+        "proteinG": 28,
+        "satFatG": 6,
+        "sodiumMg": 1010,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 326,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-grilled-filet-warm",
+      "name": "Market Salad w/ Grilled Filet (Warm)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 80,
+        "fatG": 31,
+        "fiberG": 5,
+        "kcal": 550,
+        "proteinG": 28,
+        "satFatG": 6,
+        "sodiumMg": 1010,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 325,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-grilled-nuggets",
+      "name": "Market Salad w/ Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 95,
+        "fatG": 32,
+        "fiberG": 6,
+        "kcal": 570,
+        "proteinG": 32,
+        "satFatG": 6,
+        "sodiumMg": 1080,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 335,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-no-chicken",
+      "name": "Market Salad w/ No Chicken",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 10,
+        "fatG": 29,
+        "fiberG": 5,
+        "kcal": 440,
+        "proteinG": 7,
+        "satFatG": 5.5,
+        "sodiumMg": 640,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 241,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-nuggets",
+      "name": "Market Salad w/ Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 51,
+        "cholesterolMg": 90,
+        "fatG": 40,
+        "fiberG": 5,
+        "kcal": 700,
+        "proteinG": 34,
+        "satFatG": 8,
+        "sodiumMg": 1850,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 354,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "market-salad-w-spicy-grilled-filet-cold",
+      "name": "Market Salad w/ Spicy Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 70,
+        "fatG": 31,
+        "fiberG": 6,
+        "kcal": 540,
+        "proteinG": 26,
+        "satFatG": 6,
+        "sodiumMg": 1360,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 326,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-chick-fil-a-diet-lemonade",
+      "name": "Medium Chick-fil-A Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 612,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-chick-fil-a-lemonade",
+      "name": "Medium Chick-fil-A Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 66,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 612,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-chick-fil-a-waffle-potato-fries",
+      "name": "Medium Chick-fil-A Waffle Potato Fries",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 24,
+        "fiberG": 5,
+        "kcal": 420,
+        "proteinG": 5,
+        "satFatG": 4,
+        "sodiumMg": 240,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 125,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-coca-cola",
+      "name": "Medium Coca-Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 584,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-dr-pepper",
+      "name": "Medium Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 584,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-freshly-brewed-sweetened-iced-tea",
+      "name": "Medium Freshly-Brewed Sweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 120,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 604,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-freshly-brewed-unsweetened-iced-tea",
+      "name": "Medium Freshly-Brewed Unsweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 604,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-fruit-cup",
+      "name": "Medium Fruit Cup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 2,
+        "kcal": 70,
+        "proteinG": 1,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 125,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-mac-cheese",
+      "name": "Medium Mac & Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 70,
+        "fatG": 29,
+        "fiberG": 3,
+        "kcal": 450,
+        "proteinG": 20,
+        "satFatG": 16,
+        "sodiumMg": 1190,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 227,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Medium Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-sunjoy-1-2-sweet-tea-1-2-lemonade",
+      "name": "Medium Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 240,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 57,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Medium Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 10,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "medium-sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Medium Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "mocha-cream-cold-brew",
+      "name": "Mocha Cream Cold Brew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 71,
+        "cholesterolMg": 65,
+        "fatG": 17,
+        "fiberG": 1,
+        "kcal": 460,
+        "proteinG": 9,
+        "satFatG": 11,
+        "sodiumMg": 370,
+        "sugarG": 68,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 689,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "mocha-frosted-coffee",
+      "name": "Mocha Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 61,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 1,
+        "kcal": 330,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 400,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "mocha-iced-coffee",
+      "name": "Mocha Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 15,
+        "fatG": 4.5,
+        "fiberG": 1,
+        "kcal": 200,
+        "proteinG": 8,
+        "satFatG": 3,
+        "sodiumMg": 125,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 661,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "original-flavor-waffle-potato-chips",
+      "name": "Original Flavor Waffle Potato Chips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 0,
+        "fatG": 13,
+        "fiberG": 2,
+        "kcal": 220,
+        "proteinG": 3,
+        "satFatG": 3.5,
+        "sodiumMg": 250,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 43,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "peppermint-chip-milkshake",
+      "name": "Peppermint Chip Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 105,
+        "cholesterolMg": 80,
+        "fatG": 22,
+        "fiberG": 1,
+        "kcal": 650,
+        "proteinG": 11,
+        "satFatG": 14,
+        "sodiumMg": 340,
+        "sugarG": 92,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 405,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "peppermint-coffee",
+      "name": "Peppermint Hot Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "peppermint-iced-coffee",
+      "name": "Peppermint Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 20,
+        "fatG": 4.5,
+        "fiberG": 0,
+        "kcal": 240,
+        "proteinG": 8,
+        "satFatG": 3.5,
+        "sodiumMg": 160,
+        "sugarG": 29,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 695,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-diet-lemonade",
+      "name": "Pineapple Dragonfruit Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 10,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-frosted-diet-lemonade",
+      "name": "Pineapple Dragonfruit Frosted Lemonade w/ Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 300,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 375,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-frosted-lemonade-2",
+      "name": "Pineapple Dragonfruit Frosted Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 70,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 360,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 150,
+        "sugarG": 63,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 375,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-lemonade",
+      "name": "Pineapple Dragonfruit Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 72,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 691,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sprite",
+      "name": "Pineapple Dragonfruit & Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 100,
+        "sugarG": 43,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sunjoy-sweet-tea-diet-lemonade",
+      "name": "Pineapple Dragonfruit Sunjoy (Sweet Tea, Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 25,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sunjoy-sweet-tea-lemonade",
+      "name": "Pineapple Dragonfruit Sunjoy (Sweet Tea, Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 59,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 240,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 50,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sunjoy-unsweet-tea-diet-lemonade",
+      "name": "Pineapple Dragonfruit Sunjoy (Unsweet Tea, Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sunjoy-unsweet-tea-lemonade",
+      "name": "Pineapple Dragonfruit Sunjoy (Unsweet Tea, Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-sweet-tea",
+      "name": "Pineapple Dragonfruit Sweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 37,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "pineapple-dragonfruit-unsweet-tea",
+      "name": "Pineapple Dragonfruit Unsweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 7,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 662,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sausage-egg-cheese-biscuit",
+      "name": "Sausage, Egg & Cheese Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 205,
+        "fatG": 42,
+        "fiberG": 2,
+        "kcal": 620,
+        "proteinG": 22,
+        "satFatG": 18,
+        "sodiumMg": 1510,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 192,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sausage-egg-cheese-muffin",
+      "name": "Sausage, Egg & Cheese Muffin",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 205,
+        "fatG": 32,
+        "fiberG": 1,
+        "kcal": 490,
+        "proteinG": 23,
+        "satFatG": 13,
+        "sodiumMg": 1000,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 173,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "seasonal-gallon-beverages",
+      "name": "Seasonal Gallon Beverages",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 210,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "side-salad",
+      "name": "Side Salad",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 35,
+        "fatG": 42,
+        "fiberG": 4,
+        "kcal": 470,
+        "proteinG": 6,
+        "satFatG": 8,
+        "sodiumMg": 700,
+        "sugarG": 5,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 166,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "simply-orange",
+      "name": "Simply Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 2,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 326,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-chick-fil-a-diet-lemonade",
+      "name": "Small Chick-fil-A Diet Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 40,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 465,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-chick-fil-a-lemonade",
+      "name": "Small Chick-fil-A Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 465,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-chick-fil-a-waffle-potato-fries",
+      "name": "Small Chick-fil-A Waffle Potato Fries",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 19,
+        "fiberG": 4,
+        "kcal": 320,
+        "proteinG": 4,
+        "satFatG": 3,
+        "sodiumMg": 190,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 96,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-coca-cola",
+      "name": "Small Coca-Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 35,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 451,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-dr-pepper",
+      "name": "Small Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 34,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 451,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-freshly-brewed-iced-tea-sweetened",
+      "name": "Small Freshly-Brewed Sweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 22,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 22,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 451,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-freshly-brewed-iced-tea-unsweetened",
+      "name": "Small Freshly-Brewed Unsweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 451,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-fruit-cup",
+      "name": "Small Fruit Cup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 2,
+        "kcal": 60,
+        "proteinG": 1,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 107,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-hash-browns",
+      "name": "Small Hash Browns",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 18,
+        "fiberG": 3,
+        "kcal": 270,
+        "proteinG": 3,
+        "satFatG": 2.5,
+        "sodiumMg": 440,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 77,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-mac-cheese",
+      "name": "Small Mac & Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 17,
+        "cholesterolMg": 40,
+        "fatG": 17,
+        "fiberG": 2,
+        "kcal": 270,
+        "proteinG": 12,
+        "satFatG": 10,
+        "sodiumMg": 710,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 136,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Small Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 20,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 479,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-sunjoy-1-2-sweet-tea-1-2-lemonade",
+      "name": "Small Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 43,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 479,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Small Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 8,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 30,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 479,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "small-sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Small Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 33,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 479,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-chicken-biscuit",
+      "name": "Spicy Chicken Biscuit",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 40,
+        "fatG": 22,
+        "fiberG": 3,
+        "kcal": 450,
+        "proteinG": 19,
+        "satFatG": 8,
+        "sodiumMg": 1570,
+        "sugarG": 5,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 153,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-chicken-sandwich",
+      "name": "Spicy Chicken Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 65,
+        "fatG": 18,
+        "fiberG": 1,
+        "kcal": 450,
+        "proteinG": 28,
+        "satFatG": 4,
+        "sodiumMg": 1740,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 188,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-chilled-grilled-chicken-sub-sandwich",
+      "name": "Spicy Chilled Grilled Chicken Sub Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 90,
+        "fatG": 17,
+        "fiberG": 5,
+        "kcal": 500,
+        "proteinG": 34,
+        "satFatG": 6,
+        "sodiumMg": 1405,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 230,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-deluxe-sandwich",
+      "name": "Spicy Deluxe Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 85,
+        "fatG": 24,
+        "fiberG": 2,
+        "kcal": 540,
+        "proteinG": 34,
+        "satFatG": 8,
+        "sodiumMg": 1890,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 259,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-deluxe-sandwich-w-american",
+      "name": "Spicy Deluxe Sandwich w/ American",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 80,
+        "fatG": 22,
+        "fiberG": 2,
+        "kcal": 510,
+        "proteinG": 31,
+        "satFatG": 7,
+        "sodiumMg": 1980,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 252,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-deluxe-sandwich-w-colby-jack",
+      "name": "Spicy Deluxe Sandwich w/ Colby Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 85,
+        "fatG": 24,
+        "fiberG": 2,
+        "kcal": 540,
+        "proteinG": 33,
+        "satFatG": 8,
+        "sodiumMg": 1890,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 259,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-deluxe-sandwich-w-no-cheese",
+      "name": "Spicy Deluxe Sandwich w/ No Cheese",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 65,
+        "fatG": 18,
+        "fiberG": 2,
+        "kcal": 460,
+        "proteinG": 28,
+        "satFatG": 4,
+        "sodiumMg": 1740,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 238,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-deluxe-sandwich-w-pepper-jack",
+      "name": "Spicy Deluxe Sandwich w/ Pepper Jack",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 85,
+        "fatG": 24,
+        "fiberG": 2,
+        "kcal": 540,
+        "proteinG": 34,
+        "satFatG": 8,
+        "sodiumMg": 1890,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 259,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad",
+      "name": "Spicy Southwest Salad",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 100,
+        "fatG": 49,
+        "fiberG": 7,
+        "kcal": 680,
+        "proteinG": 33,
+        "satFatG": 10,
+        "sodiumMg": 1570,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 424,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-chick-fil-a-chick-n-strips",
+      "name": "Spicy Southwest Salad w/ Chick-fil-A Chick-n-Strips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 115,
+        "fatG": 60,
+        "fiberG": 7,
+        "kcal": 880,
+        "proteinG": 43,
+        "satFatG": 12,
+        "sodiumMg": 1710,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 475,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-grilled-filet-cold",
+      "name": "Spicy Southwest Salad w/ Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 110,
+        "fatG": 48,
+        "fiberG": 7,
+        "kcal": 680,
+        "proteinG": 35,
+        "satFatG": 9.5,
+        "sodiumMg": 1220,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 424,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-grilled-filet-warm",
+      "name": "Spicy Southwest Salad w/ Grilled Filet (Warm)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 110,
+        "fatG": 48,
+        "fiberG": 7,
+        "kcal": 680,
+        "proteinG": 35,
+        "satFatG": 9.5,
+        "sodiumMg": 1220,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 423,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-grilled-nuggets",
+      "name": "Spicy Southwest Salad w/ Grilled Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 125,
+        "fatG": 49,
+        "fiberG": 7,
+        "kcal": 700,
+        "proteinG": 39,
+        "satFatG": 10,
+        "sodiumMg": 1290,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 434,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-no-chicken",
+      "name": "Spicy Southwest Salad w/ No Chicken",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 35,
+        "fatG": 47,
+        "fiberG": 7,
+        "kcal": 570,
+        "proteinG": 14,
+        "satFatG": 9.5,
+        "sodiumMg": 850,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 339,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-nuggets",
+      "name": "Spicy Southwest Salad w/ Nuggets",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 120,
+        "fatG": 56,
+        "fiberG": 7,
+        "kcal": 800,
+        "proteinG": 39,
+        "satFatG": 11,
+        "sodiumMg": 2050,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 448,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "spicy-southwest-salad-w-spicy-grilled-filet-cold",
+      "name": "Spicy Southwest Salad w/ Spicy Grilled Filet (Cold)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 100,
+        "fatG": 49,
+        "fiberG": 7,
+        "kcal": 680,
+        "proteinG": 33,
+        "satFatG": 10,
+        "sodiumMg": 1570,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 424,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "strawberry-milkshake",
+      "name": "Strawberry Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 92,
+        "cholesterolMg": 70,
+        "fatG": 18,
+        "fiberG": 1,
+        "kcal": 560,
+        "proteinG": 10,
+        "satFatG": 11,
+        "sodiumMg": 370,
+        "sugarG": 86,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 409,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sunjoy-1-2-sweet-tea-1-2-diet-lemonade",
+      "name": "Sunjoy (1/2 Sweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sunjoy-1-2-sweet-tea-1-2-lemonade",
+      "name": "Sunjoy (1/2 Sweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 240,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 57,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sunjoy-1-2-unsweet-tea-1-2-diet-lemonade",
+      "name": "Sunjoy (1/2 Unsweet Tea, 1/2 Diet Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 10,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "sunjoy-1-2-unsweet-tea-1-2-lemonade",
+      "name": "Sunjoy (1/2 Unsweet Tea, 1/2 Lemonade)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 641,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "vanilla-cream-cold-brew",
+      "name": "Vanilla Cream Cold Brew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 72,
+        "cholesterolMg": 65,
+        "fatG": 17,
+        "fiberG": 0,
+        "kcal": 470,
+        "proteinG": 8,
+        "satFatG": 10,
+        "sodiumMg": 360,
+        "sugarG": 69,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": 689,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "vanilla-frosted-coffee",
+      "name": "Vanilla Frosted Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 62,
+        "cholesterolMg": 25,
+        "fatG": 7,
+        "fiberG": 0,
+        "kcal": 330,
+        "proteinG": 7,
+        "satFatG": 4.5,
+        "sodiumMg": 140,
+        "sugarG": 60,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 400,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "vanilla-iced-coffee",
+      "name": "Vanilla Iced Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 15,
+        "fatG": 4,
+        "fiberG": 0,
+        "kcal": 210,
+        "proteinG": 7,
+        "satFatG": 3,
+        "sodiumMg": 115,
+        "sugarG": 33,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 661,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "vanilla-milkshake",
+      "name": "Vanilla Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 82,
+        "cholesterolMg": 90,
+        "fatG": 23,
+        "fiberG": 1,
+        "kcal": 580,
+        "proteinG": 13,
+        "satFatG": 15,
+        "sodiumMg": 390,
+        "sugarG": 80,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 409,
+      "sourceId": "nutrition",
+      "variant": null
+    }
+  ],
+  "route": "html-json",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "contentHash": "2eea99ac19569c687c0dc478cf5f165219a6de752195cc624b8356d014a7671d",
+      "fetchedAt": "2026-11-17",
+      "generatedAt": null,
+      "id": "nutrition",
+      "kind": "html-json",
+      "landingUrl": null,
+      "sourceDate": null,
+      "url": "https://www.chick-fil-a.com/nutrition-allergens"
+    }
+  ],
+  "spotChecks": [
+    {
+      "addParts": [],
+      "id": "chicken-sandwich-page",
+      "itemKey": "chick-fil-a-chicken-sandwich",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 70,
+        "fatG": 16,
+        "fiberG": null,
+        "kcal": 420,
+        "proteinG": null,
+        "satFatG": 3.5,
+        "sodiumMg": 1470,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.chick-fil-a.com/menu/entrees/chick-fil-a-chicken-sandwich"
+    },
+    {
+      "addParts": [],
+      "id": "deluxe-sandwich-page",
+      "itemKey": "chick-fil-a-deluxe-sandwich",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 85,
+        "fatG": 21,
+        "fiberG": null,
+        "kcal": 490,
+        "proteinG": null,
+        "satFatG": 6,
+        "sodiumMg": 1710,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.chick-fil-a.com/menu/entrees/chick-fil-a-deluxe-sandwich"
+    },
+    {
+      "addParts": [],
+      "id": "waffle-fries-page",
+      "itemKey": "chick-fil-a-waffle-potato-fries",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 24,
+        "fiberG": null,
+        "kcal": 420,
+        "proteinG": null,
+        "satFatG": 4,
+        "sodiumMg": 240,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.chick-fil-a.com/menu/sides/chick-fil-a-waffle-potato-fries"
+    }
+  ]
+}
