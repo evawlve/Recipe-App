@@ -1,7 +1,7 @@
 /**
  * S202 row HH: a leading `half and half` is the food's NAME, not half a serving.
  *
- * Mechanism: isHalfAndHalfAt() / halfAndHalfCursor() in ../ingredient-line.ts
+ * Mechanism: isHalfAndHalfAt() / fractionNameCursor() in ../ingredient-line.ts
  * decide ONCE where the line's quantity cursor sits (0, or 1 behind a leading
  * hedge or a quantity token) and every site that would consume `half` as a
  * quantity, fraction or multiplier honours it. Before this, bare "half and

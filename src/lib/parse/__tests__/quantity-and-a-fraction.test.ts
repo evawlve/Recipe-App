@@ -31,7 +31,7 @@ const MOVED: Row[] = [
 // Byte-identical to base. The three lines flagged below are unchanged by F1 --
 // a pre-existing defect, not an endorsement: "2 eggs and a half bagel",
 // "2 slices of toast and half an avocado" and "3 eggs and 2 strips of bacon".
-// A leading "half and half" is the food's name (halfAndHalfCursor() in
+// A leading "half and half" is the food's name (fractionNameCursor() in
 // ingredient-line.ts): qty 1, the three words kept in the name.
 const UNCHANGED: Row[] = [
   { line: "one and a half cups milk", qty: 1.5, unit: "cup", name: "milk" },

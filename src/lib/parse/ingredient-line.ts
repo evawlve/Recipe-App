@@ -721,15 +721,41 @@ function isHalfAndHalfAt(tokens: string[], k: number): boolean {
     && HALF_AND_HALF_CONNECTORS.has(tokens[k + 1].toLowerCase())
     && tokens[k + 2].toLowerCase() === 'half';
 }
-/** The cursor k at which `half and half` opens the name (0 or 1), or -1. */
-function halfAndHalfCursor(tokens: string[]): number {
-  if (isHalfAndHalfAt(tokens, 0)) return 0;
+// s461 QP-LEAD: a fraction word that OPENS a food name is the same class as `half and half`. `quarter pounder` parsed as
+// qty 0.25 of `pounder` (25 g / 64 kcal for a ~200 g burger: MEL noCache=false 2026-07-24 and 08-12), `half moon cookie`
+// as 0.5 of `moon cookie`, `third street lemonade` as 1/3 of `street lemonade`, and after a quantity normalizeUnitToken()
+// read the word as a multiplier (`2 quarter pounders` = 0.5 of `pounders`, `1/4 quarter pounder` = 1/16). The table holds
+// whole NAMES (two or three words) whose words after the fraction are no food on their own (`pounder`, `smoke`, `moonies`)
+// or a brand (`third street`, a drinks brand; `half street taco` is still half a taco). Source: the OffFood/FatSecretFood
+// census of names led by a fraction word (s461 pd-qplead, 2026-11-16). `half moon` is NOT a pair: `moon` opens food names
+// (`moon pie`, `moon cake`, `moon cheese`), and as a pair it billed `half moon pie` 507 kcal (a whole 113 g package) for
+// half a MoonPie, and `half moon cake` a whole mooncake (s461 rf-qplead full-mapper replay); only the cookie is listed.
+// Absent on purpose: the real fractions in that census (`half chicken`, `half rack`, `half loaf`, `quarter chicken`,
+// `half sub`), the drinks the segmenter splits (`half sweet tea`, `half lemonade`), and ADJECTIVES -- `half baked` is the
+// ice cream but `half baked potato` is half a potato; reading the adjective pairs as names billed 6 adversarial lines
+// worse (`half baked potato`, `half fat milk`, `half dipped strawberries`; s461 pd-qplead full-mapper replay, arm A).
+// Read at the same cursor as `half and half` (fractionNameCursor()), honoured through hhCursor at every site that consumes it.
+const FRACTION_NAMES: ReadonlySet<string> = new Set([
+  'quarter pounder', 'quarter pounders', 'third pounder', 'third pounders', 'half pounder', 'half pounders',
+  'half moon cookie', 'half moon cookies', 'half moonies', 'third street', 'half smoke', 'half smokes',
+]);
+function isFractionNameAt(tokens: string[], k: number): boolean {
+  if (k < 0) return false;
+  for (let n = 2; n <= 3 && k + n <= tokens.length; n++) {
+    if (FRACTION_NAMES.has(tokens.slice(k, k + n).join(' ').toLowerCase())) return true;
+  }
+  return false;
+}
+/** The cursor k at which `half and half` or a FRACTION_NAMES name opens the name (0 or 1), or -1. */
+function fractionNameCursor(tokens: string[]): number {
+  const opensName = (k: number): boolean => isHalfAndHalfAt(tokens, k) || isFractionNameAt(tokens, k);
+  if (opensName(0)) return 0;
   if (tokens.length === 0) return -1;
   const lead = tokens[0].toLowerCase();
   const leadIsQuantity = LEADING_HEDGES.has(lead)
     || /^[\d¼-¾⅐-⅞]/.test(lead)
     || QUANTITY_WORD_NUMBERS.has(lead);
-  return leadIsQuantity && isHalfAndHalfAt(tokens, 1) ? 1 : -1;
+  return leadIsQuantity && opensName(1) ? 1 : -1;
 }
 
 // S202 (route 25): a quantity HEDGE never changes the quantity or the unit. A tilde RANGE (`2~3 eggs`) becomes the dash range the
@@ -1086,7 +1112,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   rewriteWordFractionOfMeasure(mergedTokens);   // s459 QTY-34; before rewriteSpanishNumeral() (`tres cuartos`)
   rewriteSpanishNumeral(mergedTokens, brandDetection.matchedBrand);
   rewriteShotGlassOf(mergedTokens);   // s459 AL-b2 (2)
-  const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
+  const hhCursor = fractionNameCursor(mergedTokens);   // S202 row HH + s461 QP-LEAD, decided once
   if (hhCursor < 0) { normalizeFractionalMeasure(mergedTokens); rewriteDoublePortion(mergedTokens); rewriteStackOfPancakes(mergedTokens); }
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).

@@ -76,13 +76,13 @@ describe('a spoken fraction before a measure parses as its digit twin', () => {
 describe('food names that open with a fraction word do not move', () => {
   // Each line keeps the parse it had before this rule; the fields pinned are the ones the rule would change.
   test.each<[string, string]>([
-    ['quarter pounder with cheese', 'pounder with cheese'],
+    ['quarter pounder with cheese', 'quarter pounder with cheese'],   // s461 QP-LEAD (fraction-word-name.test.ts)
     ['a quarter pounder with cheese', 'a quarter pounder with cheese'],
     ['double quarter pounder with cheese', 'double quarter pounder with cheese'],
     ['mcdonalds quarter pounder', 'mcdonalds quarter pounder'],
     ['quarter-pounder with cheese', 'quarter-pounder with cheese'],
     ['a quarter of a quarter pounder', 'a quarter of a quarter pounder'],
-    ['third street bagel', 'street bagel'],
+    ['third street bagel', 'third street bagel'],   // s461 QP-LEAD
     ['chicken quarters', 'chicken quarters'],
     ['quarters of an orange', 'quarters of an orange'],
     ['cuarto de libra', 'cuarto de libra'],
