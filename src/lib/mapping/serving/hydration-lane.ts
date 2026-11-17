@@ -24,6 +24,10 @@ import {
     inferDiscreteUnit,
 } from '../count-label';
 import { labelCountPerPiece } from './label-count-band';
+import {
+    fractionOneShape, fractionSizeUnit, fractionWholeDecline, fractionWholeEnabled, isFractionOfAnItem,
+    recordIsTheItem, wholeAccepted,
+} from './fraction-whole-item';
 import { logger } from '../../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from '../client';
 import { getCachedFoodWithRelations, cacheFoodToDetails } from '../cache-search';
@@ -3982,6 +3986,59 @@ export async function buildOffResult(
         // below bills a single bounded serving instead of 100g * count.
         if (grams == null) {
             unitlessCountUnresolved = true;
+        }
+    }
+
+    // A FRACTION OF ONE ITEM (s461 WHOLE-ONE; the rule and its four predicates:
+    // fraction-whole-item.ts). A unit-less qty < 1 never enters the count branch
+    // above (it needs qty >= 1), so it lands here and bills qty x the label serving
+    // or qty x the 100 g floor. When the line says `half a <item>` and that "one" is
+    // a portion (`1 portion (85 g)`, `100.0g`, no label), bill qty x the item's
+    // `whole` weight instead: the same rung `1/2 whole <item>` takes above (seed,
+    // OffServing row, sibling, estimate). Raise-only. Kill switch: SERVING_FRACTION_WHOLE="0".
+    // A SYNTHETIC-BARCODE chain record keeps today's bill when it has a label: its `100g`
+    // label and panel describe the MENU ITEM (`Taco Bell, Mexican Pizza` reads 550 kcal per
+    // `100g`, the whole pizza's 540), so the item's real grams x that panel over-bills it
+    // (replay: `half a taco bell mexican pizza` 275 -> 660 kcal). Same predicate as (A2).
+    if ((grams == null || servingDescription == null) && !unit && fractionWholeEnabled()
+        && isFractionOfAnItem(parsed, rawLine)) {
+        const hasLabel = !!(hydrated.servingGrams && hydrated.servingGrams > 0);
+        const oneGrams = hasLabel ? hydrated.servingGrams! : 100;
+        const syntheticChainLabel = hasLabel
+            && candidate.id.replace(/^off_/, '').length > MAX_REAL_GTIN_LENGTH;
+        const shape = fractionOneShape(hasLabel ? hydrated.servingDescription : null,
+            parsed?.name || hydrated.foodName);
+        if (shape === 'portion' && !syntheticChainLabel
+            && recordIsTheItem(hydrated.foodName, parsed?.name)) {
+            // r2 (s461 pd-whole2): a panel that cannot be a prepared whole item, a
+            // below-standard size, a package or a bottle-sold pour keeps today's bill
+            // BEFORE the estimate; a named size asks its own unit (`half a small fries`
+            // -> `small`); the whole must clear the cap and, on a bare-mass label, a 1.5x
+            // margin (predicates 5-8, fraction-whole-item.ts).
+            const declined = fractionWholeDecline({
+                itemName: parsed?.name, recordName: hydrated.foodName, rawLine,
+                per100: hydrated.nutrientsPer100g,
+            });
+            if (declined) {
+                logger.info('off.build_result.fraction_whole_item', {
+                    foodId: candidate.id, qty, oneGrams, labelled: hasLabel, declined, taken: false,
+                });
+            } else {
+                const askUnit = fractionSizeUnit(parsed) ?? 'whole';
+                const whole = await getOrCreateAmbiguousServing(
+                    candidate.id, hydrated.foodName, askUnit, brandForBorrow
+                );
+                const wholeGrams = (whole.status === 'success' || whole.status === 'cached') ? whole.grams : null;
+                if (wholeAccepted(wholeGrams, oneGrams, hasLabel ? hydrated.servingDescription : null)) {
+                    grams = qty * wholeGrams!;
+                    servingDescription = `${qty} ${askUnit} (${wholeGrams!.toFixed(1)}g each)`;
+                    servingTier = 'fraction_whole_item';
+                }
+                logger.info('off.build_result.fraction_whole_item', {
+                    foodId: candidate.id, qty, oneGrams, labelled: hasLabel, askUnit,
+                    wholeGrams, status: whole.status, taken: servingTier === 'fraction_whole_item',
+                });
+            }
         }
     }
 
