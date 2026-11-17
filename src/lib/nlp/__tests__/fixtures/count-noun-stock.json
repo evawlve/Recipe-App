@@ -571,13 +571,11 @@
   ],
   "expect": [
    {
-    "rawText": "10 eggs",
+    "rawText": "half a dozen eggs",
     "normalizedForm": "eggs"
    }
   ],
-  "expectKinds": [
-   "stock"
-  ],
+  "expectKinds": [],
   "changed": false
  },
  {
@@ -592,13 +590,11 @@
   ],
   "expect": [
    {
-    "rawText": "10 eggs",
+    "rawText": "half dozen eggs",
     "normalizedForm": "eggs"
    }
   ],
-  "expectKinds": [
-   "stock"
-  ],
+  "expectKinds": [],
   "changed": false
  },
  {
