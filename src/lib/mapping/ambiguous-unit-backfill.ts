@@ -178,6 +178,7 @@ async function upsertServing(
     note?: string,
     source: string = 'ai',
     isAiEstimated: boolean = true,
+    saveBand?: { foodName: string },
 ): Promise<boolean> {
     if (!hasServingWriteTarget(foodId)) {
         logger.warn('ambiguous_backfill.persist_skipped_no_target', {
@@ -197,6 +198,20 @@ async function upsertServing(
     if (isWriteSuppressed('aiServing')) {
         noteRefusedWrite('aiServing', servingTableFor(foodId), `${foodId}:${normalizedUnit}`);
         return false;
+    }
+
+    // THE SAVE BAND (s461 WHOLE-PERSIST): a model estimate outside it is still returned to
+    // the caller, which bills or refuses it for this request, but it is never written. After
+    // the two guards above, so a nosave receipt and the `consulted` counter read as before.
+    if (saveBand) {
+        const refusal = persistBandRefusal(normalizedUnit, grams, saveBand.foodName,
+            await recordPackageGrams(foodId));
+        if (refusal) {
+            logger.warn('ambiguous_backfill.persist_out_of_band', {
+                foodId, foodName: saveBand.foodName, unit: normalizedUnit, grams, refusal,
+            });
+            return false;
+        }
     }
 
     if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
@@ -257,6 +272,83 @@ async function upsertServing(
         });
     }
     return true;
+}
+
+/**
+ * THE SAVE BAND FOR A MODEL-ESTIMATED SERVING (s461 WHOLE-PERSIST).
+ *
+ * getOrCreateAmbiguousServing() writes the model's answer before any caller reads it, and a
+ * saved row answers every later request for that (record, unit) ahead of the model, so the
+ * first draw is the record's answer for good. Most units carry no bounds at all: 52 of
+ * AMBIGUOUS_UNITS' 80 spellings have no getAmbiguousUnitBounds() entry (`whole`, `small`,
+ * `medium`, `large`, `container`, `slice`, `each`, ...). This band decides only
+ * whether the answer is WRITTEN. The caller still gets it and bills or refuses it for this
+ * request (the band never moves this request's bill; the next request asks the model again).
+ * Three clauses, each a property of the unit or the record, never of the line:
+ *   1. `unit_bounds`: the unit's own read bounds. A row findExistingServing()'s caller would
+ *      reject on read is never written. The estimator clamps its model answer to these, so
+ *      today this catches only an unclamped rung (getFdcServingWeight()).
+ *   2. `whole_max`: a `whole` above WHOLE_SAVE_MAX_GRAMS (2,000 g) is a roast, a holiday bird
+ *      or a tub, not one item a person logs (prod: `Roast Turkey` whole = 3,000 g; s461
+ *      replays: `Turkey` 4,000 / 4,500, `Smoked Turkey` 2,400 / 3,000, `Turkey dinner`
+ *      3,500, a 2,270 g gainer tub). Same number as the fraction rule's bill cap.
+ *   3. `over_package`: one unit of a product cannot outweigh the product's own net package
+ *      (OFF `packageQuantity` in g or ml, ml read as grams; PACKAGE_SAVE_TOLERANCE 1.1 covers
+ *      label rounding and a drink's density), floored at the record's own `servingGrams`: a
+ *      package lighter than one serving of itself is a mis-read `product_quantity` (prod:
+ *      noosa mango 0.5 g on a 113 g cup, Parmalat milk 1 g on a 250 ml serving, Orgain powder
+ *      21 g on a 46 g serving; s461 rf-persist-b). Prod holds 18 such OFF rows (s461 pd-persist), e.g.
+ *      `Roasted Chicken` (709 g pack) whole = 1,200 g, `Hunt's Ketchup` (397 g) large = 450 g,
+ *      `Whataburger Onion Rings` (136 g) large = 310 g; a replay drew `Smoked Turkey` (170 g)
+ *      whole = 2,400 g. OFF only: FDC and AiGenerated records carry no package.
+ * A lookup that fails reads as "no package" (clause 3 skipped, today's behaviour).
+ * Measured cost (s461 pd-persist, 552 records with a `whole` draw): clause 2 refuses 0 and
+ * clause 3 refuses 2 of 111 first draws graded GOOD against a written truth band. The request
+ * that drew a refused answer bills exactly what it bills today. The NEXT request for that
+ * (record, unit) asks the model again (~2 s) and, the model being unseeded, may bill a
+ * different weight, until an in-band answer is drawn and saved (s461 rf-persist-b).
+ * The sibling borrow (genuine same-brand label medians) does not pass a band.
+ */
+export const WHOLE_SAVE_MAX_GRAMS = 2000;
+export const PACKAGE_SAVE_TOLERANCE = 1.1;
+
+export type PersistBandRefusal = 'unit_bounds' | 'whole_max' | 'over_package';
+
+/** Which clause of the save band an estimate breaks, or null when it may be written. Pure. */
+export function persistBandRefusal(
+    unit: string,
+    grams: number,
+    foodName: string | null | undefined,
+    packageGrams: number | null | undefined,
+): PersistBandRefusal | null {
+    const u = unit.toLowerCase().trim();
+    const bounds = getAmbiguousUnitBounds(u, foodName);
+    if ((bounds.min != null && grams < bounds.min) || (bounds.max != null && grams > bounds.max)) return 'unit_bounds';
+    if (u === 'whole' && grams > WHOLE_SAVE_MAX_GRAMS) return 'whole_max';
+    if (packageGrams != null && packageGrams > 0 && grams > PACKAGE_SAVE_TOLERANCE * packageGrams) return 'over_package';
+    return null;
+}
+
+/**
+ * The OFF record's own net package in grams (`g`, or `ml` read as grams), floored at its own
+ * label `servingGrams` (a package cannot weigh less than one serving of itself), else null.
+ * Never throws.
+ */
+async function recordPackageGrams(foodId: string): Promise<number | null> {
+    if (!foodId.startsWith('off_')) return null;
+    try {
+        const food = await prisma.offFood.findUnique({
+            where: { barcode: foodId.replace('off_', '') },
+            select: { packageQuantity: true, packageQuantityUnit: true, servingGrams: true },
+        });
+        const q = food?.packageQuantity;
+        const u = food?.packageQuantityUnit?.toLowerCase().trim();
+        if (q == null || !(q > 0) || (u !== 'g' && u !== 'ml')) return null;
+        const s = food?.servingGrams;
+        return s != null && s > q ? s : q;
+    } catch {
+        return null;
+    }
 }
 
 // ============================================================
@@ -525,7 +617,7 @@ export async function getOrCreateAmbiguousServing(
     // no write target returns false and is not a save. The catch below stays:
     // a genuine `fdc_`/`off_` write failure must remain loud.
     try {
-        const persisted = await upsertServing(foodId, normalizedUnit, result.estimatedGrams, result.confidence ?? 1, result.reasoning?.slice(0, 200));
+        const persisted = await upsertServing(foodId, normalizedUnit, result.estimatedGrams, result.confidence ?? 1, result.reasoning?.slice(0, 200), 'ai', true, { foodName });
 
         if (persisted) {
             logger.info('ambiguous_backfill.saved', {
