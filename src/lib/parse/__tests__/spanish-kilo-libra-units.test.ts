@@ -9,10 +9,9 @@
  *
  * Guards pinned below: `un cuarto de libra con queso` (McDonald's) keeps its name, because the word fraction needs `de <word>` after
  * the unit. `kilo` is also English, so isSpanishLine() does not count it as a marker (`a kilo of pasta` stays English). NOT in the
- * set: `vaso` (no `glass` unit) and `litro(s)` (held: bare `agua` resolves to a cracker record, s429 WATER-PRODUCT).
- * KNOWN COSTS, pinned: a chain after `cuarto de libra de` reads as the food (`[un] cuarto de libra de mcdonalds` = 0.25 lb of
- * `mcdonalds`; 0 MEL events in any arm), and `16 onzas de agua` = 16 oz of bare `agua`, which retrieves a cracker record (s429
- * WATER-PRODUCT; cold 729 -> 1,878 kcal, s459 rf-kilo Q01/Q02, the same class `2 tazas de agua` already bills live).
+ * set: `vaso` (no `glass` unit). `litro(s)` joined in s461 ES-UNITSET-LITRO (spanish-litro-units.test.ts).
+ * KNOWN COST, pinned: a chain after `cuarto de libra de` reads as the food (`[un] cuarto de libra de mcdonalds` = 0.25 lb of
+ * `mcdonalds`; 0 MEL events in any arm). `16 onzas de agua` = 16 oz of bare `agua`, which bills water at 0 kcal since #710.
  */
 import { parseIngredientLine } from '../ingredient-line';
 import { SPANISH_UNIT_TOKENS } from '../unit';
@@ -29,8 +28,8 @@ describe('membership', () => {
   test('kilo, libra and onza (both numbers) are Spanish unit words', () => {
     for (const t of ['kilo', 'kilos', 'libra', 'libras', 'onza', 'onzas']) expect(SPANISH_UNIT_TOKENS.has(t)).toBe(true);
   });
-  test('vaso and litro are not', () => {
-    for (const t of ['vaso', 'vasos', 'litro', 'litros']) expect(SPANISH_UNIT_TOKENS.has(t)).toBe(false);
+  test('vaso is not', () => {
+    for (const t of ['vaso', 'vasos']) expect(SPANISH_UNIT_TOKENS.has(t)).toBe(false);
   });
 });
 
@@ -68,7 +67,7 @@ describe('KNOWN COST: a chain name after `cuarto de libra de` reads as the food'
   });
 });
 
-describe('KNOWN COST: onza before bare agua (s429 WATER-PRODUCT retrieves a cracker record)', () => {
+describe('onza before bare agua reads 16 oz of `agua` (water since #710)', () => {
   test('16 onzas de agua', () => {
     expect(core('16 onzas de agua')).toMatchObject({ qty: 16, unit: 'oz', name: 'agua' });
   });
@@ -87,7 +86,7 @@ describe('isSpanishLine: kilo is not a marker, libra is', () => {
 });
 
 // Byte-identical to master 2369d10b (parseIngredientLine() output pinned).
-describe('CONTROLS: food names, vaso, litro, English kilo lines are unchanged', () => {
+describe('CONTROLS: food names, vaso, English kilo lines are unchanged', () => {
   test.each<[string, unknown]>([
     ["un cuarto de libra con queso", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"un cuarto de libra con queso","notes":null,"unitHint":null}],
     ["cuarto de libra con queso", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"cuarto de libra con queso","notes":null,"unitHint":null}],
@@ -104,8 +103,6 @@ describe('CONTROLS: food names, vaso, litro, English kilo lines are unchanged', 
     ["a kilo of apples", {"qty":1,"multiplier":1,"unit":"kg","rawUnit":"kilo","name":"apples","notes":null,"unitHint":null}],
     ["half a kilo of grapes", {"qty":0.5,"multiplier":1,"unit":"kg","rawUnit":"kilo","name":"grapes","notes":null,"unitHint":null}],
     ["a kilo and a half of chicken", {"qty":1.5,"multiplier":1,"unit":"kg","rawUnit":"kilo","name":"chicken","notes":null,"unitHint":null}],
-    ["un litro de leche", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"un litro de leche","notes":null,"unitHint":null}],
-    ["2 litros de agua", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"litros de agua","notes":null,"unitHint":null}],
     ["libra de carne", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"libra de carne","notes":null,"unitHint":null}],
     ["onza de queso", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"onza de queso","notes":null,"unitHint":null}],
   ])('%s', (line, expected) => {
