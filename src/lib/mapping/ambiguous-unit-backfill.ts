@@ -16,6 +16,7 @@ import {
     isEstimableUnknownUnit,
     estimateAmbiguousServing,
     getAmbiguousUnitBounds,
+    packetMaxGrams,
     AMBIGUOUS_UNITS,
 } from '../ai/ambiguous-serving-estimator';
 
@@ -397,7 +398,12 @@ export async function getOrCreateAmbiguousServing(
         // a per-piece weight in disguise for the requested unit. Out-of-bounds
         // seeds fall through to sibling-borrow / AI instead.
         if (countDefault) {
-            const seedBounds = getAmbiguousUnitBounds(normalizedUnit, foodName);
+            // A word-matched seed is a PIECE weight (nugget 18 g, wing 34 g, cookie 30 g, strawberry 12 g),
+            // never a packet: the food packet caps (packetMaxGrams) admit model answers and cached rows,
+            // so a packet line on a food name keeps the condiment bound here and a piece seed above it
+            // falls through to sibling-borrow / AI (s461 PKT-FOOD; rf-pktfood measured 152 names).
+            const seedBounds = getAmbiguousUnitBounds(
+                normalizedUnit, packetMaxGrams(normalizedUnit, foodName) != null ? null : foodName);
             const seedOutOfBounds = (seedBounds.min != null && countDefault.grams < seedBounds.min)
                 || (seedBounds.max != null && countDefault.grams > seedBounds.max);
             if (seedOutOfBounds) {

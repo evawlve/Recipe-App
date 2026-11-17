@@ -42,7 +42,7 @@ describe('names, brands, articles and excluded words are byte-identical to base 
     'una manzana', 'un platano', 'una medida de proteína ascent de vainilla', 'un vaso de agua', // s459 ES-ART: `una taza de arroz` moved (spanish-article-units.test.ts)
     'dos', 'media', 'dos y medio', 'dos con queso', 'tres 8 oz steaks', 'dos y tres tacos',
     'dos pinos yogurt', 'tres agaves margarita mix', 'ocho candy bar', 'dos hombres mezcal',
-    'medio litro de leche', 'dos platos de arroz', // s459 ES-UNITSET-KILO: `dos onzas de queso` moved (spanish-kilo-libra-units.test.ts)
+    'dos platos de arroz', // s459 ES-UNITSET-KILO: `dos onzas de queso` moved; s461: `medio litro de leche` moved (spanish-litro-units.test.ts)
   ])('%s unchanged', (line) => {
     expect(core(line)).toEqual({ qty: 1, multiplier: 1, unit: null, rawUnit: null, name: line, unitHint: null, qualifiers: null });
   });
