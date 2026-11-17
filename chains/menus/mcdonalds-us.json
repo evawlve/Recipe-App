@@ -1,0 +1,821 @@
+{
+  "schemaVersion": 1,
+  "chain": "mcdonalds-us",
+  "chainName": "McDonald's",
+  "country": "US",
+  "route": "chrome",
+  "sources": [
+    {
+      "id": "dnaapp",
+      "kind": "chrome",
+      "url": "https://www.mcdonalds.com/dnaapp/itemDetails",
+      "landingUrl": "https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-calculator.html",
+      "sourceDate": null,
+      "generatedAt": null,
+      "fetchedAt": "2026-11-14",
+      "contentHash": null
+    }
+  ],
+  "components": [
+    {
+      "key": "300037",
+      "name": "Ketchup",
+      "removalKeys": ["ketchup"],
+      "portions": []
+    },
+    {
+      "key": "300038",
+      "name": "100% Beef Patty",
+      "removalKeys": ["patty", "beef patty"],
+      "portions": []
+    },
+    {
+      "key": "300041",
+      "name": "Onions",
+      "removalKeys": ["onion"],
+      "portions": []
+    },
+    {
+      "key": "300042",
+      "name": "Pickle Slices",
+      "removalKeys": ["pickle"],
+      "portions": []
+    },
+    {
+      "key": "300044",
+      "name": "Mustard",
+      "removalKeys": ["mustard"],
+      "portions": []
+    },
+    {
+      "key": "300067",
+      "name": "Egg",
+      "removalKeys": ["egg"],
+      "portions": []
+    },
+    {
+      "key": "300098",
+      "name": "Shredded Lettuce",
+      "removalKeys": ["lettuce"],
+      "portions": []
+    },
+    {
+      "key": "300310",
+      "name": "Salted Butter",
+      "removalKeys": ["butter"],
+      "portions": []
+    },
+    {
+      "key": "300430",
+      "name": "Mayonnaise",
+      "removalKeys": ["mayo"],
+      "portions": []
+    },
+    {
+      "key": "300654",
+      "name": "Clarified Butter",
+      "removalKeys": ["butter"],
+      "portions": []
+    },
+    {
+      "key": "300708",
+      "name": "McChicken Patty",
+      "removalKeys": ["patty", "chicken patty"],
+      "portions": []
+    },
+    {
+      "key": "301502",
+      "name": "Onions",
+      "removalKeys": ["onion"],
+      "portions": []
+    },
+    {
+      "key": "301516",
+      "name": "Quarter Pound Bun",
+      "removalKeys": ["bun"],
+      "portions": []
+    },
+    {
+      "key": "301518",
+      "name": "Pasteurized Process American Cheese",
+      "removalKeys": ["cheese"],
+      "portions": []
+    },
+    {
+      "key": "301533",
+      "name": "English Muffin",
+      "removalKeys": ["english muffin", "muffin"],
+      "portions": []
+    },
+    {
+      "key": "301554",
+      "name": "Big Mac Sauce",
+      "removalKeys": ["big mac sauce", "special sauce", "sauce"],
+      "portions": []
+    },
+    {
+      "key": "301574",
+      "name": "Quarter Pound 100% Beef Patty",
+      "removalKeys": ["patty", "beef patty"],
+      "portions": []
+    },
+    {
+      "key": "301578",
+      "name": "Regular Bun",
+      "removalKeys": ["bun"],
+      "portions": []
+    },
+    {
+      "key": "301639",
+      "name": "Canadian Bacon",
+      "removalKeys": ["canadian bacon", "bacon"],
+      "portions": []
+    },
+    {
+      "key": "302510",
+      "name": "Big Mac Bun",
+      "removalKeys": ["bun"],
+      "portions": []
+    }
+  ],
+  "items": [
+    {
+      "key": "200298",
+      "name": "Egg McMuffin",
+      "aliases": [],
+      "variant": null,
+      "servingG": 138.3,
+      "panel": { "kcal": 310, "proteinG": 17, "carbsG": 30, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 770, "fiberG": 2, "sugarG": 3, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "301533",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 54.5,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 140, "proteinG": 5, "carbsG": 27, "fatG": 1, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 260, "fiberG": 2, "sugarG": 2, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 170, "proteinG": 12, "carbsG": 3, "fatG": 12, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 510, "fiberG": 0, "sugarG": 1, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300067",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 51.6,
+          "isDefault": true,
+          "kcalPublished": 80,
+          "contribution": { "kcal": 76.9, "proteinG": 6, "carbsG": 1, "fatG": 5, "satFatG": 1.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 70, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 230, "proteinG": 11, "carbsG": 29, "fatG": 8, "satFatG": 4.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 700, "fiberG": 2, "sugarG": 3, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301639",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.9,
+          "isDefault": true,
+          "kcalPublished": 15,
+          "contribution": { "kcal": 14.9, "proteinG": 3, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 220, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 290, "proteinG": 14, "carbsG": 29, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 550, "fiberG": 2, "sugarG": 2, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.2,
+          "isDefault": true,
+          "kcalPublished": 50,
+          "contribution": { "kcal": 50.1, "proteinG": 2, "carbsG": 2, "fatG": 4, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 210, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 260, "proteinG": 15, "carbsG": 28, "fatG": 9, "satFatG": 4, "transFatG": null, "cholesterolMg": null, "sodiumMg": 560, "fiberG": 2, "sugarG": 2, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300310",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 3,
+          "isDefault": true,
+          "kcalPublished": 20,
+          "contribution": { "kcal": 21.9, "proteinG": 0, "carbsG": 0, "fatG": 2, "satFatG": 1, "transFatG": null, "cholesterolMg": null, "sodiumMg": 20, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 280, "proteinG": 17, "carbsG": 30, "fatG": 11, "satFatG": 5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 750, "fiberG": 2, "sugarG": 3, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300654",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.2,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 1.8, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 300, "proteinG": 17, "carbsG": 30, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 770, "fiberG": 2, "sugarG": 3, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200438",
+      "name": "McChicken",
+      "aliases": [],
+      "variant": null,
+      "servingG": 139.4,
+      "panel": { "kcal": 390, "proteinG": 14, "carbsG": 38, "fatG": 21, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 560, "fiberG": 1, "sugarG": 4, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "300708",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 61.1,
+          "isDefault": true,
+          "kcalPublished": 150,
+          "contribution": { "kcal": 148.6, "proteinG": 9, "carbsG": 10, "fatG": 8, "satFatG": 1.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 270, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 240, "proteinG": 5, "carbsG": 28, "fatG": 13, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 290, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301578",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 50.7,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 141.7, "proteinG": 5, "carbsG": 27, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 220, "fiberG": 1, "sugarG": 4, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 250, "proteinG": 9, "carbsG": 11, "fatG": 19, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 340, "fiberG": 0, "sugarG": 0, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300098",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.2,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 2, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 14, "carbsG": 37, "fatG": 21, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 560, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300430",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 13.5,
+          "isDefault": true,
+          "kcalPublished": 100,
+          "contribution": { "kcal": 100.7, "proteinG": 0, "carbsG": 1, "fatG": 11, "satFatG": 1.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 60, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 290, "proteinG": 14, "carbsG": 37, "fatG": 10, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 500, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200463",
+      "name": "Big Mac",
+      "aliases": [],
+      "variant": null,
+      "servingG": 216.6,
+      "panel": { "kcal": 580, "proteinG": 25, "carbsG": 45, "fatG": 34, "satFatG": 11, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1060, "fiberG": 3, "sugarG": 7, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "302510",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 68.9,
+          "isDefault": true,
+          "kcalPublished": 190,
+          "contribution": { "kcal": 194, "proteinG": 7, "carbsG": 37, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 310, "fiberG": 2, "sugarG": 4, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 18, "carbsG": 8, "fatG": 32, "satFatG": 11, "transFatG": null, "cholesterolMg": null, "sodiumMg": 750, "fiberG": 1, "sugarG": 3, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300038",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 61.2,
+          "isDefault": true,
+          "kcalPublished": 190,
+          "contribution": { "kcal": 187.6, "proteinG": 15, "carbsG": 1, "fatG": 14, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 310, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 10, "carbsG": 44, "fatG": 20, "satFatG": 5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 750, "fiberG": 3, "sugarG": 7, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300098",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 28.4,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 4, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 1, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 580, "proteinG": 25, "carbsG": 44, "fatG": 34, "satFatG": 11, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1060, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301554",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 28,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 140, "proteinG": 1, "carbsG": 4, "fatG": 14, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 130, "fiberG": 0, "sugarG": 2, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 440, "proteinG": 24, "carbsG": 41, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 930, "fiberG": 3, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.2,
+          "isDefault": true,
+          "kcalPublished": 50,
+          "contribution": { "kcal": 50.1, "proteinG": 3, "carbsG": 1, "fatG": 4, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 200, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 530, "proteinG": 22, "carbsG": 44, "fatG": 30, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 860, "fiberG": 3, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 8,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.6, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 80, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 580, "proteinG": 25, "carbsG": 45, "fatG": 34, "satFatG": 11, "transFatG": null, "cholesterolMg": null, "sodiumMg": 980, "fiberG": 3, "sugarG": 7, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300041",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.9,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 5, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 580, "proteinG": 25, "carbsG": 44, "fatG": 34, "satFatG": 11, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1060, "fiberG": 3, "sugarG": 7, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200466",
+      "name": "Quarter Pounder with Cheese",
+      "aliases": [],
+      "variant": null,
+      "servingG": 200.5,
+      "panel": { "kcal": 520, "proteinG": 30, "carbsG": 42, "fatG": 26, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1140, "fiberG": 2, "sugarG": 10, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "301574",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 77.5,
+          "isDefault": true,
+          "kcalPublished": 220,
+          "contribution": { "kcal": 219.2, "proteinG": 18, "carbsG": 0, "fatG": 16, "satFatG": 7, "transFatG": null, "cholesterolMg": null, "sodiumMg": 210, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 300, "proteinG": 12, "carbsG": 42, "fatG": 10, "satFatG": 5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 930, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301516",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 62.7,
+          "isDefault": true,
+          "kcalPublished": 180,
+          "contribution": { "kcal": 180.2, "proteinG": 6, "carbsG": 34, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 260, "fiberG": 1, "sugarG": 6, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 340, "proteinG": 24, "carbsG": 8, "fatG": 24, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 880, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 28.4,
+          "isDefault": true,
+          "kcalPublished": 100,
+          "contribution": { "kcal": 100.3, "proteinG": 5, "carbsG": 2, "fatG": 8, "satFatG": 4, "transFatG": null, "cholesterolMg": null, "sodiumMg": 410, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 420, "proteinG": 25, "carbsG": 40, "fatG": 18, "satFatG": 8, "transFatG": null, "cholesterolMg": null, "sodiumMg": 730, "fiberG": 2, "sugarG": 9, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300037",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 16,
+          "isDefault": true,
+          "kcalPublished": 15,
+          "contribution": { "kcal": 16, "proteinG": 0, "carbsG": 4, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 160, "fiberG": 0, "sugarG": 3, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 500, "proteinG": 30, "carbsG": 38, "fatG": 26, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 980, "fiberG": 2, "sugarG": 7, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 8,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.6, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 80, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 520, "proteinG": 30, "carbsG": 42, "fatG": 26, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1060, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301502",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 520, "proteinG": 30, "carbsG": 42, "fatG": 26, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1140, "fiberG": 2, "sugarG": 9, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300044",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 520, "proteinG": 30, "carbsG": 42, "fatG": 26, "satFatG": 12, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1140, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200476",
+      "name": "Double Quarter Pounder with Cheese",
+      "aliases": [],
+      "variant": null,
+      "servingG": 278.1,
+      "panel": { "kcal": 740, "proteinG": 48, "carbsG": 43, "fatG": 42, "satFatG": 20, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1360, "fiberG": 2, "sugarG": 10, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "301574",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 155,
+          "isDefault": true,
+          "kcalPublished": 440,
+          "contribution": { "kcal": 438.3, "proteinG": 36, "carbsG": 1, "fatG": 32, "satFatG": 15, "transFatG": null, "cholesterolMg": null, "sodiumMg": 430, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 300, "proteinG": 12, "carbsG": 42, "fatG": 10, "satFatG": 5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 930, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301516",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 62.7,
+          "isDefault": true,
+          "kcalPublished": 180,
+          "contribution": { "kcal": 180.2, "proteinG": 6, "carbsG": 34, "fatG": 2, "satFatG": 1, "transFatG": null, "cholesterolMg": null, "sodiumMg": 270, "fiberG": 1, "sugarG": 6, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 560, "proteinG": 42, "carbsG": 9, "fatG": 40, "satFatG": 19, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1090, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 28.4,
+          "isDefault": true,
+          "kcalPublished": 100,
+          "contribution": { "kcal": 100.3, "proteinG": 5, "carbsG": 3, "fatG": 8, "satFatG": 5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 410, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 640, "proteinG": 43, "carbsG": 40, "fatG": 34, "satFatG": 15, "transFatG": null, "cholesterolMg": null, "sodiumMg": 950, "fiberG": 2, "sugarG": 9, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300037",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 16,
+          "isDefault": true,
+          "kcalPublished": 15,
+          "contribution": { "kcal": 16, "proteinG": 0, "carbsG": 4, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 170, "fiberG": 0, "sugarG": 3, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 720, "proteinG": 48, "carbsG": 39, "fatG": 42, "satFatG": 20, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1190, "fiberG": 2, "sugarG": 7, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 8,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.6, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 90, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 740, "proteinG": 48, "carbsG": 43, "fatG": 42, "satFatG": 20, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1270, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301502",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 3, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 740, "proteinG": 48, "carbsG": 42, "fatG": 42, "satFatG": 20, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1360, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300044",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 10, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 740, "proteinG": 48, "carbsG": 43, "fatG": 42, "satFatG": 20, "transFatG": null, "cholesterolMg": null, "sodiumMg": 1350, "fiberG": 2, "sugarG": 10, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200477",
+      "name": "Hamburger",
+      "aliases": [],
+      "variant": null,
+      "servingG": 97.6,
+      "panel": { "kcal": 250, "proteinG": 12, "carbsG": 30, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 510, "fiberG": 1, "sugarG": 5, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "301578",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 50.7,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 141.7, "proteinG": 5, "carbsG": 27, "fatG": 2, "satFatG": 0.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 220, "fiberG": 1, "sugarG": 3, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 100, "proteinG": 7, "carbsG": 3, "fatG": 7, "satFatG": 3, "transFatG": null, "cholesterolMg": null, "sodiumMg": 290, "fiberG": 0, "sugarG": 2, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300038",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 30.6,
+          "isDefault": true,
+          "kcalPublished": 90,
+          "contribution": { "kcal": 93.8, "proteinG": 7, "carbsG": 0, "fatG": 7, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 150, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 150, "proteinG": 5, "carbsG": 30, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 360, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300037",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.8,
+          "isDefault": true,
+          "kcalPublished": 10,
+          "contribution": { "kcal": 7.8, "proteinG": 0, "carbsG": 2, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 80, "fiberG": 0, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 240, "proteinG": 12, "carbsG": 28, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 430, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 4,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 40, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 250, "proteinG": 12, "carbsG": 30, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 470, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300041",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 3.9,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 2.4, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 240, "proteinG": 12, "carbsG": 29, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 510, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300044",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 250, "proteinG": 12, "carbsG": 30, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 510, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200480",
+      "name": "Cheeseburger",
+      "aliases": [],
+      "variant": null,
+      "servingG": 111.8,
+      "panel": { "kcal": 300, "proteinG": 15, "carbsG": 31, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 720, "fiberG": 2, "sugarG": 6, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "301578",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 50.7,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 141.7, "proteinG": 5, "carbsG": 27, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 230, "fiberG": 2, "sugarG": 4, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 150, "proteinG": 10, "carbsG": 4, "fatG": 11, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 490, "fiberG": 0, "sugarG": 2, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300038",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 30.6,
+          "isDefault": true,
+          "kcalPublished": 90,
+          "contribution": { "kcal": 93.8, "proteinG": 7, "carbsG": 0, "fatG": 7, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 160, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 200, "proteinG": 8, "carbsG": 31, "fatG": 6, "satFatG": 2.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 560, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.2,
+          "isDefault": true,
+          "kcalPublished": 50,
+          "contribution": { "kcal": 50.1, "proteinG": 3, "carbsG": 1, "fatG": 4, "satFatG": 2.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 210, "fiberG": 1, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 250, "proteinG": 12, "carbsG": 30, "fatG": 9, "satFatG": 3.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 510, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300037",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.8,
+          "isDefault": true,
+          "kcalPublished": 10,
+          "contribution": { "kcal": 7.8, "proteinG": 0, "carbsG": 2, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 80, "fiberG": 1, "sugarG": 2, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 290, "proteinG": 15, "carbsG": 29, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 640, "fiberG": 1, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 4,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 50, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 300, "proteinG": 15, "carbsG": 31, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 670, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300041",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 3.9,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 2.4, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 1, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 290, "proteinG": 15, "carbsG": 31, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 720, "fiberG": 1, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300044",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 10, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 300, "proteinG": 15, "carbsG": 31, "fatG": 13, "satFatG": 6, "transFatG": null, "cholesterolMg": null, "sodiumMg": 710, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        }
+      ]
+    },
+    {
+      "key": "200491",
+      "name": "McDouble",
+      "aliases": [],
+      "variant": null,
+      "servingG": 150.3,
+      "panel": { "kcal": 390, "proteinG": 22, "carbsG": 32, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 920, "fiberG": 2, "sugarG": 6, "addedSugarG": null },
+      "sourceId": "dnaapp",
+      "parts": [
+        {
+          "componentKey": "300038",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 61.2,
+          "isDefault": true,
+          "kcalPublished": 190,
+          "contribution": { "kcal": 187.6, "proteinG": 14, "carbsG": 0, "fatG": 14, "satFatG": 6.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 320, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 210, "proteinG": 8, "carbsG": 32, "fatG": 6, "satFatG": 2.5, "transFatG": null, "cholesterolMg": null, "sodiumMg": 600, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301578",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 50.7,
+          "isDefault": true,
+          "kcalPublished": 140,
+          "contribution": { "kcal": 141.7, "proteinG": 5, "carbsG": 27, "fatG": 2, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 230, "fiberG": 1, "sugarG": 4, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 250, "proteinG": 17, "carbsG": 5, "fatG": 18, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 690, "fiberG": 1, "sugarG": 2, "addedSugarG": null }
+        },
+        {
+          "componentKey": "301518",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 14.2,
+          "isDefault": true,
+          "kcalPublished": 50,
+          "contribution": { "kcal": 50.1, "proteinG": 2, "carbsG": 1, "fatG": 4, "satFatG": 2, "transFatG": null, "cholesterolMg": null, "sodiumMg": 210, "fiberG": 1, "sugarG": 1, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 340, "proteinG": 20, "carbsG": 31, "fatG": 16, "satFatG": 7, "transFatG": null, "cholesterolMg": null, "sodiumMg": 710, "fiberG": 1, "sugarG": 5, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300042",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 8,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.6, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 90, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 22, "carbsG": 32, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 830, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300041",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.9,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 5, "proteinG": 0, "carbsG": 1, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 0, "fiberG": 1, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 22, "carbsG": 31, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 920, "fiberG": 1, "sugarG": 6, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300037",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 7.8,
+          "isDefault": true,
+          "kcalPublished": 10,
+          "contribution": { "kcal": 7.8, "proteinG": 0, "carbsG": 2, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 80, "fiberG": 0, "sugarG": 2, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 22, "carbsG": 30, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 840, "fiberG": 2, "sugarG": 4, "addedSugarG": null }
+        },
+        {
+          "componentKey": "300044",
+          "portionLabel": null,
+          "quantity": null,
+          "grams": 0.5,
+          "isDefault": true,
+          "kcalPublished": 0,
+          "contribution": { "kcal": 0.3, "proteinG": 0, "carbsG": 0, "fatG": 0, "satFatG": 0, "transFatG": null, "cholesterolMg": null, "sodiumMg": 10, "fiberG": 0, "sugarG": 0, "addedSugarG": null },
+          "contributionBasis": "kcal-per-100g-x-grams; macros leave-one-out",
+          "without": { "kcal": 390, "proteinG": 22, "carbsG": 32, "fatG": 20, "satFatG": 9, "transFatG": null, "cholesterolMg": null, "sodiumMg": 910, "fiberG": 2, "sugarG": 6, "addedSugarG": null }
+        }
+      ]
+    }
+  ],
+  "spotChecks": [
+    {
+      "id": "mcchicken-no-mayo",
+      "itemKey": "200438",
+      "removeComponentKeys": ["300430"],
+      "addParts": [],
+      "observed": { "kcal": 290, "proteinG": 14, "carbsG": 37, "fatG": 10, "satFatG": null, "transFatG": null, "cholesterolMg": null, "sodiumMg": null, "fiberG": null, "sugarG": null, "addedSugarG": null },
+      "observedAt": "2026-11-14",
+      "where": "mcdonalds.com nutrition calculator, Mayonnaise unticked"
+    },
+    {
+      "id": "big-mac-no-sauce",
+      "itemKey": "200463",
+      "removeComponentKeys": ["301554"],
+      "addParts": [],
+      "observed": { "kcal": 440, "proteinG": 24, "carbsG": 41, "fatG": 20, "satFatG": null, "transFatG": null, "cholesterolMg": null, "sodiumMg": 930, "fiberG": null, "sugarG": null, "addedSugarG": null },
+      "observedAt": "2026-11-14",
+      "where": "mcdonalds.com nutrition calculator, Big Mac Sauce unticked"
+    },
+    {
+      "id": "qpc-no-cheese",
+      "itemKey": "200466",
+      "removeComponentKeys": ["301518"],
+      "addParts": [],
+      "observed": { "kcal": 420, "proteinG": null, "carbsG": null, "fatG": null, "satFatG": null, "transFatG": null, "cholesterolMg": null, "sodiumMg": null, "fiberG": null, "sugarG": null, "addedSugarG": null },
+      "observedAt": "2026-11-14",
+      "where": "mcdonalds.com nutrition calculator, American Cheese unticked"
+    }
+  ]
+}
