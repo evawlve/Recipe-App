@@ -216,10 +216,10 @@ describe('committed menus (chains/menus/*.json)', () => {
 
   it('mcdonalds-us reproduces the three live-calculator builds of 2026-11-14', () => {
     const s = loadSnapshot('mcdonalds-us.json');
-    expect(s.spotChecks.map((sc) => [sc.id, spotCheckKcal(s, sc)])).toEqual([
-      ['mcchicken-no-mayo', 290],
-      ['big-mac-no-sauce', 440],
-      ['qpc-no-cheese', 420],
-    ]);
+    expect(Object.fromEntries(s.spotChecks.map((sc) => [sc.id, spotCheckKcal(s, sc)]))).toEqual({
+      'mcchicken-no-mayo': 290,
+      'big-mac-no-sauce': 440,
+      'qpc-no-cheese': 420,
+    });
   });
 });
