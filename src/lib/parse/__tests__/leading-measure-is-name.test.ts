@@ -71,8 +71,8 @@ describe('#307 controls — byte-identical to the shipped parser', () => {
         ['a pound cake', { qty: 1, unit: 'lb', name: 'cake', unitHint: null }],
         // Count words are out of scope (mass/volume only).
         ['squirt soda', { qty: 1, unit: 'squirt', name: 'soda', unitHint: null }],
-        // Already a wrong parse today, and not this rule's: `quarter` is a fraction word.
-        ['quarter pounder', { qty: 0.25, unit: null, name: 'pounder', unitHint: null }],
+        // Not this rule's: `quarter pounder` is a FRACTION_NAMES name (s461 QP-LEAD, fraction-word-name.test.ts).
+        ['quarter pounder', { qty: 1, unit: null, name: 'quarter pounder', unitHint: null }],
         // `half` is a multiplier, so `pound` is never at [0] and the rule never fires.
         ['half pound cake', { qty: 0.5, unit: 'lb', name: 'cake', unitHint: null }],
         // A quantity precedes, so the rule does not fire. Also a wrong parse today —

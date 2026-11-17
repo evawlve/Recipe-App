@@ -71,7 +71,7 @@
  * 660 kcal, `2x eggs x2` 440 kcal (cold probes, s459 rf-x2). A `<food> x2` name billed ONE portion (`200g chicken
  * x2` 200 g, `a banana x2` 118 g; s459 pd-x2c). Now `dozen eggs x2` = 24 eggs, `⅓ bagel x2` = ⅔ bagel,
  * `a banana x2` = 2 bananas, `at least 2 wings x2` = 4 wings, `200g chicken x2` = 400 g, `2 cups rice x2` = 4 cups.
- * A WRONG head stays wrong ×N (`quarter pounder` parses as ¼ of a `pounder`; that is the head's row, not this one).
+ * The head parses on its own row: `quarter pounder x2` = 2 × `quarter pounder` (a fraction-word name, s461 QP-LEAD).
  *
  * STILL DECLINED: text after the tag (`2 toast x2 w/ butter`, `chicken x2 12 oz`); a fractional or 3-digit tag
  * (`2 eggs x2.5`, `toast x100`); N = 0.
