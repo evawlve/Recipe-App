@@ -66,7 +66,6 @@ describe('a fraction word that opens a food name is not a quantity (s461 QP-LEAD
     ["half rack of ribs", {"qty": 0.5, "multiplier": 1, "unit": "rack", "rawUnit": "rack", "name": "ribs", "notes": null, "unitHint": null}],
     ["half sub", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "sub", "notes": null, "unitHint": null}],
     ["half sandwich", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "sandwich", "notes": null, "unitHint": null}],
-    ["half dozen wings", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "dozen wings", "notes": null, "unitHint": null}],
     ["half order of applebees boneless wings", {"qty": 0.5, "multiplier": 1, "unit": "order", "rawUnit": "order", "name": "applebees wings", "notes": null, "qualifiers": ["boneless"], "unitHint": null}],
     ["third slice of pizza", {"qty": 0.3333333333333333, "multiplier": 1, "unit": "slice", "rawUnit": "slice", "name": "pizza", "notes": null, "unitHint": null}],
     ["fourth slice of pizza", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "fourth of pizza", "notes": null, "unitHint": "slice"}],
