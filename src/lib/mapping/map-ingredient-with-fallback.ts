@@ -12,6 +12,7 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
 import { VOLUME_UNIT_ML, LARGE_VOLUME_UNIT_SPELLINGS, pickVolumeUnits } from '../units/volume-density';
 import { normalizeIngredientName, rewriteRegionalDishWords } from './normalization-rules';
+import { rewriteSpanishStapleNames } from './spanish-staple-names';
 import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
 import {
@@ -722,7 +723,10 @@ async function preflightIngredientLine(
     // input, so query and key move together (playbook §11 class-D defense),
     // and lookupValidatedMappingWithLegacyFallback's legacy-key fallback stops
     // resurrecting `garlic of`-class fork rows on the main path.
-    let baseName = stripPartitiveOfResidue((options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine).trim());
+    // s459 ES-BARE-STAPLE: parsed.name was rewritten above; the segmenter's normalizedForm and the
+    // unparsed line were not, so the Spanish staple names are rewritten on baseName too (the
+    // retrieval query and the cache-key input). Idempotent on an already rewritten name.
+    let baseName = rewriteSpanishStapleNames(stripPartitiveOfResidue((options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine).trim()));
 
     // IDENTITY HINT RESTORATION — the discriminator survives into the cache KEY
     // and was being lost from the search QUERY.

@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger';
 import { detectBrandInQuery } from './brand-detector';
+import { rewriteSpanishStapleNames } from './spanish-staple-names';
 
 export type SynonymRewrite = {
   from: string;
@@ -495,6 +496,13 @@ export function isBrandLedProductName(accentStripped: string): boolean {
 const REGIONAL_WORD = /\b(butty|butties|sarnie|sarnies|cuppas?|bickies|biccies|bikkies|bicky|biccy|bikkie|parmy|parmi|parma)\b/gi;
 
 export function rewriteRegionalDishWords(text: string): string {
+  // s459 ES-BARE-STAPLE: the Spanish staple names ride every seat of this rewrite (preflight
+  // parsed.name, normalizeIngredientName(), the normalize and simplify LLM inputs). Their table,
+  // tiers and measured members are owned by spanish-staple-names.ts; the UK/AU table below is unchanged.
+  return rewriteSpanishStapleNames(rewriteUkAuDishWords(text));
+}
+
+function rewriteUkAuDishWords(text: string): string {
   return text.replace(REGIONAL_WORD, (match: string, word: string, offset: number, whole: string) => {
     const w = word.toLowerCase();
     const before = whole.slice(0, offset).match(/([a-z]+)\W*$/i)?.[1]?.toLowerCase() ?? null;
