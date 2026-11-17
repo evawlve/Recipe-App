@@ -305,7 +305,9 @@ export async function POST(req: NextRequest) {
     // STILL WRITTEN under nosave, on purpose: MappingEventLog (the measurement
     // itself), the FoodMapping usedCount/lastUsedAt bumps on a warm READ, and the
     // upstream mirrors (FatSecretFood, OffFood, AiGeneratedFood, LearnedSynonym) —
-    // caches of other people's data, not rows this request computed.
+    // caches of other people's data, not rows this request computed. AiNormalizeCache is
+    // NOT one of them: it is the model's reading of the line, refused under nosave
+    // (s461; 'aiNormalizeCache' in the policy below).
     // TESTER ALLOWLIST (2026-08-23, plan 11 §4, after H3 #369): a bearer account listed in
     // NOSAVE_TESTER_EMAILS may ask for the write policy too — device sittings must not warm
     // the production cache — and gets NOTHING else: not the rate-limit bypass, not noCache,
@@ -941,7 +943,7 @@ export async function POST(req: NextRequest) {
       return { parsedItems, receipt, free };
     }
 
-    const policy: WritePolicyOptions = { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] };
+    const policy: WritePolicyOptions = { suppress: noSave ? ['aiServing', 'segmentationCache', 'aiNormalizeCache'] : [] };
 
     if (!wantStream) {
       // ONE-SHOT WIRE: the run ends inside this callback, so this is where it settles —

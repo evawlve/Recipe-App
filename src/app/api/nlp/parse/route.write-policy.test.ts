@@ -224,6 +224,8 @@ describe('/api/nlp/parse nosave=1 refuses AI-serving writes', () => {
     expect(receipt.refused).toHaveLength(1);
     expect(receipt.refused[0]).toMatchObject({ kind: 'aiServing', table: 'FdcServing' });
     expect(receipt.refused[0].key).toContain('747997');
+    // The model's reading of the line (AiNormalizeCache) is refused too (s461).
+    expect(receipt.suppress).toEqual(['aiNormalizeCache', 'aiServing', 'segmentationCache']);
   });
 
   // ------------------------------------------------------------------

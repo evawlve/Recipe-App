@@ -23,6 +23,7 @@ import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-r
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 import { ensureFatSecretParentPersisted } from './fatsecret-lane';
+import { isWriteSuppressed, noteRefusedWrite } from '../write-policy';
 
 // Cross-source displacement margin (fs displacement hardening, Jul 2026):
 // how much MORE confident a challenger from a different source family
@@ -1574,6 +1575,14 @@ export async function saveAiNormalizeCache(
 ): Promise<void> {
     try {
         const normalizedKey = computeNormalizedKey(rawLine, opts?.namespace ?? '');
+        // nosave (write-policy 'aiNormalizeCache'): the caller still uses this answer for the
+        // current request; only the row is refused. That covers the update: arm too — it
+        // re-stamps a stale row to RULES_VERSION, which makes it readable by live traffic.
+        if (isWriteSuppressed('aiNormalizeCache')) {
+            noteRefusedWrite('aiNormalizeCache', 'AiNormalizeCache', normalizedKey);
+            logger.info('ai_normalize_cache.save_refused', { normalizedKey });
+            return;
+        }
         await prisma.aiNormalizeCache.upsert({
             where: { normalizedKey },
             create: {
