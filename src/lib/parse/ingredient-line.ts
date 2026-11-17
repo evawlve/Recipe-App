@@ -2,7 +2,7 @@ import { parseQuantityTokens } from './quantity';
 import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE, SPANISH_UNIT_TOKENS } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
-import { expandUnitAbbreviation } from './unit-abbreviations';
+import { expandUnitAbbreviation, expandLeadingAbbreviation } from './unit-abbreviations';
 import { resolveLoosePourMeasures } from './loose-measures';
 import { resolveCountTag, splitTrailingCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
@@ -1105,6 +1105,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
 
   if (mergedTokens.length === 0) return null;
+  expandLeadingAbbreviation(mergedTokens);   // s461 ABBREV: `half a t butter` reads as `half a tsp butter`
 
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
