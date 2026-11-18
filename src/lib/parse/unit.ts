@@ -73,6 +73,12 @@ const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)
  * de leche` and billed 500 g, `dos litros de refresco` 240 g (deploy 46 cold); with it, each reads as its twin `2 liters leche`
  * (2,000 g). It was held out of ES-UNITSET-KILO only while bare `agua` resolved to a 414 kcal/100 g cracker record; #710 made
  * `agua` water. The trailing bottle size stays in the name (`una botella de 1 litro de agua`, `coca cola 2 litros`).
+ * s462 ES-SOBRE: the packet, COUNT unit `packet` (as `packet`). `sobre(s)` was no unit at all: `un sobre de avena` read the whole
+ * line as the name and billed a 156 g / 607 kcal default serving, `un sobre de catsup` 100 g / 112 kcal (deploy 49 cold); with it,
+ * each reads as its twin `1 packet avena` and the packet seats bill it (#711 dose, #717 food cap). `sobre` is also the preposition
+ * `on`: it is a unit only where a unit word can stand (after a count, or leading: `sobre de azúcar`), never mid-line (`huevos
+ * sobre pan tostado`). KNOWN COST: `2 sobres de café` reads `café` = coffee (ES-BARE-STAPLE), so it bills brewed coffee 20 g /
+ * 0 kcal where an instant sachet is ~2 g / 5 kcal, exactly as English `2 packets of coffee` does (PKT-COFFEE).
  */
 export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
   'cucharada', 'cucharadas', 'cucharadita', 'cucharaditas', 'taza', 'tazas', 'mililitro', 'mililitros',
@@ -81,6 +87,7 @@ export const SPANISH_UNIT_TOKENS: ReadonlySet<string> = new Set([
   'gramo', 'gramos', 'gr', 'grs', 'kilogramo', 'kilogramos',
   'kilo', 'kilos', 'libra', 'libras', 'onza', 'onzas',
   'litro', 'litros',
+  'sobre', 'sobres',
 ]);
 
 export function normalizeUnitToken(tok: string): NormalizedUnit {
@@ -194,6 +201,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'lata': 'can', 'latas': 'can',
     'botella': 'bottle', 'botellas': 'bottle',
     'puñado': 'handful', 'puñados': 'handful', 'punado': 'handful', 'punados': 'handful',
+    // s462 ES-SOBRE: the packet (see SPANISH_UNIT_TOKENS). Exact tokens only.
+    'sobre': 'packet', 'sobres': 'packet',
   };
 
   if (countUnits[token]) {
