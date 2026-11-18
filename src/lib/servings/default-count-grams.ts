@@ -42,6 +42,12 @@ interface SeedEntry {
     };
     /** Aliases that should match this food */
     aliases?: string[];
+    /**
+     * Reachable ONLY when the whole name (after EXACT_ONLY_LEAD_RE's produce descriptors) is the key or an
+     * alias: never by the last-two-words / last-word fallbacks, so a flavour or compound product name
+     * (`Cape cod jalapeno`, `Jamón Serrano`, `Activia Prune`, `Sparkling Clementine`) cannot take the piece.
+     */
+    exactOnly?: boolean;
 }
 
 // ============================================================
@@ -70,6 +76,44 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'grapefruit': { grams: 256, confidence: 0.85, sizes: { small: 200, medium: 256, large: 325 }, aliases: ['grapefruits'] },
     'strawberry': { grams: 12, confidence: 0.8, sizes: { small: 7, medium: 12, large: 18 }, aliases: ['strawberries'] },
     'blueberry': { grams: 1.5, confidence: 0.7, aliases: ['blueberries'] },
+
+    // ===== SMALL PRODUCE, PER PIECE (s462 SMALL-PRODUCE-PIECE) =====
+    // Without a row, a counted small fruit or chile found no per-piece weight:
+    // `2 dates` billed the 100 g count floor (308 kcal) and `1 chipotle pepper`
+    // the 164 g BELL pepper through the bare `pepper` alias below. Each weight is
+    // the per-piece row of the generic (brandless, USDA-derived) FatSecret / FDC
+    // record we already hold ('1 date' 8.3 g, '1 pepper' 14 g, '1 sprout' 19 g);
+    // chipotle has no such row and takes the OffFood label median for chipotle
+    // in adobo, `2 peppers (30 g)` (La Costena, La Morena). Specific
+    // `<variety> pepper` keys win over the `pepper` alias for an exact name.
+    //
+    // EXACT-ONLY (s462 rf-produce): each of these words is also a FLAVOUR or a
+    // compound name in the corpus (3,680 records end in one: cheese and chips
+    // `... jalapeno`, `Jamón Serrano` ham, `Activia Prune`, `Sparkling
+    // Clementine`, `Mamoul With Date`). Through the last-word fallback the
+    // replay billed `2 slices jamon serrano` 50 -> 2 g, `1 activia prune` 125
+    // -> 8.4 g and `1 sparkling clementine` 248 -> 74 g, so these rows answer
+    // only a name that IS the produce (getDefaultCountServing()).
+    //
+    // DELIBERATELY ABSENT (measured on the s462 replay, not guessed):
+    //   - apricot, fig, cherry: the parser moves `dried` into qualifiers, so
+    //     `three dried apricots` reaches this table as `apricots` and billed a
+    //     35 g FRESH apricot per piece (24 g -> 105 g on off_0869151200345);
+    //   - raspberry (and cherry again): a flavour word at the end of a RECORD
+    //     name. The ambiguous-unit rung reads the record name, so `1 scoop ghost
+    //     whey` on "Ghost Clear Whey Blue Raspberry" fell from its cached 21.5 g
+    //     scoop to a 1.9 g raspberry (303 organic events).
+    'jalapeno pepper': { grams: 14, confidence: 0.85, exactOnly: true, aliases: ['jalapeno peppers', 'jalapeno', 'jalapenos', 'jalapeño pepper', 'jalapeño peppers', 'jalapeño', 'jalapeños'] },
+    'serrano pepper': { grams: 6.1, confidence: 0.85, exactOnly: true, aliases: ['serrano peppers', 'serrano', 'serranos'] },
+    'habanero pepper': { grams: 4.5, confidence: 0.8, exactOnly: true, aliases: ['habanero peppers', 'habanero', 'habaneros'] },
+    'chipotle pepper': { grams: 15, confidence: 0.8, exactOnly: true, aliases: ['chipotle peppers'] },
+    'date': { grams: 8.3, confidence: 0.85, exactOnly: true, aliases: ['dates'] },
+    'medjool date': { grams: 24, confidence: 0.85, exactOnly: true, aliases: ['medjool dates'] },
+    'prune': { grams: 8.4, confidence: 0.85, exactOnly: true, aliases: ['prunes'] },
+    'lychee': { grams: 9.6, confidence: 0.85, exactOnly: true, aliases: ['lychees'] },
+    'clementine': { grams: 74, confidence: 0.85, exactOnly: true, aliases: ['clementines'] },
+    'tangerine': { grams: 84, confidence: 0.85, exactOnly: true, sizes: { small: 70, medium: 84, large: 98 }, aliases: ['tangerines'] },
+    'brussels sprout': { grams: 19, confidence: 0.85, exactOnly: true, aliases: ['brussels sprouts', 'brussel sprout', 'brussel sprouts'] },
 
     // ===== VEGETABLES =====
     'potato': { grams: 213, confidence: 0.9, sizes: { small: 170, medium: 213, large: 284 }, aliases: ['potatoes'] },
@@ -232,15 +276,36 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'creatine scoop': { grams: 5, confidence: 0.9, aliases: ['scoop creatine'] },
 };
 
-// Build lookup map with aliases
+// Build lookup map with aliases. `exactOnly` rows go to their own map, which
+// only the whole-name lookup reads (exactOnlyKey()).
 const ALIAS_MAP = new Map<string, string>();
+const EXACT_ONLY_ALIAS_MAP = new Map<string, string>();
 for (const [key, value] of Object.entries(COUNT_DEFAULTS)) {
-    ALIAS_MAP.set(key.toLowerCase(), key);
+    const map = value.exactOnly ? EXACT_ONLY_ALIAS_MAP : ALIAS_MAP;
+    map.set(key.toLowerCase(), key);
     if (value.aliases) {
         for (const alias of value.aliases) {
-            ALIAS_MAP.set(alias.toLowerCase(), key);
+            map.set(alias.toLowerCase(), key);
         }
     }
+}
+
+// Leading words that leave the food the same produce piece (`3 pitted dates`,
+// `3 pickled jalapenos`, `a jalapeno pepper`, `organic medjool dates`). `dried`
+// is deliberately absent: a dried chile is not a fresh one's weight.
+const EXACT_ONLY_LEAD_RE = /^(?:(?:a|an|fresh|raw|whole|pitted|pickled|organic|ripe|green|red|roasted|frozen|steamed)\s+)+/;
+
+// The only units an exact-only row answers: a request for PIECES of the produce.
+// `a serving of roasted brussels sprouts` reaches the seed lookup with unit
+// `serving` on the FatSecret record "Roasted Brussels Sprouts" (the ambiguous
+// rung reads the record name) and billed one 19 g sprout for a 112 g serving
+// in the s462 rf-produce replay; a scoop / slice / packet is not a piece either.
+const EXACT_ONLY_UNITS = new Set(['', 'each', 'piece', 'pieces', 'pc', 'pcs', 'whole', 'small', 'medium', 'large', 'mini']);
+
+/** The exact-only seed key for a whole name, or undefined. Never a word match inside a longer name. */
+function exactOnlyKey(nameLower: string): string | undefined {
+    const n = nameLower.replace(/\s+/g, ' ');
+    return EXACT_ONLY_ALIAS_MAP.get(n) ?? EXACT_ONLY_ALIAS_MAP.get(n.replace(EXACT_ONLY_LEAD_RE, ''));
 }
 
 // ============================================================
@@ -290,12 +355,18 @@ export function getDefaultCountServing(
         // handful is many pieces. Same only-exact-"<name> <unit>"-seed
         // contract as container units; the AI estimator handles them instead.
         'handful', 'handfuls', 'bowl', 'bowls', 'plate', 'plates',
+        // Small-amount measures (s462 SMIDGE): a FRACTION of a serving, so a whole-item seed the food NAME
+        // matches must never answer them: `1 smidge of pepper` billed the bell-pepper seed (164 g) on Black
+        // Pepper (418 kcal), `1 smidge of avocado` a whole avocado (201 g); deploy 49 cold. An exact
+        // "<name> <unit>" seed still answers (`butter pat` 5 g); everything else goes to the estimator.
+        'smidge', 'smidges', 'smidgen', 'smidgens', 'dab', 'dabs', 'pat', 'pats', 'squeeze', 'squeezes',
     ]);
     const isContainerUnit = CONTAINER_UNITS.has(unitLower);
 
     // Find the canonical key using combined name + unit first (for specific unit overrides like "garlic salt tbsp")
     let canonicalKey = ALIAS_MAP.get(`${nameLower} ${unitLower}`)
-        || (isContainerUnit ? undefined : ALIAS_MAP.get(nameLower));
+        || (isContainerUnit ? undefined
+            : (ALIAS_MAP.get(nameLower) ?? (EXACT_ONLY_UNITS.has(unitLower) ? exactOnlyKey(nameLower) : undefined)));
 
     // If not found directly, try partial matching
     // IMPORTANT: Try LONGER matches first! "organic grape tomatoes" should match

@@ -3,7 +3,7 @@ import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE, SPANISH_UNIT_TO
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { expandUnitAbbreviation, expandLeadingAbbreviation } from './unit-abbreviations';
-import { resolveLoosePourMeasures } from './loose-measures';
+import { resolveArticleMeasureNouns, resolveLoosePourMeasures } from './loose-measures';
 import { resolveCountTag, splitTrailingCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
@@ -336,6 +336,17 @@ function rewriteSpanishNumeral(mergedTokens: string[], detectedBrand: string | n
     return;
   }
   if (d !== undefined && SPANISH_UNIT_TOKENS.has(mergedTokens[1].toLowerCase()) && !articleNamesOwnMeasure(first, mergedTokens)) { mergedTokens[0] = d; return; }
+  // s462 ES-TEEN-UNIT: every other count readSpanishCount() reads (11-999, `treinta y dos`, `once`, `quince`) directly before a unit
+  // word, so `doce onzas de cerveza` reads as `12 onzas de cerveza`. The noun branch below stopped these at SPANISH_COUNT_STOP_NEXT
+  // (`onza`/`litro`, listed there before they were unit words) or SPANISH_COUNT_EXCLUDED (`once`/`quince` are English words; before a
+  // unit word they are not). NOT a count that opens a detected brand: detectBrandInQuery() reads every `siete <unit> de ...` as Siete.
+  if (d === undefined && !(detectedBrand && foldEs(detectedBrand.trim().split(/\s+/)[0] ?? '') === foldEs(first))) {
+    const r = readSpanishCount(mergedTokens);
+    if (r && r.consumed < mergedTokens.length && SPANISH_UNIT_TOKENS.has(mergedTokens[r.consumed].toLowerCase())) {
+      mergedTokens.splice(0, r.consumed, String(r.qty));
+      return;
+    }
+  }
   rewriteSpanishCountBeforeNoun(mergedTokens, detectedBrand);
 }
 
@@ -924,7 +935,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   }
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line)))));
+  const processedLine = resolveArticleMeasureNouns(resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line))))));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();
