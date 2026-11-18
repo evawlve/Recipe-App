@@ -63,6 +63,7 @@ import { parseQuantityTokens } from '../parse/quantity';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
+import { SPIRIT_WORD_RE } from './filter-candidates';
 
 // ============================================================
 // Local copies of unexported map-ingredient-with-fallback helpers.
@@ -85,6 +86,36 @@ function requestBillsByServing(parsed: ParsedIngredient | null): boolean {
  * replaces a positional pick — see the reasoning there.
  */
 const EXPLICIT_ONE_SERVING_RE = /^\s*1\s+serving\b/i;
+
+/**
+ * A SPIRIT IS ONE POUR, NOT ONE FLUID OUNCE (s461 BARE-SPIRIT-POUR). FatSecret's generic Rum fs_7582, Vodka
+ * fs_7731, Tequila fs_305929, Whiskey fs_7693, Bourbon fs_307205 and Gin (90 Proof) fs_37734 declare
+ * "1 fl oz (no ice)" / "1 fl oz" (28 g) as their default serving, and each carries its own drink beside it:
+ * "1 jigger" / "1 jigger 1.5 fl oz", 42 g (box, read-only, 2026-11-16). A unitless request for a spirit
+ * (`tequila`, `a whiskey`, `1 rum`, `2 tequilas`) counts drinks, so each drink is the record's own pour row.
+ * Generic Gin fs_7581 already declares "1 jigger" and is unchanged.
+ *
+ * All four conditions are properties of the RECORD, never a list of lines:
+ *  - the declared default is a `1 fl oz` row (a brand record declaring "1 serving" / "1 shot" is left alone);
+ *  - the panel is ethanol only: > 150 kcal/100 g, protein 0, fat 0, carbs < 1 g (whiskey carries 0.1), so a
+ *    cocktail, a liqueur or a seltzer never qualifies;
+ *  - the name is a spirit (SPIRIT_WORD_RE, owned by filter-candidates.ts);
+ *  - the record has a `1 jigger` / `1 shot` row (the caller passes `usableServings`, which all carry grams).
+ *    No row, no change: no 42 g is synthesised and a "1 serving" row is not read as a pour.
+ * The caller adds the fifth, about the REQUEST: no unit at all, so `a whiskey` = `1 whiskey` and `2 tequilas` is
+ * two pours. A line with a unit keeps its own path: `a shot of` (#688 made `shot` a count unit, estimated per
+ * drink), `1.5 oz`, `a dash of`, `a bottle of`.
+ */
+const FL_OZ_DEFAULT_RE = /^\s*1\s+fl\.?\s*oz\b/i;
+const SPIRIT_POUR_ROW_RE = /^\s*1\s+(?:jigger|shot)\b/i;
+function spiritPourRow(
+    servings: FsServingView[], declaredDefault: FsServingView | undefined, foodName: string, per100: Macros | null,
+): FsServingView | undefined {
+    if (!declaredDefault || !FL_OZ_DEFAULT_RE.test(declaredDefault.description)) return undefined;
+    if (!per100 || per100.kcal <= 150 || per100.protein !== 0 || per100.fat !== 0 || per100.carbs >= 1) return undefined;
+    if (!SPIRIT_WORD_RE.test(foodName)) return undefined;
+    return servings.find(s => SPIRIT_POUR_ROW_RE.test(s.description));
+}
 
 const WEIGHT_TO_GRAMS: Record<string, number> = {
     'g': 1, 'gram': 1, 'grams': 1,
@@ -1117,8 +1148,15 @@ export async function buildFatSecretResult(
                     : undefined)
                 ?? usableServings.find(s => EXPLICIT_ONE_SERVING_RE.test(s.description))
                 ?? usableServings[0];
-            const defaultServing = declaredDefault && bareServingUsable(declaredDefault)
-                ? declaredDefault
+            const pourRow = !unit ? spiritPourRow(usableServings, declaredDefault, foodName, per100) : undefined;
+            if (pourRow) {
+                logger.info('fs.build_result.spirit_pour_row', {
+                    foodId: candidate.id, from: declaredDefault?.description, to: pourRow.description,
+                });
+            }
+            const pickedDefault = pourRow ?? declaredDefault;
+            const defaultServing = pickedDefault && bareServingUsable(pickedDefault)
+                ? pickedDefault
                 : undefined;
             if (declaredDefault && !defaultServing) {
                 logger.info('fs.build_result.bare_default_serving_out_of_band', {

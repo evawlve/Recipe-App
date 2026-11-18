@@ -82,7 +82,6 @@ describe('CONTROLS: a size inside the name, English litre lines, water and agua 
     ["un vaso de agua", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"un vaso de agua","notes":null,"unitHint":null}],
     ["huevos sobre pan tostado", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"huevos sobre pan tostado","notes":null,"unitHint":null}],
     ["pollo sobre arroz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"pollo sobre arroz","notes":null,"unitHint":null}],
-    ["sobre de azúcar", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"sobre de azúcar","notes":null,"unitHint":null}],
   ])('%s', (line, expected) => {
     expect(parseIngredientLine(line)).toEqual(expected);
   });

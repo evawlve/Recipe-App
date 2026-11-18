@@ -44,8 +44,12 @@
  * The class is sized (s459 rf-staple, 102 Spanish staples): 45 reach retrieval untranslated, and all
  * but the table's members resolve to the right food through a Spanish-labelled US record (`queso`,
  * `jamon`, `helado`, `tocino`, `elote`, ...), so translating them would move right answers. Seen and
- * NOT added: `dulce` (ambiguous: sweet / candy / dulce de leche; today a 1 kg 3,214 kcal record);
- * `ron` (today "Rons" 286 kcal, but English `rum` itself resolves to a rum cake, 398 kcal: not better).
+ * NOT added: `ron` (today "Rons" 286 kcal, but English `rum` itself resolves to a rum cake, 398 kcal: not better).
+ * s462 STAPLE2: bare `dulce` is candy (Diego's ruling 2026-11-17; it was "seen and not added" as ambiguous) and `chocolate caliente`
+ * is hot chocolate. Deploy 49 cold: `dulce` / `un dulce` -> OFF "n'dulce" 1,000 g / 3,214 kcal, `2 dulces` -> "Dulces Enchilados"
+ * 227 g / 907 kcal, `chocolate caliente` -> a "Chocolate Caliente Mexicano" mix whose density bills `una taza de chocolate caliente`
+ * at 559 kcal. Whole names only, so `dulce de leche`, `pan dulce`, `papa dulce` and `chocolate caliente con malvaviscos` keep their
+ * names; no member detects a brand (detectBrandInQuery() on each), so the phrase tier's mask is not needed.
  */
 
 /** Whole-name table: folded lowercase Spanish name -> English name. */
@@ -64,6 +68,10 @@ export const SPANISH_STAPLE_WHOLE_NAMES: Readonly<Record<string, string>> = {
     'pina': 'pineapple',     // FS "Pina Colada" 133 g / 230 kcal
     'papa': 'potato',        // OFF "Papas" chips, 100 g / 606 kcal
     'te verde': 'green tea', // OFF "VERDE" 100 g / 21 kcal
+    // s462 STAPLE2 (Diego 2026-11-17: bare `dulce` = candy). Deploy 49 cold, each one's same-named record is another food.
+    'dulce': 'candy',                       // OFF "n'dulce" 1,000 g / 3,214 kcal
+    'dulces': 'candy',                      // OFF "Dulces Enchilados" 227 g / 907 kcal
+    'chocolate caliente': 'hot chocolate',  // OFF "Chocolate Caliente Mexicano" (a mix: a cup bills 559 kcal)
 };
 
 const ARTICLE = '(?:(?:un|una|unos|unas|el|la|los|las)\\s+)?';
