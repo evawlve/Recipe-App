@@ -235,7 +235,8 @@ describe('producer call-site census — the guard against the next silent miss',
     const EXPECTED: Record<string, number> = {
         // 7 -> 8 on 2026-11-12: buildOffResult() label_piece_estimate step (s456 CXL-1)
         // 8 -> 9 on 2026-11-16: buildOffResult() fraction_whole_item step (s461 WHOLE-ONE)
-        getOrCreateAmbiguousServing: 9,
+        // 9 -> 10 on 2026-11-17: buildFatSecretResult() fraction_whole_item step (s462 WHOLE-ONE-FS)
+        getOrCreateAmbiguousServing: 10,
         getOrCreateFdcSizeServings: 3,
         insertFdcAiServing: 1,
         estimateAmbiguousServing: 4,

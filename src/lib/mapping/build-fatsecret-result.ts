@@ -54,6 +54,10 @@ import { volumeToGrams, VOLUME_UNIT_ML } from '../units/volume-density';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
 import { classifyUnit } from './unit-type';
 import { isPreparedDrinkLine, recordCupSizeClass } from './drink-cup-size';
+import {
+    fractionSizeUnit, fractionWholeDecline, fractionWholeFsEnabled, fsFractionOneIsPortion, fsFractionWholeDecline,
+    isFractionOfAnItem, recordIsTheItem, wholeAccepted,
+} from './serving/fraction-whole-item';
 // Leading-quantity parsing for serving labels ("1/2 cup" -> 0.5, "1 1/4 cups"
 // -> 1.25). The ONE owner of that grammar; it has no imports of its own, so
 // there is no cycle risk here. Deliberately NOT a local copy: 40.1% of the
@@ -1277,6 +1281,52 @@ export async function buildFatSecretResult(
         servingDescription = `${grams.toFixed(1)}g`;
         servingTier = 'fs_per100g_fallback';
         pickedServing = null;
+    }
+
+    // A FRACTION OF ONE ITEM, THE FATSECRET TWIN (s462 WHOLE-ONE-FS; the rule and its
+    // predicates: serving/fraction-whole-item.ts, which buildOffResult() also asks).
+    // `half a rotisserie chicken` on fs_2314048 (Wal-Mart, default `3 oz` 84 g) billed
+    // 0.5 x 84 = 42 g. When the line says `half a <item>`, the record is the item, and
+    // the "one" it billed is a portion by FatSecret's label convention (no serving, a bare
+    // mass, or `1 serving (N g)`: fsFractionOneIsPortion()), bill qty x the item's `whole`
+    // weight, with the OFF rule's class guards. A branded `1 serving` is the menu item and
+    // keeps today's bill; so does every label naming the item, a size or a piece. r2 adds the
+    // FatSecret half's own guards (fsFractionWholeDecline()): a branded bare mass is a portion of
+    // one item only above 2 oz and up to 4 oz (a slice of deli ham below, a 6 oz acai bowl above),
+    // and a dried form is not the fresh item.
+    // NOT PERSISTED: an `fs_` id has no serving table (hasServingWriteTarget() in
+    // ambiguous-unit-backfill.ts, DNB-1/DNB-2), so the estimate is asked on every request,
+    // exactly as `1/2 whole <item>` on a FatSecret record already is (`count_unit_ai`).
+    // Kill switches: SERVING_FRACTION_WHOLE_FS="0" (this half), SERVING_FRACTION_WHOLE="0" (both).
+    if ((servingTier === 'fs_default_serving' || servingTier === 'fs_per100g_fallback')
+        && !unit && fractionWholeFsEnabled() && isFractionOfAnItem(parsed, rawLine)) {
+        const label = servingTier === 'fs_default_serving' ? (pickedServing?.description ?? null) : null;
+        const oneGrams = servingTier === 'fs_default_serving' && pickedServing?.grams ? pickedServing.grams : 100;
+        if (fsFractionOneIsPortion(label) && recordIsTheItem(foodName, parsed?.name)) {
+            const declined = fsFractionWholeDecline({
+                itemName: parsed?.name, recordName: foodName, brandName, label, oneGrams,
+            }) ?? fractionWholeDecline({
+                itemName: parsed?.name, recordName: foodName, rawLine, per100: per100 ? { ...per100 } : null,
+            });
+            if (declined) {
+                logger.info('fs.build_result.fraction_whole_item', {
+                    foodId: candidate.id, qty, oneGrams, label, declined, taken: false,
+                });
+            } else {
+                const askUnit = fractionSizeUnit(parsed) ?? 'whole';
+                const whole = await getOrCreateAmbiguousServing(candidate.id, foodName, askUnit, brandName);
+                const wholeGrams = (whole.status === 'success' || whole.status === 'cached') ? whole.grams : null;
+                const taken = wholeAccepted(wholeGrams, oneGrams, label);
+                if (taken) {
+                    grams = qty * wholeGrams!;
+                    servingDescription = `${qty} ${askUnit} (${wholeGrams!.toFixed(1)}g each)`;
+                    servingTier = 'fraction_whole_item';
+                }
+                logger.info('fs.build_result.fraction_whole_item', {
+                    foodId: candidate.id, qty, oneGrams, label, askUnit, wholeGrams, status: whole.status, taken,
+                });
+            }
+        }
     }
 
     // Bare-query guard parity (PR D pt3 Lever A, reused generically): the
