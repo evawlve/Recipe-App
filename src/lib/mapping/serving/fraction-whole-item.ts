@@ -157,6 +157,41 @@ export function fractionWholeEnabled(): boolean {
     return process.env.SERVING_FRACTION_WHOLE !== '0';
 }
 
+/**
+ * THE FATSECRET TWIN (s462 WHOLE-ONE-FS): buildFatSecretResult() asks the same rule, behind
+ * its own switch as well as this module's. SERVING_FRACTION_WHOLE_FS="0" turns the FatSecret
+ * half off and leaves the OFF half on; SERVING_FRACTION_WHOLE="0" turns both off.
+ */
+export function fractionWholeFsEnabled(): boolean {
+    return fractionWholeEnabled() && process.env.SERVING_FRACTION_WHOLE_FS !== '0';
+}
+
+/** FatSecret's generic nominal serving states its own weight: `1 serving (85 g)`. */
+const FS_GRAM_SERVING_RE = /^\s*1\s+(?:serving|portion)\s*\(\s*\d+(?:\.\d+)?\s*(?:g|ml)\s*\)\s*$/i;
+
+/**
+ * Predicate 2 for a FATSECRET record (s462 WHOLE-ONE-FS). FatSecret writes its labels by a
+ * convention OFF does not share, so fractionOneShape() is not reused: a BRANDED FatSecret
+ * record's `1 serving` (no stated weight) is the brand's declared serving, which on a menu or
+ * a single-item product IS the item (`Chick-fil-A Chicken Sandwich` `1 serving` 183 g,
+ * `Cheeseburger with Onion` In-N-Out 229 g, `Kale Caesar Salad` Sweetgreen 447 g; s461 pd-whole
+ * r0 billed half a Chick-fil-A sandwich 210 -> 253 kcal by reading it as a portion). Measured
+ * over every FatSecretFood default serving (s462, 2026-11-17): `1 serving` with no weight is
+ * branded on 4,613 of 4,620 records; `1 serving (N g)` is the generic nominal portion. So the
+ * FatSecret "one" is a PORTION only when it is:
+ *   - absent (the per-100 g floor, `fs_per100g_fallback`),
+ *   - a bare mass (`3 oz`, `100 g`, `4.5 oz`: 1,893 defaults), or
+ *   - a `serving` / `portion` that states its own weight (`1 serving (85 g)`).
+ * Every other label (`1 serving`, `1 sandwich`, `1 piece`, `1 medium`, `1/8 pie`, `8 pieces`,
+ * `1 cup`) keeps today's bill.
+ */
+export function fsFractionOneIsPortion(description: string | null | undefined): boolean {
+    if (!description || !description.trim()) return true;
+    const word = extractLabelServingUnit(description);
+    if (word != null && MASS_WORDS.has(word)) return true;
+    return FS_GRAM_SERVING_RE.test(description);
+}
+
 /** Predicate 3: take the whole weight only when it is more than the portion it replaces. */
 export function wholeBeatsPortion(wholeGrams: number | null | undefined, portionGrams: number): boolean {
     return wholeGrams != null && Number.isFinite(wholeGrams) && wholeGrams > portionGrams;
@@ -240,4 +275,54 @@ export function wholeAccepted(
     // label text, so those take the margin too; `1 portion (85 g)` keeps its word and takes none.
     const bareMass = word == null || MASS_WORDS.has(word) || /^\s*1 serving\s*$/i.test(labelDescription);
     return !bareMass || wholeGrams > BARE_MASS_WHOLE_MARGIN * oneGrams;
+}
+
+/**
+ * THE FATSECRET HALF'S OWN GUARDS (s462 WHOLE-ONE-FS r2, pd-wholefs2). buildOffResult() does not ask
+ * these; the OFF half is unchanged. Each is a class with a mechanism, read BEFORE the estimate (a declined
+ * record costs no model call), and every decline keeps today's bill.
+ *   - A BRANDED bare mass is the brand's Nutrition Facts serving, and US serving sizes are set per food
+ *     class. MEASURED (rf-wholefs, 2026-11-17): 1,142 of the 1,893 FatSecret bare-mass defaults are branded.
+ *     Only the band FS_BRANDED_SLICE_LABEL_MAX_GRAMS < label <= FS_BRANDED_PORTION_LABEL_MAX_GRAMS (more than
+ *     2 oz, at most 4 oz: the cooked / raw meat, poultry and fish serving, 85 g / 112 g) is a portion of ONE
+ *     item: a rotisserie chicken, a roast, a ribeye, a chicken breast (378 records at <= 300 kcal/100 g; head
+ *     words steak, breast, fillets, chicken, strips, tenderloins, ribs, tofu, roast). Outside it:
+ *       * 2 oz or less is a SLICE OF A PACKAGE (`branded_slice_label`): deli meats, jerky, cheese, smoked fish,
+ *         jarred peppers (325 records). The `whole` of those is the package or the ham:
+ *         `half an applegate farms natural uncured black forest ham` (`2 oz` 56 g) 28 -> 113-850 g (s462).
+ *       * more than 4 oz is a PACKAGED SERVING (`branded_package_label`): a single-serve bowl, cup, tray or
+ *         prepared dish, whose label is the item itself, or a share of a multi-serving pack the model cannot
+ *         see (111 records: yogurts, salads, soups, bowls, prepared meals). `half a dole acai bowl` (`6 oz`
+ *         170 g = the bowl) 85 -> 150-225 g (model whole 200-450 g; no margin separates it from a ribeye).
+ *   - A DRIED FORM (`dried_form`, any record): the line or the record names a dried / dehydrated form, and the
+ *     word-matched count seed and the model answer the FRESH item: `half a dried apple` on `Dried Apple`
+ *     (`1 serving (22 g)`) 11 -> 91 g from the `apple` seed (182 g). (The OFF half reads the same seed;
+ *     changing it changes OFF bills, so it is a separate row.)
+ */
+export const FS_BRANDED_SLICE_LABEL_MAX_GRAMS = 57;
+export const FS_BRANDED_PORTION_LABEL_MAX_GRAMS = 114;
+const DRIED_FORM_RE = /\b(?:dried|dehydrated|freeze[- ]?dried|sun[- ]?dried|jerky)\b/i;
+
+export type FsFractionWholeDecline = 'branded_slice_label' | 'branded_package_label' | 'dried_form';
+
+/** The words before any `with` / `on` / `from` clause: `Cake with Dried Beans` is not a dried form. */
+function headClause(name: string | null | undefined): string {
+    return (name ?? '').split(/\s(?:with|on|from)\s|\sw\//i)[0];
+}
+
+export function fsFractionWholeDecline(args: {
+    itemName: string | null | undefined;
+    recordName: string | null | undefined;
+    brandName: string | null | undefined;
+    label: string | null | undefined;
+    oneGrams: number;
+}): FsFractionWholeDecline | null {
+    if (DRIED_FORM_RE.test(headClause(args.itemName)) || DRIED_FORM_RE.test(headClause(args.recordName))) return 'dried_form';
+    const branded = !!args.brandName && args.brandName.trim().length > 0;
+    const word = args.label && args.label.trim() ? extractLabelServingUnit(args.label) : null;
+    if (branded && word != null && MASS_WORDS.has(word)) {
+        if (args.oneGrams <= FS_BRANDED_SLICE_LABEL_MAX_GRAMS) return 'branded_slice_label';
+        if (args.oneGrams > FS_BRANDED_PORTION_LABEL_MAX_GRAMS) return 'branded_package_label';
+    }
+    return null;
 }
