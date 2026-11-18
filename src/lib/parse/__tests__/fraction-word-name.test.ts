@@ -62,7 +62,7 @@ describe('a fraction word that opens a food name is not a quantity (s461 QP-LEAD
     ["half cup milk", {"qty": 0.5, "multiplier": 1, "unit": "cup", "rawUnit": "cup", "name": "milk", "notes": null, "unitHint": null}],
     ["three quarters of a cup of milk", {"qty": 0.75, "multiplier": 1, "unit": "cup", "rawUnit": "cup", "name": "milk", "notes": null, "unitHint": null}],
     ["half and half", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "half and half", "notes": null, "unitHint": null}],
-    ["a quarter of a pie", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a quarter of a pie", "notes": null, "unitHint": null}],
+    ["a quarter of a pie", {"qty": 0.25, "multiplier": 1, "unit": null, "rawUnit": null, "name": "pie", "notes": null, "unitHint": null}],   // s463 WORD-FRACTION-COUNT-NOUN
     ["half rack of ribs", {"qty": 0.5, "multiplier": 1, "unit": "rack", "rawUnit": "rack", "name": "ribs", "notes": null, "unitHint": null}],
     ["half sub", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "sub", "notes": null, "unitHint": null}],
     ["half sandwich", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "sandwich", "notes": null, "unitHint": null}],
@@ -88,7 +88,7 @@ describe('a fraction word that opens a food name is not a quantity (s461 QP-LEAD
     ["a quarter pounder with cheese", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a quarter pounder with cheese", "notes": null, "unitHint": null}],
     ["mcdonalds quarter pounder", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "mcdonalds quarter pounder", "notes": null, "unitHint": null}],
     ["half a quarter pounder", {"qty": 0.5, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a quarter pounder", "notes": null, "unitHint": null}],
-    ["a quarter of a quarter pounder", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a quarter of a quarter pounder", "notes": null, "unitHint": null}],
+    ["a quarter of a quarter pounder", {"qty": 0.25, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a quarter pounder", "notes": null, "unitHint": null}],   // s463: a quarter OF a quarter pounder
     ["mcdonalds double quarter pounder with cheese", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "mcdonalds double quarter pounder with cheese", "notes": null, "unitHint": null}],
     ["a half moon cookie", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a half moon cookie", "notes": null, "unitHint": null}],
     ["half-moon cookie", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "half-moon cookie", "notes": null, "unitHint": null}],

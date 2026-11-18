@@ -47,7 +47,7 @@ describe('controls: a size word or a non-measure after the article is untouched'
     ['half an avocado', { qty: 0.5, unit: null, name: 'an avocado' }],
     ['half a medium onion', { qty: 0.5, unit: null, name: 'a onion' }],
     ['half a bagel', { qty: 0.5, unit: null, name: 'a bagel' }],
-    ['a third of a large pizza', { qty: 1, unit: null, name: 'a third of a pizza' }],
+    ['a third of a large pizza', { qty: 1 / 3, unit: 'large', name: 'pizza' }],   // s463 WORD-FRACTION-COUNT-NOUN: as `1/3 large pizza`
   ])('%s', (line, expected) => {
     expect(parsed(line)).toEqual(expected);
   });
