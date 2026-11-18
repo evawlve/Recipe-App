@@ -370,6 +370,58 @@ function siblingLeadingCount(description: string): number {
     return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
+/**
+ * SIBLING-ORDER (s462): the borrow reads at most SIBLING_BORROW_CAP sibling rows, and WHICH rows
+ * is decided here, never by Postgres. The query used to end in `LIMIT 50` with no ORDER BY; its
+ * plan is a parallel seq scan of OffServing under a Gather, so the first 50 rows were whichever
+ * worker answered first. The same request on an unchanged table billed `nutri-grain bar`
+ * 24 / 25 / 28 / 33.5 / 34 / 36 g and a Tesco pizza slice 25 / 31 / 40 / 42.5 / 44 g in six reads
+ * a few seconds apart (s462 pd-sibling). 39 of the 117 (brand, unit) keys that
+ * reached the borrow in the s461 replays and the saved borrows have more than 50 siblings
+ * (largest 234, Kind bars); 78 have 50 or fewer, and for those every row was always read.
+ *
+ * Over the cap, the borrow keeps the rows CLOSEST TO THE RECORD'S OWN kcal/100 g (sibling
+ * rows with no calories last, then OffServing.id), so the 50 are the record's own form: Ghost's
+ * 72 scoop rows mix ~21 g pre-workout scoops (under 75 kcal/100 g) with 32-44 g protein scoops
+ * (312-394 kcal), and `Vegan protein Cinnabon` (375 kcal, label 40 g) borrowed the pre-workout 22 g.
+ * Measured against the full brand median (no cap), this order bills Nutri-Grain 37 g, not 28 g,
+ * and Ghost vegan protein 31.5 g, not 22 g. At or under the cap, or when the record carries no
+ * usable calories, every row is read (the full brand median), exactly as before.
+ * Order-independent: the same rows in any order give the same answer. Pure; exported for tests.
+ */
+export const SIBLING_BORROW_CAP = 50;
+
+export interface SiblingServingRow {
+    id?: number | null;
+    grams: number;
+    description: string;
+    kcal?: number | null;
+}
+
+export function selectSiblingRows<T extends SiblingServingRow>(
+    rows: T[],
+    selfKcalPer100g: number | null | undefined,
+    cap: number = SIBLING_BORROW_CAP,
+): T[] {
+    if (rows.length <= cap) return rows;
+    const self = selfKcalPer100g == null ? NaN : Number(selfKcalPer100g);
+    if (!Number.isFinite(self) || self <= 0) return rows;
+    const distance = (r: T): number => {
+        const k = r.kcal == null ? NaN : Number(r.kcal);
+        return Number.isFinite(k) ? Math.abs(k - self) : Infinity;
+    };
+    const keyed = rows.map(r => ({ r, d: distance(r) }));
+    keyed.sort((a, b) => {
+        if (a.d !== b.d) return a.d < b.d ? -1 : 1;
+        const ia = a.r.id ?? Number.MAX_SAFE_INTEGER;
+        const ib = b.r.id ?? Number.MAX_SAFE_INTEGER;
+        if (ia !== ib) return ia - ib;
+        if (a.r.grams !== b.r.grams) return a.r.grams - b.r.grams;
+        return a.r.description < b.r.description ? -1 : a.r.description > b.r.description ? 1 : 0;
+    });
+    return keyed.slice(0, cap).map(x => x.r);
+}
+
 function median(nums: number[]): number {
     const sorted = [...nums].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
@@ -406,10 +458,19 @@ async function borrowSiblingServing(
     // Genuine servings only (isAiEstimated=false AND source='openfoodfacts') so
     // borrowed rows (source='sibling_borrow') never seed further borrows — that
     // exclusion is what prevents transitive estimate drift.
-    let rows: Array<{ grams: number; description: string }>;
+    // No LIMIT: which rows count is selectSiblingRows()'s decision (SIBLING-ORDER), so the
+    // answer cannot depend on the plan. The seq scan dominates either way (EXPLAIN ANALYZE, s462,
+    // Clif bars and Tesco slices: 155-204 ms with the LIMIT, 172-233 ms without).
+    type SiblingRow = SiblingServingRow & { siblingSelfKcal?: number | null };
+    let rows: SiblingRow[];
     try {
-        rows = await prisma.$queryRaw<Array<{ grams: number; description: string }>>`
-            SELECT s.grams, s.description
+        rows = await prisma.$queryRaw<SiblingRow[]>`
+            SELECT s.id, s.grams, s.description,
+                   (CASE WHEN jsonb_typeof(f."nutrientsPer100g"->'calories') = 'number'
+                         THEN (f."nutrientsPer100g"->>'calories')::float8 END) AS kcal,
+                   (SELECT CASE WHEN jsonb_typeof(o."nutrientsPer100g"->'calories') = 'number'
+                                THEN (o."nutrientsPer100g"->>'calories')::float8 END
+                    FROM "OffFood" o WHERE o.barcode = ${selfBarcode}) AS "siblingSelfKcal"
             FROM "OffServing" s
             JOIN "OffFood" f ON s.barcode = f.barcode
             WHERE lower(f."brandName") = ${brand.toLowerCase()}
@@ -417,7 +478,6 @@ async function borrowSiblingServing(
               AND s.source = 'openfoodfacts'
               AND s.barcode <> ${selfBarcode}
               AND s.description ~* ${'\\m' + unitStem + 's?\\M'}
-            LIMIT 50
         `;
     } catch (e) {
         logger.warn('ambiguous_backfill.sibling_query_failed', {
@@ -426,10 +486,11 @@ async function borrowSiblingServing(
         return null;
     }
     if (!rows.length) return null;
+    const read = selectSiblingRows(rows, rows[0].siblingSelfKcal);
 
     // Per-unit grams = serving grams / leading count ("2 scoops (46g)" → 23g).
     const perUnit: number[] = [];
-    for (const r of rows) {
+    for (const r of read) {
         const count = siblingLeadingCount(r.description);
         const g = r.grams / (count > 0 ? count : 1);
         if (g >= 0.2 && g <= 600) perUnit.push(g);
