@@ -111,6 +111,12 @@ const TARGETS: Array<[string, string]> = [
     ['piña', 'pineapple'],
     ['una papa', 'potato'],
     ['té verde', 'green tea'],
+    // s462 STAPLE2
+    ['dulce', 'candy'],
+    ['un dulce', 'candy'],
+    ['dulces', 'candy'],
+    ['chocolate caliente', 'hot chocolate'],
+    ['un chocolate caliente', 'hot chocolate'],
 ];
 
 // Byte-identical: every one is a real English or Spanish line whose longer name must survive, or a
@@ -121,7 +127,10 @@ const CONTROLS: string[] = [
     'chorizo al vino tinto', 'sal de mar', 'sal y pimienta', 'salsa', 'salt', 'coffee', 'beer', 'croissant',
     'pan', 'un pan', 'pan dulce', 'queso', 'te', 'un te', 'cuernito', 'una corona', 'corona', 'cerveza corona',
     'vinegar', 'salami', 'medium coffee', 'a cuppa',
-    'piña colada', 'papa johns pizza', 'papas fritas', 'papas', 'ron', 'ron zacapa', 'te verde matcha latte', 'dulce',
+    'piña colada', 'papa johns pizza', 'papas fritas', 'papas', 'ron', 'ron zacapa', 'te verde matcha latte',
+    // s462 STAPLE2: a longer name keeps `dulce` / `chocolate caliente`, and bare `chocolate` is not hot chocolate.
+    'dulce de leche', 'una cucharada de dulce de leche', 'papa dulce', 'agua dulce', 'un dulce de tamarindo', 'chocolate',
+    'chocolate caliente con malvaviscos', 'leche con chocolate caliente', 'candy', 'hot chocolate',
 ];
 
 describe('rewriteSpanishStapleNames()', () => {
@@ -148,6 +157,9 @@ describe('rewriteSpanishStapleNames()', () => {
 
 describe('detectBrandInQuery(): `luna` inside a staple phrase is not the Luna Bar brand', () => {
     it.each(['media luna', 'una media luna', 'media luna de chocolate', 'Media Luna con jamon y queso'])('%s: no brand', (line) => {
+        expect(detectBrandInQuery(line)).toEqual({ isBranded: false, matchedBrand: null });
+    });
+    it.each(['dulce', 'un dulce', '2 dulces', 'chocolate caliente', 'una taza de chocolate caliente'])('s462 %s: no brand, so no mask', (line) => {
         expect(detectBrandInQuery(line)).toEqual({ isBranded: false, matchedBrand: null });
     });
     it.each(['luna', 'luna bar', '1 luna bar chocolate', 'luna protein bar'])('%s: still the luna brand', (line) => {
@@ -184,6 +196,8 @@ describe('the mapper retrieves the English name (parsed.name, baseName, the norm
         ['cafe', 'coffee'],
         ['una cerveza', 'beer'],
         ['vino tinto', 'red wine'],
+        ['un dulce', 'candy'],
+        ['chocolate caliente', 'hot chocolate'],
     ])('solo line %s: every retrieval query, parsed.name and the normalize input read %s', async (line, english) => {
         await mapIngredientWithFallback(line);
         expect(queries().length).toBeGreaterThan(0);
