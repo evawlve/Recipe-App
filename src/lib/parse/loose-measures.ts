@@ -107,6 +107,37 @@ export function isPourOntoSecondFood(text: string): boolean {
   return !!m && POUR_VEHICLE_RX.test(text.slice(m[0].length));
 }
 
+// s462 SMIDGE: ARTICLE-LED MEASURE NOUNS. The digit twin `1 dollop of sour cream` already reads unit `dollop` (the unknown-unit
+// partitive path) and the serving layer estimates it per food (`count_unit_ai`, isEstimableUnknownUnit). `a dollop of sour cream`
+// did not: the article path is gated on normalizeUnitToken() (leadingArticlePrecedesUnit() in ingredient-line.ts) and these words
+// are not units there, so the whole phrase stayed the name, the measure word was lost downstream, and the bare cascade billed a
+// whole serving or package (`a smidge of tamarind chutney` 226.8 g / 529 kcal package_count_own, its twin `1 smidge of` 3 g
+// count_unit_ai; deploy 49 cold). The rewrite turns a LEADING `a|an <word> of <food>` into that digit twin, so the two lines parse
+// identically. It adds NO gram number: the per-food estimate stays the serving layer's.
+// Words: the measures that mean LESS than a serving -- smidge, smidgen, dab, pat, squeeze -- where the bare cascade's full serving is
+// wrong by construction. HELD (not here): dollop, spoonful, knob, smear, swirl mean about a tablespoon, the bare serving is usually
+// already that, and the per-food estimate only redraws it (pd-smidge mrep: 4 of 14 such organic lines read worse on one draw);
+// sprinkle, because buildFdcResult() bills a parsed `sprinkle` at FDC_MICRO_VOLUME_GRAMS' spice constant (0.2 g of parmesan).
+// NOT pinch/dash/squirt/scoop/handful (already units). Singular only: `a dabs of` is not English.
+// DECLINES a rest that continues past the food (`on`/`onto`/`over`/`in`/`into`/`with`/`w/`/`and`/`for`/`plus`/`&`/`+`/a comma or
+// semicolon): the whole line then names two foods or a composite, and the parsed name would carry the second one (with spoonful in
+// the list, `a spoonful of jam on toast` -> `jam on toast` -> Zwieback Toast, pd-smidge mrep S14; `a pat of butter w/ toast` -> French
+// Toast with Butter and `... for my toast` -> Nuts for butter, rf-smidge mrep B01/B02). A declined line keeps today's parse exactly.
+// The route's segmenter splits a line on `,` `;` `+` `&` `and` `with` `plus` first, so each of those segments still rewrites.
+const ARTICLE_MEASURE_RX = new RegExp(
+  '^(\\s*)(?:a|an)\\s+(smidge|smidgen|dab|pat|squeeze)\\s+of\\s+(?=[\\p{L}\\d])',
+  'iu',
+);
+const ARTICLE_MEASURE_CLAUSE_RX = /[,;]|\sw\/|\s(?:on|onto|over|in|into|with|and|for|plus|&|\+)\s/i;
+
+export function resolveArticleMeasureNouns(line: string): string {
+  const m = ARTICLE_MEASURE_RX.exec(line);
+  if (!m) return line;
+  const rest = line.slice(m[0].length);
+  if (ARTICLE_MEASURE_CLAUSE_RX.test(` ${rest} `)) return line;
+  return `${m[1]}1 ${m[2].toLowerCase()} of ${rest}`;
+}
+
 function splitWithLead(text: string): LeadingPour | null {
   const m = POUR_RX.exec(text);
   if (!m) return null;

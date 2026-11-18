@@ -290,6 +290,11 @@ export function getDefaultCountServing(
         // handful is many pieces. Same only-exact-"<name> <unit>"-seed
         // contract as container units; the AI estimator handles them instead.
         'handful', 'handfuls', 'bowl', 'bowls', 'plate', 'plates',
+        // Small-amount measures (s462 SMIDGE): a FRACTION of a serving, so a whole-item seed the food NAME
+        // matches must never answer them: `1 smidge of pepper` billed the bell-pepper seed (164 g) on Black
+        // Pepper (418 kcal), `1 smidge of avocado` a whole avocado (201 g); deploy 49 cold. An exact
+        // "<name> <unit>" seed still answers (`butter pat` 5 g); everything else goes to the estimator.
+        'smidge', 'smidges', 'smidgen', 'smidgens', 'dab', 'dabs', 'pat', 'pats', 'squeeze', 'squeezes',
     ]);
     const isContainerUnit = CONTAINER_UNITS.has(unitLower);
 
