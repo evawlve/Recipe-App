@@ -3,7 +3,7 @@ import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE, SPANISH_UNIT_TO
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { expandUnitAbbreviation, expandLeadingAbbreviation } from './unit-abbreviations';
-import { resolveLoosePourMeasures } from './loose-measures';
+import { resolveArticleMeasureNouns, resolveLoosePourMeasures } from './loose-measures';
 import { resolveCountTag, splitTrailingCountTag } from './count-tag';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
@@ -935,7 +935,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   }
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line)))));
+  const processedLine = resolveArticleMeasureNouns(resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(resolveCountTag(stripClockTime(line))))));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();
