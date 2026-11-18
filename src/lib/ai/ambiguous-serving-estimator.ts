@@ -571,6 +571,8 @@ export async function estimateAmbiguousServing(
     }
 
     const prompt = buildPrompt(request);
+    // Asked alongside the weight, not after it, so a `whole` costs no extra latency (it never throws).
+    const yieldAnswer = asksEdibleYield(unit) ? estimateEdibleYield({ foodName, brandName }) : null;
 
     try {
         const result = await callStructuredLlm({
@@ -630,6 +632,22 @@ export async function estimateAmbiguousServing(
             clampedGrams = minGrams;
         }
 
+        // A `whole` answer is the item as sold; the panel it bills is the edible part (edibleYield()).
+        if (yieldAnswer) {
+            const y = await yieldAnswer;
+            if (y && y.fraction < 1 && clampedGrams <= EDIBLE_YIELD_MAX_AS_SOLD_GRAMS) {
+                logger.info('ambiguous_estimation.edible_yield', {
+                    foodName, unit, asSoldGrams: clampedGrams, part: y.part, fraction: y.fraction,
+                });
+                return {
+                    status: 'success',
+                    estimatedGrams: Math.round(clampedGrams * y.fraction * 10) / 10,
+                    confidence,
+                    reasoning: `[edible ${y.part} x${y.fraction}] ${reasoning ?? ''}`,
+                };
+            }
+        }
+
         return {
             status: 'success',
             estimatedGrams: clampedGrams,
@@ -638,6 +656,123 @@ export async function estimateAmbiguousServing(
         };
     } catch (error) {
         return { status: 'error', error: (error as Error).message };
+    }
+}
+
+/**
+ * A WHOLE ITEM IS BILLED BY ITS EDIBLE WEIGHT (s463 WHOLE-ITEM-EDIBLE-WEIGHT). Every caller of a `whole`
+ * estimate (`1 whole <item>`, `1/2 whole <item>`, the fraction rule's `half a <item>`: fraction-whole-item.ts)
+ * bills grams x the record's per-100 g panel, and that panel is the EDIBLE part (meat and skin, flesh). The
+ * other rungs of getOrCreateAmbiguousServing() already answer edible weights (the count seeds are USDA edible
+ * portions: `banana` 118 g peeled, `avocado` 201 g without skin and seed, `mango` 336 g; the FDC rung reads SR
+ * household weights), and returns before this point. The model rung alone answers the item AS SOLD: MEASURED
+ * (deploy 51, cold) `half a rotisserie chicken` on fs_2314048 (Wal-Mart, meat-and-skin panel 298 kcal/100 g)
+ * billed 450-600 g / 1,339-1,786 kcal from a 900-1,200 g whole bird.
+ *
+ * So after the model answers a `whole`, a SECOND, narrow question asks what part of the item is not eaten and
+ * what share is (EDIBLE_YIELD_SCHEMA), and the as-sold answer is scaled by that share. The first question is
+ * byte-identical to before, on purpose: s463 pd-edible rewrote it twice and both rewrites moved foods with
+ * nothing inedible (asked "the edible weight", `Mom's Meatloaf` 900 -> 450 g "cooking loss"; asked "as sold
+ * + edible", `Boneless Skinless Chicken Breast` 170 -> 450 g, a package), because gpt-4o-mini re-reads the
+ * whole question. The yield question carries USDA reference shares (a whole roasted bird ~0.6, ribs ~0.5,
+ * a bone-in steak ~0.85, melon ~0.5, corn on the cob ~0.45: buildEdibleYieldPrompt()); without them the model
+ * answered 0.7-0.85 for every bird (pd-edible r0 H). The share is clamped to EDIBLE_YIELD_BOUNDS for the part the
+ * model names (USDA SR refuse ranges, REASONING); "none" or a failed call keeps the as-sold answer (today's bill).
+ * Cost: one more model call per `whole` estimate the model answers, asked alongside the weight (no added
+ * latency); an off_ answer is saved once, an fs_ record has no serving table so its `whole` is asked per request.
+ * Kill switch: SERVING_WHOLE_EDIBLE="0" skips the second question (no build). Saved `whole` rows keep their answer.
+ *
+ * Two limits keep the bill-side guards reading the weight they were tuned on (s463 rf-edible, MEASURED):
+ *   - an as-sold answer over EDIBLE_YIELD_MAX_AS_SOLD_GRAMS keeps it: FRACTION_WHOLE_MAX_GRAMS (fraction-whole-item.ts)
+ *     declines "a roast, a holiday bird" and WHOLE_SAVE_MAX_GRAMS (ambiguous-unit-backfill.ts) refuses the save by that
+ *     weight; scaled first, `Whole Roasted Turkey` 3,000 g became 1,800 g and slipped under both;
+ *   - a share above EDIBLE_YIELD_MAX_SHARE is not applied: the 0.85 class (steaks, chops, a bone-in ham) is the one
+ *     where bone-in or boneless cannot be read from the name (`Ribeye` drew `bone` 0.85 although the prompt lists it
+ *     as usually boneless), the cut is inside the `whole` estimate's own draw noise, and it moved records across the
+ *     fraction rule's margin (`half a smithfield center cut pork chop` 85 g -> half the 4 oz label, 56 g).
+ */
+export function wholeEdibleEnabled(): boolean {
+    return process.env.SERVING_WHOLE_EDIBLE !== '0';
+}
+
+export function asksEdibleYield(unit: string): boolean {
+    return unit.toLowerCase().trim() === 'whole' && wholeEdibleEnabled();
+}
+
+/** Equal to FRACTION_WHOLE_MAX_GRAMS and WHOLE_SAVE_MAX_GRAMS (pinned in whole-edible-weight.test.ts); not imported, so lib/ai keeps no edge into lib/mapping. */
+export const EDIBLE_YIELD_MAX_AS_SOLD_GRAMS = 2000;
+/** A share above this (less than 20% thrown away) bills the as-sold answer. */
+export const EDIBLE_YIELD_MAX_SHARE = 0.8;
+
+export const INEDIBLE_PARTS = ['none', 'bone', 'shell', 'peel_or_rind', 'pit_or_core', 'cob'] as const;
+export type InediblePart = typeof INEDIBLE_PARTS[number];
+
+/** The edible share each named part allows (REASONING from USDA SR refuse factors); the model's share is clamped into it. */
+export const EDIBLE_YIELD_BOUNDS: Readonly<Record<Exclude<InediblePart, 'none'>, readonly [number, number]>> = {
+    bone: [0.45, 0.85],
+    shell: [0.2, 0.75],
+    peel_or_rind: [0.45, 0.85],
+    pit_or_core: [0.6, 0.9],
+    cob: [0.35, 0.65],
+};
+
+export const EDIBLE_YIELD_SCHEMA = {
+    name: 'edible_yield',
+    schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+            inediblePart: { type: 'string', enum: [...INEDIBLE_PARTS] },
+            edibleFraction: { type: 'number' },
+            reasoning: { type: 'string' },
+        },
+        required: ['inediblePart', 'edibleFraction', 'reasoning'],
+    },
+    strict: true,
+};
+
+const EDIBLE_YIELD_SYSTEM_PROMPT = 'You are a nutrition assistant. You say which part of a food, as bought, is not eaten.';
+
+/** The share of one whole item that is eaten, clamped per part; null when nothing is inedible, the clamped share is above EDIBLE_YIELD_MAX_SHARE, the answer is unusable, or the call fails. */
+export function edibleYield(inediblePart: unknown, edibleFraction: unknown): { part: InediblePart; fraction: number } | null {
+    if (typeof inediblePart !== 'string' || inediblePart === 'none' || !(INEDIBLE_PARTS as readonly string[]).includes(inediblePart)) return null;
+    if (typeof edibleFraction !== 'number' || !Number.isFinite(edibleFraction) || edibleFraction <= 0 || edibleFraction >= 1) return null;
+    const [lo, hi] = EDIBLE_YIELD_BOUNDS[inediblePart as Exclude<InediblePart, 'none'>];
+    const fraction = Math.min(hi, Math.max(lo, edibleFraction));
+    return fraction > EDIBLE_YIELD_MAX_SHARE ? null : { part: inediblePart as InediblePart, fraction };
+}
+
+export function buildEdibleYieldPrompt(foodName: string, brandName?: string | null): string {
+    return [
+        `Food: ${foodName}`,
+        brandName ? `Brand: ${brandName}` : 'Brand: Generic',
+        `Question: when 1 whole "${foodName}" is bought, is any part of it NOT eaten?`,
+        `inediblePart: "none" when all of it is eaten: prepared dishes, casseroles, meatloaf, pizza, sandwiches, wraps, bowls,`,
+        `bread and baked goods, boneless meat or fish, fillets, cuts usually sold boneless (ribeye, sirloin, strip or filet steak,`,
+        `chuck or pot roast), peeled or cut produce, drinks. Cooking loss, crust, sauce, fat and`,
+        `skin that is eaten are NOT inedible. Otherwise the main part that is thrown away: "bone" (bone-in meat, poultry or fish),`,
+        `"shell" (shellfish in the shell), "peel_or_rind", "pit_or_core", "cob".`,
+        `edibleFraction: the share of the whole item's weight that is eaten, from 0 to 1 (1 when inediblePart is "none").`,
+        `Typical eaten shares (USDA refuse data): a whole roasted chicken, hen or turkey ~0.6 (meat and skin); bone-in poultry`,
+        `pieces ~0.7; ribs ~0.5; a bone-in steak or chop ~0.85; a ham hock or shank ~0.45; crab or clams in the shell ~0.3;`,
+        `a lobster tail ~0.7; melon or watermelon ~0.5; pineapple ~0.5; papaya ~0.65; banana ~0.65; mango ~0.7; avocado ~0.75;`,
+        `citrus ~0.75; corn on the cob ~0.45; a head of cabbage ~0.8.`,
+    ].join('\n');
+}
+
+async function estimateEdibleYield(req: { foodName: string; brandName?: string | null }): Promise<{ part: InediblePart; fraction: number } | null> {
+    try {
+        const result = await callStructuredLlm({
+            schema: EDIBLE_YIELD_SCHEMA,
+            systemPrompt: EDIBLE_YIELD_SYSTEM_PROMPT,
+            userPrompt: buildEdibleYieldPrompt(req.foodName, req.brandName),
+            purpose: 'ambiguous',
+        });
+        if (result.status === 'error') return null;
+        const c = result.content as Record<string, unknown>;
+        return edibleYield(c.inediblePart, c.edibleFraction);
+    } catch {
+        return null;
     }
 }
 
