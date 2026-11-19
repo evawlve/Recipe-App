@@ -305,6 +305,41 @@ const DRIED_FORM_RE = /\b(?:dried|dehydrated|freeze[- ]?dried|sun[- ]?dried|jerk
 
 export type FsFractionWholeDecline = 'branded_slice_label' | 'branded_package_label' | 'dried_form';
 
+/**
+ * A FISH SOLD AS A FILLET (s463 WHOLE-FS-UNBRANDED-FILLET, pd-fillet). The `whole` of a large fish's NAME is the fish
+ * or a side of it, never one item a person eats a fraction of: replay of the shipped FatSecret rule (deploy 51,
+ * 3 draws, identity pinned) asked `whole` of `Sockeye Salmon` 300-907 g, `Salmon` 200-1,500 g, `Wild Atlantic Salmon`
+ * 900-1,500 g and `Atlantic and Pacific Halibut` 1,500-2,270 g, so `half a halibut` billed 750-1,000 g. The one
+ * that is eaten is a FILLET (or a steak), a unit the estimator already answers per record (`fillet` is an
+ * ambiguous unit), so the fraction asks THAT unit, as fractionSizeUnit() asks `small` / `medium` / `large`.
+ * Same replay with this rule: `half a salmon` 75-85 g, `half a halibut` 204 g (the estimator's FDC rung answers
+ * USDA's `fillet`, 396 g sockeye / 408 g halibut; the model answers 113-200 g for other names).
+ * The class is the record's HEAD word, not a word anywhere in it (`Salmon Burger`, `Tuna Salad` keep `whole`),
+ * plus `Steelhead Trout` (a 2-5 kg sea-run trout whose names end in `trout`: rf-fillet live `half a steelhead trout`
+ * billed 300 g). Fish often served whole are NOT in it: mackerel, pompano, perch, flounder, catfish, other trout and
+ * squid drew a `whole` of 100-500 g in the same replay; sea bass (a whole branzino) 500-900 g. Two shapes keep the
+ * `whole` ask (rf-fillet): a fish sold in a CAN or pouch, whose `whole` is the can (`Canned Tuna` 140 g, `Canned
+ * Salmon` 213 g) and whose `fillet` the model answers below it (60-120 g); and a DISH named `<fish> with ...`, whose
+ * `whole` is the plate. A miss keeps the `whole` ask.
+ */
+const FILLET_FISH_HEADS = new Set([
+    'salmon', 'halibut', 'tuna', 'swordfish', 'cod', 'haddock', 'pollock', 'grouper', 'hake', 'marlin', 'sturgeon',
+    'monkfish', 'steelhead', 'mahi', 'wahoo',
+]);
+const FILLET_FISH_TWO_WORD_HEADS = new Set(['steelhead trout']);
+const CANNED_FISH_RE = /\b(?:canned|can|tinned|pouch)\b/i;
+
+/** The unit a fraction of this FatSecret record asks instead of `whole`: `fillet` for a fillet-fish head, else null. */
+export function fsFractionCutUnit(recordName: string | null | undefined): 'fillet' | null {
+    const name = recordName ?? '';
+    if (headClause(name) !== name || CANNED_FISH_RE.test(name)) return null;
+    const head = headWord(name);
+    if (head == null) return null;
+    const words = name.toLowerCase().split(/[^a-z&]+/).filter(Boolean);
+    const lastTwo = words.length >= 2 ? `${words[words.length - 2]} ${head}` : '';
+    return FILLET_FISH_HEADS.has(head) || FILLET_FISH_TWO_WORD_HEADS.has(lastTwo) ? 'fillet' : null;
+}
+
 /** The words before any `with` / `on` / `from` clause: `Cake with Dried Beans` is not a dried form. */
 function headClause(name: string | null | undefined): string {
     return (name ?? '').split(/\s(?:with|on|from)\s|\sw\//i)[0];
