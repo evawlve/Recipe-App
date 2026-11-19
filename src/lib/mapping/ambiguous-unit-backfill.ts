@@ -363,11 +363,54 @@ function siblingSingularize(w: string): string {
     return s;
 }
 
-function siblingLeadingCount(description: string): number {
-    const m = description.match(/^\s*(\d+(?:\.\d+)?)/);
-    if (!m) return 1;
-    const n = parseFloat(m[1]);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+/**
+ * A measure, not a count: the number in front of one of these words is a weight, a volume, an energy or a length
+ * ("40 g bar", "3.5 inch slice"). "per" joins a number to a unit word without counting it ("510 per container").
+ */
+const SIBLING_MEASURE_WORD_RE = /^(?:g|gr|grs|grm|grms|gram|grams|gramm|kg|mg|mcg|oz|ozs|ounce|ounces|lb|lbs|pound|pounds|ml|mls|l|cl|dl|litre|litres|liter|liters|fl|kcal|cal|cals|calorie|calories|kj|inch|inches|in|cm|mm)$/i;
+const SIBLING_NOT_A_COUNT_WORD_RE = /^per$/i;
+
+/**
+ * A plain number or a bare fraction at the start of `text` ("2", "0.5", ".5", "1/2"); null otherwise.
+ * A MIXED number keeps its whole part ("1 1/6 slice" -> 1), as the first-number read always did: in sibling
+ * descriptions it is mostly OFF's rendering of ONE slice that is a sixth of the item ("1 1/6 slice (140 g)",
+ * "1 1/16 of bottle", "1 1/2 inch slice"), not one and a sixth slices (s463 pd-sibnum: 46 rows, a handful genuine).
+ */
+function siblingLeadingQuantity(text: string): number | null {
+    const m = text.match(/^\s*(?:(\d+)\/(\d+)(?![\d./])|(\d+(?:\.\d+)?|\.\d+))/);
+    if (!m) return null;
+    const n = m[1] != null ? Number(m[1]) / Number(m[2]) : parseFloat(m[3]);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * SIBLING-FIRST-NUMBER (s463): how many units of `unitStem` a sibling's serving description states, so that
+ * per-unit grams = OffServing.grams / count. Order of reading:
+ *   1. the number written against the unit word, at most one word between ("2 bars (80 g)" 2, "40 g (1 BAR)" 1,
+ *      "30 g (about 1 scoop)" 1, "1 oz (28 g) about 2 pieces" 2, "2 large eggs" 2, "150g (1/2 can)" 0.5,
+ *      "40 g (13 -15 CHIPS)" 14 - a range is its midpoint);
+ *   2. no number against the unit word and the description leads with a measure ("31g Slice", "250 ml glass") -> 1;
+ *   3. otherwise the description's leading quantity (siblingLeadingQuantity()), else 1.
+ * This used to be the description's FIRST number, so "40 g (1 BAR)" was forty bars of 1 g, and a Boca patty
+ * borrowed 1 g from five "71 g (1 PATTY)" siblings. Pure; exported for tests.
+ */
+export function siblingUnitCount(description: string, unitStem: string): number {
+    const unit = description.match(new RegExp(`(?<![A-Za-z0-9_])${unitStem}s?(?![A-Za-z0-9_])`, 'i'));
+    if (unit && unit.index != null) {
+        const before = description.slice(0, unit.index);
+        const m = before.match(/(?<![\w./-])(\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?|(?<!\d\s*)\d+\/\d+|\d+(?:\.\d+)?|\.\d+)\s*(?:([a-z]+)\s+)?$/i);
+        const word = m?.[2];
+        if (m && !(word && (SIBLING_MEASURE_WORD_RE.test(word) || SIBLING_NOT_A_COUNT_WORD_RE.test(word)))) {
+            const range = m[1].split('-');
+            const n = range.length === 2
+                ? (parseFloat(range[0]) + parseFloat(range[1])) / 2
+                : siblingLeadingQuantity(m[1]);
+            if (n != null && Number.isFinite(n) && n > 0) return n;
+        }
+    }
+    const lead = description.match(/^\s*(?:\d+(?:\.\d+)?|\.\d+)\s*([a-z]+)/i);
+    if (lead && SIBLING_MEASURE_WORD_RE.test(lead[1])) return 1;
+    return siblingLeadingQuantity(description) ?? 1;
 }
 
 /**
@@ -488,10 +531,10 @@ async function borrowSiblingServing(
     if (!rows.length) return null;
     const read = selectSiblingRows(rows, rows[0].siblingSelfKcal);
 
-    // Per-unit grams = serving grams / leading count ("2 scoops (46g)" → 23g).
+    // Per-unit grams = serving grams / the count stated for the unit ("2 scoops (46g)" → 23g; "40 g (1 BAR)" → 40g).
     const perUnit: number[] = [];
     for (const r of read) {
-        const count = siblingLeadingCount(r.description);
+        const count = siblingUnitCount(r.description, unitStem);
         const g = r.grams / (count > 0 ? count : 1);
         if (g >= 0.2 && g <= 600) perUnit.push(g);
     }
