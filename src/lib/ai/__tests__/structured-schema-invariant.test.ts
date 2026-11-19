@@ -50,6 +50,7 @@ import { RESPONSE_SCHEMA as SERVING_SCHEMA } from '@/lib/ai/serving-estimator';
 import {
     RESPONSE_SCHEMA as AMBIGUOUS_SERVING_SCHEMA,
     PRODUCE_SIZE_RESPONSE_SCHEMA,
+    EDIBLE_YIELD_SCHEMA,
 } from '@/lib/ai/ambiguous-serving-estimator';
 import { NLP_SPLIT_SCHEMA } from '@/lib/nlp/ai-segmenter';
 import { VERDICT_SCHEMA as CACHE_VALIDATOR_SCHEMA } from '@/lib/mapping/cache-validator';
@@ -77,6 +78,7 @@ const ALL_SCHEMAS: StructuredSchema[] = [
     SERVING_SCHEMA,
     AMBIGUOUS_SERVING_SCHEMA,
     PRODUCE_SIZE_RESPONSE_SCHEMA,
+    EDIBLE_YIELD_SCHEMA,
     NLP_SPLIT_SCHEMA,
     CACHE_VALIDATOR_SCHEMA,
 ];
