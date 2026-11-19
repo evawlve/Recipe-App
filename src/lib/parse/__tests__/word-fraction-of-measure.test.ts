@@ -11,6 +11,7 @@
  */
 
 import { parseIngredientLine } from '../ingredient-line';
+import { isFractionOfAnItem } from '../../mapping/serving/fraction-whole-item';
 
 const KEYS = ['qty', 'multiplier', 'unit', 'rawUnit', 'name', 'unitHint', 'qualifiers'] as const;
 function core(line: string) {
@@ -81,7 +82,6 @@ describe('food names that open with a fraction word do not move', () => {
     ['double quarter pounder with cheese', 'double quarter pounder with cheese'],
     ['mcdonalds quarter pounder', 'mcdonalds quarter pounder'],
     ['quarter-pounder with cheese', 'quarter-pounder with cheese'],
-    ['a quarter of a quarter pounder', 'a quarter of a quarter pounder'],
     ['third street bagel', 'third street bagel'],   // s461 QP-LEAD
     ['chicken quarters', 'chicken quarters'],
     ['quarters of an orange', 'quarters of an orange'],
@@ -110,14 +110,84 @@ describe('a bare fraction word before a bare measure is not rewritten (ordinals)
   });
 });
 
-describe('KNOWN GAP, not this row: a fraction of a FOOD keeps its parse', () => {
-  // The rule needs a measure after `of a`; `three quarters of a banana` still reads 3 of the unknown unit `quarters`.
+describe('s463 WORD-FRACTION-COUNT-NOUN: a fraction of a FOOD parses as its digit twin, without the article', () => {
+  // Before: `a third of a burrito` kept qty 1 and its whole text as the name (the whole item: `a third of a chipotle carnitas
+  // burrito` 455 g, cold, deploy 51), and `three quarters of a banana` read 3 of the unknown unit `quarters` (354 g).
+  // The twin drops `of a|an` (s463 rf-wordfrac): the name, the query and the cache key are the food's own (`burrito`), not
+  // the article key `a burrito`; a size word is then the unit (`1/3 large pizza`), as on the digit line.
+  test.each([
+    ['a third of a chipotle carnitas burrito', '1/3 chipotle carnitas burrito'],
+    ['a third of a burrito', '1/3 burrito'],
+    ['a quarter of a burrito', '1/4 burrito'],
+    ['two thirds of a burrito', '2/3 burrito'],
+    ['three quarters of a burrito', '3/4 burrito'],
+    ['three-quarters of a burrito', '3/4 burrito'],
+    ['a half of a burrito', '1/2 burrito'],
+    ['a fourth of a burrito', '1/4 burrito'],
+    ['one fourth of a pizza', '1/4 pizza'],
+    ['one third of a burrito', '1/3 burrito'],
+    ['a quarter of an avocado', '1/4 avocado'],
+    ['three quarters of a banana', '3/4 banana'],
+    ['three quarters of a medium banana', '3/4 medium banana'],
+    ['a third of a large pizza', '1/3 large pizza'],
+    ['a quarter of a costco rotisserie chicken', '1/4 costco rotisserie chicken'],
+    ["a quarter of a marie callender's pumpkin pie", "1/4 marie callender's pumpkin pie"],
+    ['a quarter of a quarter pounder', '1/4 a quarter pounder'],
+    ['two halves of a bagel', '2/2 bagel'],
+    ['A Third of a Burrito', '1/3 Burrito'],
+    ['about a third of a burrito', 'about 1/3 burrito'],
+    // Spanish: `tercio(s)` and `tres cuartos` + `de` + a food word (an article after `de` goes too)
+    ['un tercio de burrito', '1/3 burrito'],
+    ['dos tercios de burrito', '2/3 burrito'],
+    ['tres cuartos de pizza', '3/4 pizza'],
+    ['un tercio de una pizza', '1/3 pizza'],
+  ])('%s  ==  %s', (spoken, twin) => {
+    expect(core(spoken)).toEqual(core(twin));
+  });
+
+  test('the measured lines bill the fraction, named by the food alone (no article)', () => {
+    expect(core('a third of a chipotle carnitas burrito')).toMatchObject({ qty: 1 / 3, multiplier: 1, unit: null, name: 'chipotle carnitas burrito' });
+    expect(core('three quarters of a banana')).toMatchObject({ qty: 0.75, multiplier: 1, unit: null, name: 'banana' });
+    expect({ ...core('a third of a burrito'), qty: 0.5 }).toEqual(core('1/2 burrito'));
+  });
+
+  test('the English forms reach the fraction-of-one-item serving predicate on the RAW line, as `half a` does', () => {
+    for (const line of ['half a burrito', 'a third of a burrito', 'a quarter of an avocado', 'two thirds of a burrito',
+      'three quarters of a banana', 'a quarter of a costco rotisserie chicken']) {
+      expect([line, isFractionOfAnItem(parseIngredientLine(line), line)]).toEqual([line, true]);
+    }
+  });
+
+  // s463 rf-wordfrac: a quantity right after the article keeps it (`2/3 1/2` would read as ONE number, 2.5), and the dozen
+  // read runs again on the result (rewriteDozenCount() ran before this rule).
   test.each<[string, number, string | null, string]>([
-    ['three quarters of a banana', 3, 'quarters', 'a banana'],
-    ['three quarters of a medium banana', 3, 'quarters', 'a banana'],
-    ['a quarter of a pizza', 1, null, 'a quarter of a pizza'],
-    ['a third of a large pizza', 1, null, 'a third of a pizza'],
-    ['two halves of a bagel', 2, 'halves', 'a bagel'],
+    ['two thirds of a 1/2 cup of rice', 2 / 3, null, 'a 1/2 cup of rice'],
+    ['a third of a 12 oz steak', 1 / 3, null, 'a 12 oz steak'],
+    ['a quarter of a half and half', 0.25, null, 'a half and half'],
+    ['a quarter of a dozen eggs', 3, 'egg', 'eggs'],
+    ['three quarters of a dozen donuts', 9, null, 'donuts'],
+  ])('a quantity after the article: %s', (line, qty, unit, name) => {
+    expect(core(line)).toMatchObject({ qty, unit, name });
+  });
+  test('a quarter of a dozen eggs parses as its digit twin', () => {
+    expect(core('a quarter of a dozen eggs')).toEqual(core('1/4 a dozen eggs'));
+  });
+});
+
+describe('s463: shapes that are not a numerator + `of a|an` + a food keep their parse', () => {
+  test.each<[string, number, string | null, string]>([
+    ['third of a bagel', 1 / 3, null, 'of a bagel'],   // no numerator: parseQuantityTokens() already reads 1/3
+    ['quarter of a bagel', 0.25, null, 'of a bagel'],
+    ['quarters of an orange', 1, null, 'quarters of an orange'],
+    ['a quarter of the pizza', 1, null, 'a quarter of the pizza'],   // a definite share: not an item
+    ['a quarter of it', 1, null, 'a quarter of it'],
+    ['a quarter pounder', 1, null, 'a quarter pounder'],
+    ['a half burrito', 1, null, 'a half burrito'],
+    ['un cuarto de pizza', 1, null, 'un cuarto de pizza'],   // a lone `cuarto` is also a dish or a quart
+    ['un cuarto de pollo', 1, null, 'un cuarto de pollo'],
+    ['dos cuartos de pollo', 2, null, 'cuartos de pollo'],
+    ['un cuarto de leche', 1, null, 'un cuarto de leche'],
+    ['un tercio de libra con queso', 1, null, 'un tercio de libra con queso'],   // a unit word after `de` is QTY-34's, not a food
   ])('%s', (line, qty, unit, name) => {
     expect(core(line)).toMatchObject({ qty, unit, name });
   });

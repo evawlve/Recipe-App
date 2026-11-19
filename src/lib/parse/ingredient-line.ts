@@ -502,7 +502,17 @@ function normalizeFractionalMeasure(mergedTokens: string[]): void {
 // cuarto de pollo` has no Spanish unit word after `de`.
 // Singular and plural are not policed (dictation writes `three quarter of a cup`, `tres cuarto de taza`), and neither is
 // a numerator at or above the denominator: the arithmetic stays right (`two halves of a cup` is one cup).
-// NOT this rule: a fraction of a FOOD (`a quarter of a pizza`, `three quarters of a banana`); it keeps its parse.
+// s463 WORD-FRACTION-COUNT-NOUN: a fraction WITH a numerator before `of a|an` + a FOOD (`a third of a burrito`, `three
+// quarters of a banana`, `a quarter of a costco rotisserie chicken`) collapses to its digit twin WITHOUT the article (`1/3
+// burrito`: qty 1/3, name `burrito`), so the retrieval query and the cache key are the food's own and not the article key
+// `a burrito` that `half a burrito` writes (s463 rf-wordfrac: the article lost the canonical warm rows and drew a label-less
+// pizza), and it still reaches fraction-whole-item.ts, whose predicate reads the RAW line (`a third of a`). Before, the line
+// kept qty 1 and its whole text as the name (the whole item: 455 g for `a third of a chipotle carnitas burrito`), or read
+// the numerator as a count of the unit `thirds`/`quarters` (`three quarters of a banana` = 3 bananas, 354 g; cold, deploy 51).
+// The numerator is required (`third of a bagel` already reads 1/3 through parseQuantityTokens()), and so is the INDEFINITE
+// article (`a quarter of the pizza`, `a quarter of it` are shares of a container or a referent, and keep their parse).
+// Spanish: `tercio(s)` and `tres cuartos` + `de` + a food word (`un tercio de burrito`, `tres cuartos de pizza`); a lone
+// `cuarto(s)` is also a dish or a quart (`un cuarto de pollo`, `dos cuartos de pollo`, `un cuarto de leche`) and declines.
 // Runs before rewriteSpanishNumeral(), which would otherwise read `tres cuartos` as the count 3 of `cuartos`.
 // Measurement: s459 pd-qty34 (organic members, the adversarial list, the replay), carried in this PR body.
 const EN_FRACTION_NUMERATORS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3 };
@@ -531,6 +541,14 @@ function rewriteWordFractionOfMeasure(mergedTokens: string[]): void {
       mergedTokens.splice(f, k + 2 - f, `${en.n}/${en.d}`);
     } else if (en.words === 2 && isMeasureToken(mergedTokens[k])) {   // a numerator is required here (ordinal `fourth slice`)
       mergedTokens.splice(f, k - f, `${en.n}/${en.d}`);
+    } else if (en.words === 2 && at(k) === 'of' && LEADING_ARTICLES.has(at(k + 1)) && mergedTokens[k + 2] !== undefined) {
+      // s463 rf-wordfrac: a fraction of a FOOD drops `of a|an` too (`1/3 burrito`), so the name, the retrieval query and the
+      // cache key are the food's own (`burrito`), not the article key `a burrito`; fraction-whole-item.ts reads the RAW line.
+      // A quantity right after the article keeps it (`a third of a 12 oz steak`, `two thirds of a 1/2 cup of rice`, `a
+      // quarter of a quarter pounder`): without it `2/3 1/2` reads as one number.
+      const keepArticle = parseQuantityTokens([at(k + 2)]) !== null;
+      mergedTokens.splice(f, k + (keepArticle ? 1 : 2) - f, `${en.n}/${en.d}`);
+      rewriteDozenCount(mergedTokens);   // it ran before this rule: `a quarter of a dozen eggs` -> `1/4 a dozen eggs` -> `3 eggs`
     }
     return;
   }
@@ -541,6 +559,10 @@ function rewriteWordFractionOfMeasure(mergedTokens: string[]): void {
   if (at(k) === 'de' && SPANISH_UNIT_TOKENS.has(at(k + 1)) && (at(k + 2) === 'de' || at(k + 2) === 'del')
       && mergedTokens[k + 3] !== undefined) {
     mergedTokens.splice(f, k + 1 - f, `${es.n}/${es.d}`);
+  } else if ((es.d === 3 || (es.n === 3 && es.d === 4)) && at(k) === 'de') {   // s463: a fraction of a FOOD
+    const art = at(k + 1) === 'un' || at(k + 1) === 'una' ? 1 : 0;
+    const food = at(k + 1 + art);
+    if (/^\p{L}/u.test(food) && !SPANISH_UNIT_TOKENS.has(food)) mergedTokens.splice(f, k + 1 + art - f, `${es.n}/${es.d}`);
   }
 }
 

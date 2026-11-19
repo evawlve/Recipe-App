@@ -78,7 +78,7 @@ const CONTROLS: Array<[string, unknown]> = [
   ["half a pizza", {"qty":0.5,"multiplier":1,"unit":null,"rawUnit":null,"name":"a pizza","notes":null,"unitHint":null}],
   ["half a cup of milk", {"qty":0.5,"multiplier":1,"unit":"cup","rawUnit":"cup","name":"milk","notes":null,"unitHint":null}],
   ["half an avocado", {"qty":0.5,"multiplier":1,"unit":null,"rawUnit":null,"name":"an avocado","notes":null,"unitHint":null}],
-  ["a quarter of a pie", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"a quarter of a pie","notes":null,"unitHint":null}],
+  ["a quarter of a pie", {"qty":0.25,"multiplier":1,"unit":null,"rawUnit":null,"name":"pie","notes":null,"unitHint":null}],   // s463 WORD-FRACTION-COUNT-NOUN
   ["12 wings", {"qty":12,"multiplier":1,"unit":null,"rawUnit":null,"name":"wings","notes":null,"unitHint":null}],
   ["6 eggs", {"qty":6,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"eggs","notes":null,"unitHint":null}],
   ["doce huevos", {"qty":12,"multiplier":1,"unit":null,"rawUnit":null,"name":"huevos","notes":null,"unitHint":null}],
