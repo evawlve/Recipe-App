@@ -28,7 +28,7 @@ jest.mock('../ambiguous-unit-backfill', () => ({
 import { buildFatSecretResult } from '../build-fatsecret-result';
 import { parseIngredientLine } from '../../parse/ingredient-line';
 import {
-    fsFractionOneIsPortion, fractionWholeFsEnabled, fsFractionWholeDecline,
+    fsFractionCutUnit, fsFractionOneIsPortion, fractionWholeFsEnabled, fsFractionWholeDecline,
 } from '../serving/fraction-whole-item';
 
 function candidate(id: string, name: string, brandName: string | null = null) {
@@ -309,5 +309,77 @@ describe('r2 fsFractionWholeDecline — the branded band', () => {
         ['Brand', null, 100, null],
     ])('brand %p label %p (%p g) -> %p', (brandName, label, oneGrams, want) => {
         expect(fsFractionWholeDecline({ itemName: 'a ham', recordName: 'Ham', brandName, label, oneGrams })).toBe(want);
+    });
+});
+
+describe('s463 — a large fish asks the fillet, not the fish', () => {
+    /** fs_38049's real shape (box, 2026-11-17): the `100 g` panel default is demoted, so `1 oz boneless` 28.35 g bills. */
+    const SOCKEYE = row('38049', 'Sockeye Salmon', null, 168, [
+        { servingId: '37218', description: '1 oz boneless', grams: 28.35 },
+        { servingId: '37219', description: '1/2 fillet', grams: 198 },
+    ]);
+    /** fs_38000 (box): `3 oz` 85 g default; deploy 51 asked `whole` and billed `half a halibut` 750-1,000 g. */
+    const HALIBUT = row('38000', 'Atlantic and Pacific Halibut', null, 110, [
+        { servingId: 's1', description: '3 oz', grams: 85 },
+    ]);
+
+    it('`half a sockeye salmon` asks `fillet` and bills half of it', async () => {
+        // MUTATION: `fractionSizeUnit(parsed) ?? fsFractionCutUnit(foodName) ?? 'whole'` -> `fractionSizeUnit(parsed) ?? 'whole'`.
+        mockGetOrCreateAmbiguousServing.mockResolvedValue({ status: 'success', grams: 170 });
+        const r = await bill('half a sockeye salmon', SOCKEYE);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenCalledWith('fs_38049', 'Sockeye Salmon', 'fillet', null);
+        expect(r!.servingTier).toBe('fraction_whole_item');
+        expect(r!.grams).toBe(85);
+    });
+
+    it('`half a halibut` on a `3 oz` label asks `fillet`; the 1.5x bare-mass margin still applies', async () => {
+        mockGetOrCreateAmbiguousServing.mockResolvedValue({ status: 'success', grams: 200 });
+        const r = await bill('half a halibut', HALIBUT);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenCalledWith('fs_38000', 'Atlantic and Pacific Halibut', 'fillet', null);
+        expect(r!.grams).toBe(100);
+        mockGetOrCreateAmbiguousServing.mockResolvedValue({ status: 'success', grams: 120 });
+        const held = await bill('half a halibut', HALIBUT);
+        expect(held!.servingTier).toBe('fs_default_serving');
+        expect(held!.grams).toBe(42.5);
+    });
+
+    it('a named size still wins: `half a large salmon` asks `large`', async () => {
+        mockGetOrCreateAmbiguousServing.mockResolvedValue({ status: 'success', grams: 300 });
+        await bill('half a large sockeye salmon', SOCKEYE);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenCalledWith('fs_38049', 'Sockeye Salmon', 'large', null);
+    });
+
+    it('a canned fish asks `whole` (the can), a steelhead trout asks `fillet` (rf-fillet)', async () => {
+        // MUTATION: CANNED_FISH_RE.test(name) -> false.
+        const canned = row('2064', 'Canned Salmon', null, 144, [{ servingId: 's1', description: '1 oz', grams: 28.35 }]);
+        mockGetOrCreateAmbiguousServing.mockResolvedValue({ status: 'success', grams: 213 });
+        const r = await bill('half a canned salmon', canned);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenLastCalledWith('fs_2064', 'Canned Salmon', 'whole', null);
+        expect(r!.grams).toBe(106.5);
+        const steelhead = row('21578252', 'Steelhead Trout', null, 133, [{ servingId: 's1', description: '1 serving (85 g)', grams: 85 }]);
+        await bill('half a steelhead trout', steelhead);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenLastCalledWith('fs_21578252', 'Steelhead Trout', 'fillet', null);
+    });
+
+    it('a small fish and a roast keep the `whole` ask', async () => {
+        const trout = row('2093', 'Cooked Trout', null, 197, [{ servingId: 's1', description: '1 serving (85 g)', grams: 85 }]);
+        const roast = row('1502', 'Pork Roast', null, 247, [{ servingId: 's1', description: '1 serving (85 g)', grams: 85 }]);
+        await bill('half a cooked trout', trout);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenLastCalledWith('fs_2093', 'Cooked Trout', 'whole', null);
+        await bill('half a pork roast', roast);
+        expect(mockGetOrCreateAmbiguousServing).toHaveBeenLastCalledWith('fs_1502', 'Pork Roast', 'whole', null);
+    });
+
+    it.each([
+        ['Sockeye Salmon', 'fillet'], ['Salmon', 'fillet'], ['Wild Atlantic Salmon', 'fillet'],
+        ['Atlantic and Pacific Halibut', 'fillet'], ['Tuna', 'fillet'], ['Cod', 'fillet'], ['Haddock', 'fillet'],
+        ['Baked or Broiled Swordfish', 'fillet'], ['Mahi-Mahi', 'fillet'], ['Wild Caught Pollock', 'fillet'],
+        ['Salmon Burger', null], ['Tuna Salad', null], ['Salmon with Rice', null], ['Cooked Trout', null],
+        ['Canned Salmon', null], ['Canned Tuna', null], ['Chunk Light Tuna (Pouch)', null], ['Tuna Steak', null],
+        ['Steelhead Trout', 'fillet'], ['Steelhead', 'fillet'], ['Rainbow Trout', null], ['Cod Liver Oil', null],
+        ['Sardines', null], ['Sea Bass', null], ['Pork Roast', null], ['Chicken', null], [null, null], ['', null],
+    ])('fsFractionCutUnit(%p) -> %p', (name, want) => {
+        // MUTATION: FILLET_FISH_HEADS.has(head) -> false.
+        expect(fsFractionCutUnit(name)).toBe(want);
     });
 });

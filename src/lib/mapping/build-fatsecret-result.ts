@@ -55,7 +55,7 @@ import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-b
 import { classifyUnit } from './unit-type';
 import { isPreparedDrinkLine, recordCupSizeClass } from './drink-cup-size';
 import {
-    fractionSizeUnit, fractionWholeDecline, fractionWholeFsEnabled, fsFractionOneIsPortion, fsFractionWholeDecline,
+    fractionSizeUnit, fractionWholeDecline, fractionWholeFsEnabled, fsFractionCutUnit, fsFractionOneIsPortion, fsFractionWholeDecline,
     isFractionOfAnItem, recordIsTheItem, wholeAccepted,
 } from './serving/fraction-whole-item';
 // Leading-quantity parsing for serving labels ("1/2 cup" -> 0.5, "1 1/4 cups"
@@ -1293,7 +1293,8 @@ export async function buildFatSecretResult(
     // keeps today's bill; so does every label naming the item, a size or a piece. r2 adds the
     // FatSecret half's own guards (fsFractionWholeDecline()): a branded bare mass is a portion of
     // one item only above 2 oz and up to 4 oz (a slice of deli ham below, a 6 oz acai bowl above),
-    // and a dried form is not the fresh item.
+    // and a dried form is not the fresh item. s463 (fsFractionCutUnit()): a large fish's whole is the fish or a side,
+    // so `half a salmon` asks the `fillet`, as `half a small fries` asks `small`.
     // NOT PERSISTED: an `fs_` id has no serving table (hasServingWriteTarget() in
     // ambiguous-unit-backfill.ts, DNB-1/DNB-2), so the estimate is asked on every request,
     // exactly as `1/2 whole <item>` on a FatSecret record already is (`count_unit_ai`).
@@ -1313,7 +1314,7 @@ export async function buildFatSecretResult(
                     foodId: candidate.id, qty, oneGrams, label, declined, taken: false,
                 });
             } else {
-                const askUnit = fractionSizeUnit(parsed) ?? 'whole';
+                const askUnit = fractionSizeUnit(parsed) ?? fsFractionCutUnit(foodName) ?? 'whole';
                 const whole = await getOrCreateAmbiguousServing(candidate.id, foodName, askUnit, brandName);
                 const wholeGrams = (whole.status === 'success' || whole.status === 'cached') ? whole.grams : null;
                 const taken = wholeAccepted(wholeGrams, oneGrams, label);
