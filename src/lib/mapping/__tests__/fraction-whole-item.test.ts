@@ -69,13 +69,13 @@ describe('isFractionOfAnItem — the line asks for a fraction of ONE item', () =
     ])('fires: %s', (line) => {
         expect(isFractionOfAnItem(parseIngredientLine(line), line)).toBe(true);
     });
-    // Today these parse qty 1 (or 3 `quarters`), so the rule cannot see them; QTY-35's
-    // rewrite parses them as the digit twin and the raw line keeps the article.
+    // s463 WORD-FRACTION-COUNT-NOUN (QTY-35): these parsed qty 1 (or 3 `quarters`); the parser now
+    // reads them as the fraction, so the rule sees them on the raw line, as it sees the twin.
     it.each([
         ['a quarter of a pizza', '1/4 pizza'], ['three quarters of a burrito', '3/4 burrito'],
         ['a half of a banana', '1/2 banana'],
     ])('fires on the QTY-35 twin parse: %s', (raw, twin) => {
-        expect(isFractionOfAnItem(parseIngredientLine(raw), raw)).toBe(false);
+        expect(isFractionOfAnItem(parseIngredientLine(raw), raw)).toBe(true);
         expect(isFractionOfAnItem(parseIngredientLine(twin), raw)).toBe(true);
     });
     it.each([
