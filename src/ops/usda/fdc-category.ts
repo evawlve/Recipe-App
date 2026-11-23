@@ -31,3 +31,17 @@ export function buildCategoryMap(rows: unknown[]): Record<string, string> {
     for (const [id, cat] of pairs) out[String(id)] = cat;
     return out;
 }
+
+/**
+ * USDA categories the /api/foods/search produce hoist (rule 1) may lift to the top.
+ * A bagel "includes onion" and covers the token, but USDA files it under Baked Products.
+ */
+export const PRODUCE_HOIST_CATEGORIES: readonly string[] = [
+    'Vegetables and Vegetable Products',
+    'Fruits and Fruit Juices',
+    'Spices and Herbs',
+];
+
+export function isProduceHoistCategory(cat: unknown): boolean {
+    return typeof cat === 'string' && PRODUCE_HOIST_CATEGORIES.includes(cat);
+}

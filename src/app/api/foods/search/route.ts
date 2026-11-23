@@ -281,6 +281,7 @@ export async function GET(req: NextRequest) {
     const runLocalSearch = async () => {
       const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
       const { mapUsdaToCategory } = await import('@/ops/usda/category-map');
+      const { isProduceHoistCategory } = await import('@/ops/usda/fdc-category');
       const { queryTokenCoverage, coverageTokens, findMisspelledTokens } =
         await import('@/lib/search/query-token-coverage');
       const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
@@ -379,8 +380,10 @@ export async function GET(req: NextRequest) {
         //    inside a branded query ("ryse blueberry muffin") can't hoist
         //    unrelated USDA rows above a near-exact branded match
         if (isProduceQuery) {
-          const aFdcMatch = a.source === 'fdc' && relevanceOf(a).coverage >= 1;
-          const bFdcMatch = b.source === 'fdc' && relevanceOf(b).coverage >= 1;
+          const aFdcMatch = a.source === 'fdc' && relevanceOf(a).coverage >= 1 &&
+            isProduceHoistCategory((a.rawData as { foodCategory?: unknown } | undefined)?.foodCategory);
+          const bFdcMatch = b.source === 'fdc' && relevanceOf(b).coverage >= 1 &&
+            isProduceHoistCategory((b.rawData as { foodCategory?: unknown } | undefined)?.foodCategory);
           if (aFdcMatch && !bFdcMatch) return -1;
           if (bFdcMatch && !aFdcMatch) return 1;
         }
