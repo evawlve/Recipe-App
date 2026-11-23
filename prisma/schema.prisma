@@ -340,6 +340,7 @@ model FdcFood {
   nutrientsPer100g Json                        // { kcal, protein, carbs, fat, fiber, sugar, sodium }
   servingSize     Float?
   servingSizeUnit String?
+  foodCategory    String?                      // USDA's own category, e.g. "Vegetables and Vegetable Products"
   syncedAt        DateTime       @default(now())
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
