@@ -1,4 +1,4 @@
-import { fdcCategoryOf, buildCategoryMap } from '../fdc-category';
+import { fdcCategoryOf, buildCategoryMap, isProduceHoistCategory } from '../fdc-category';
 import { buildFdcIndexDoc } from '../../../lib/ops/fdc-index-doc';
 
 describe('fdcCategoryOf', () => {
@@ -40,5 +40,18 @@ describe('buildFdcIndexDoc', () => {
         expect('foodCategory' in d).toBe(false);
         expect(d.fdcId).toBe('1');
         expect(d.dataType).toBe('SR Legacy');
+    });
+});
+
+describe('isProduceHoistCategory', () => {
+    it('is true for exactly the three produce categories', () => {
+        expect(isProduceHoistCategory('Vegetables and Vegetable Products')).toBe(true);
+        expect(isProduceHoistCategory('Fruits and Fruit Juices')).toBe(true);
+        expect(isProduceHoistCategory('Spices and Herbs')).toBe(true);
+    });
+    it('is false for everything else', () => {
+        for (const v of ['Baked Products', 'Sweets', 'American Indian/Alaska Native Foods', null, 42, undefined]) {
+            expect(isProduceHoistCategory(v)).toBe(false);
+        }
     });
 });
