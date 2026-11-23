@@ -8,6 +8,7 @@ import {
     isTypesenseAvailable
 } from '../src/lib/search/typesense-client';
 import { buildOffIndexDoc, OffIndexRow } from '../src/lib/ops/off-index-doc';
+import { buildFdcIndexDoc } from '../src/lib/ops/fdc-index-doc';
 
 async function main() {
     console.log('🚀 Starting Typesense database synchronization...');
@@ -35,6 +36,7 @@ async function main() {
             { name: 'description', type: 'string' },
             { name: 'brandName', type: 'string', optional: true },
             { name: 'dataType', type: 'string', optional: true, index: false },
+            { name: 'foodCategory', type: 'string', optional: true, index: false },
             { name: 'nutrientsPer100g', type: 'string', optional: true, index: false },
             { name: 'servings', type: 'string', optional: true, index: false }
         ]
@@ -82,17 +84,7 @@ async function main() {
 
     if (fdcFoods.length > 0) {
         console.log(`Fetched ${fdcFoods.length} FDC foods. Formatting...`);
-        const fdcDocs = fdcFoods.map(f => ({
-            fdcId: String(f.fdcId),
-            description: f.description,
-            brandName: f.brandName || '',
-            dataType: f.dataType || 'Generic',
-            nutrientsPer100g: JSON.stringify(f.nutrientsPer100g),
-            servings: JSON.stringify(f.servings.map(s => ({
-                description: s.description,
-                grams: s.grams
-            })))
-        }));
+        const fdcDocs = fdcFoods.map(f => buildFdcIndexDoc(f));
 
         console.log('Uploading FDC documents to Typesense...');
         const importRes = await importTypesenseDocuments('fdc_foods', fdcDocs);

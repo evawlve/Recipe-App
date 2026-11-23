@@ -5,6 +5,7 @@ import { DEFAULT_SATURATION_FILTERS, UsdaSaturationFilters } from '../src/ops/us
 import { normalizeUsdaRowToPer100g, fdcToUsdaRow, validateMacroSanity, StateTag } from '../src/ops/usda/normalize';
 import { canonicalName, macroFingerprintSaturation, crossDatasetDedupeKey, shouldPreferItem, looseDedupeKey, areMacrosCloseEnough } from '../src/ops/usda/dedupe';
 import { mapUsdaToCategory } from '../src/ops/usda/category-map';
+import { fdcCategoryOf } from '../src/ops/usda/fdc-category';
 import { CATEGORY_DEFAULTS } from '../src/ops/curated/category-defaults';
 import { generateAliasesForFood, canonicalAlias } from '../src/ops/foods/alias-rules';
 
@@ -24,7 +25,7 @@ function matchesFilters(row: RawUsda, f: UsdaSaturationFilters, categoryId?: str
   if (!f.includeDataTypes.some(t => dt.includes(t))) return false;
   
   const name = `${row.description||row.name||''}`.toLowerCase();
-  const cat  = `${row.foodCategory || row.category || ''}`.toLowerCase();
+  const cat  = (fdcCategoryOf(row) ?? `${row.category || ''}`).toLowerCase();
   
   // Basic substring exclusions (restaurant brands, supplements, etc.)
   // These are ALWAYS excluded, no exceptions
@@ -94,7 +95,8 @@ async function upsertFdcFood(
   dataType: string,
   brandName: string | null,
   nutrientsPer100g: any,
-  portions: any[]
+  portions: any[],
+  foodCategory: string | null = null
 ) {
   // Check if exists
   const existing = await prisma.fdcFood.findUnique({
@@ -107,6 +109,7 @@ async function upsertFdcFood(
     brandName,
     dataType,
     nutrientsPer100g,
+    foodCategory,
   };
 
   if (!existing) {
@@ -121,6 +124,8 @@ async function upsertFdcFood(
         brandName,
         dataType,
         nutrientsPer100g,
+        // never overwrite a backfilled category with null (row without a category)
+        ...(foodCategory ? { foodCategory } : {}),
       }
     });
   }
@@ -293,7 +298,8 @@ async function processRows(rows: RawUsda[], opt: Options) {
       row.dataType || 'SR Legacy',
       row.brandOwner || null,
       nutrientsPer100g,
-      row.foodPortions || []
+      row.foodPortions || [],
+      fdcCategoryOf(row)
     );
     created += res.created;
     updated += res.updated;
