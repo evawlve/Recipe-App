@@ -78,3 +78,30 @@ describe('/api/foods/search produce hoist reads the USDA category', () => {
     expect(gatherCandidates.mock.calls[0][3].fdcDepth).toBeUndefined();
   });
 });
+
+describe('/api/foods/search serves USDA names as USDA wrote them', () => {
+  beforeEach(() => jest.clearAllMocks());
+  const call = (s: string) =>
+    GET(
+      new NextRequest(
+        `http://localhost:3000/api/foods/search?s=${s}&local=true&api_key=adminAPI_dev_key_bypass`,
+      ),
+    );
+
+  test('an fdc row serves rawData.description; a fatsecret row keeps its name', async () => {
+    gatherCandidates.mockResolvedValue([
+      { ...row('fdc_1', 'raw onions', 'fdc', 1.5, 'Vegetables and Vegetable Products'), rawData: { description: 'Onions, raw', foodCategory: 'Vegetables and Vegetable Products' } },
+      row('fs_1', 'Onions', 'fatsecret', 1.4),
+    ]);
+    const body = await (await call('onion')).json();
+    const byId = Object.fromEntries(body.data.map((d: any) => [d.id, d.name]));
+    expect(byId.fdc_1).toBe('Onions, raw');
+    expect(byId.fs_1).toBe('Onions');
+  });
+
+  test('an fdc row with no rawData.description serves c.name', async () => {
+    gatherCandidates.mockResolvedValue([row('fdc_2', 'raw onions', 'fdc', 1.5)]);
+    const body = await (await call('onion')).json();
+    expect(body.data[0].name).toBe('raw onions');
+  });
+});
