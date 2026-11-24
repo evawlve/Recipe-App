@@ -80,6 +80,31 @@ export interface GatherOptions {
      * skipFdc when the seed already covers the FDC keyword sources.
      */
     seedCandidates?: UnifiedCandidate[];
+    /**
+     * When set, the PRIMARY FDC search fetches this many rows (instead of
+     * maxPerSource * 2), orders them by their own priority score with processed
+     * forms (powder, juice, dried, ...) capped, and scores position in THAT
+     * order. Used by the search route for produce queries, where the raw food
+     * can sit far below the first 16 Typesense rows. Absent = unchanged.
+     */
+    fdcDepth?: number;
+}
+
+const FDC_PROCESSED_TOKENS = new Set([
+    'powder', 'juice', 'juices', 'concentrate', 'dehydrated', 'dried', 'paste',
+    'puree', 'flakes', 'nectar', 'jam', 'jelly', 'preserves', 'pickled', 'candied',
+]);
+const FDC_PROCESSED_PRIORITY_CAP = 60;
+
+function fdcTokens(text: string): string[] {
+    return text.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+}
+
+/** Priority used by the fdcDepth ordering: processed forms the query did not ask for are capped. */
+function depthPriority(query: string, description: string, priority: number): number {
+    const queryTokens = new Set(fdcTokens(query));
+    const processed = fdcTokens(description).some(t => FDC_PROCESSED_TOKENS.has(t) && !queryTokens.has(t));
+    return processed ? Math.min(priority, FDC_PROCESSED_PRIORITY_CAP) : priority;
 }
 
 // ============================================================
@@ -218,10 +243,26 @@ function mapFdcHitToCandidate(hit: any, query: string, position: number, targetB
     };
 }
 
-async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string): Promise<UnifiedCandidate[]> {
+async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string, fdcDepth?: number): Promise<UnifiedCandidate[]> {
     try {
         const { searchTypesense } = await import('../search/typesense-client');
-        const hits = await searchTypesense('fdc_foods', query, 'description,brandName', limit * 2);
+        const hits = await searchTypesense('fdc_foods', query, 'description,brandName', fdcDepth ?? limit * 2);
+        if (hits.length > 0 && fdcDepth) {
+            // Depth mode: order by (capped) priority first, then score position in THAT order.
+            const ordered = hits
+                .map((hit: any, fetchIndex: number) => ({
+                    hit,
+                    fetchIndex,
+                    priority: depthPriority(query, hit.description, computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand)),
+                }))
+                .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex));
+            const mappedHits = ordered
+                .map((o, index) => mapFdcHitToCandidate(o.hit, query, index, targetBrand))
+                .slice(0, limit)
+                .map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
+            logger.debug('gather.fdc.typesense_hit', { query, count: mappedHits.length, fdcDepth });
+            return mappedHits;
+        }
         if (hits.length > 0) {
             const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
 
@@ -249,11 +290,22 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
                     mode: 'insensitive'
                 }
             },
-            take: limit * 2, // Fetch more for priority sorting
+            take: fdcDepth ?? limit * 2, // Fetch more for priority sorting
             include: { servings: true }
         });
 
-        const allCandidates = results.map((food, position) => {
+        const depthOrder = fdcDepth
+            ? results
+                .map((food, fetchIndex) => ({
+                    food,
+                    fetchIndex,
+                    priority: depthPriority(query, food.description, computeFdcPriorityScore(query, food.description, food.brandName ?? null, targetBrand)),
+                }))
+                .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex))
+                .map(o => o.food)
+            : results;
+
+        const allCandidates = depthOrder.map((food, position) => {
             const dataType = food.dataType || '';
             const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
             const baseScore = computePositionScore(query, food.description, position, { isHighQualityFdc: isHighQuality });
@@ -311,6 +363,7 @@ export async function gatherCandidates(
         isBrandedQuery = false,
         targetBrand,
         maxPerSource = 8,  // Get top 8 from each source to ensure we find generic names
+        fdcDepth,
     } = options;
 
     // Feature flag: run OFF when explicitly branded OR env flag is set
@@ -330,7 +383,7 @@ export async function gatherCandidates(
 
     // Local FDC search (for generic components)
     if (!skipFdc) {
-        searchPromises.push(searchFdcLocal(primaryQuery, maxPerSource, rawLine, targetBrand));
+        searchPromises.push(searchFdcLocal(primaryQuery, maxPerSource, rawLine, targetBrand, fdcDepth));
         for (const britSyn of britishSynonyms.slice(0, 2)) {
             searchPromises.push(searchFdcLocal(britSyn, 4, rawLine, targetBrand));
         }

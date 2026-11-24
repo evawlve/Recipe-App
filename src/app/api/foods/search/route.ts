@@ -284,7 +284,14 @@ export async function GET(req: NextRequest) {
       const { isProduceHoistCategory } = await import('@/ops/usda/fdc-category');
       const { queryTokenCoverage, coverageTokens, findMisspelledTokens } =
         await import('@/lib/search/query-token-coverage');
-      const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
+      // Produce queries fetch the USDA lane deep (the raw food can sit past the
+      // first 16 rows); only this route passes fdcDepth, so /api/nlp/parse is unaffected.
+      const category = mapUsdaToCategory(q);
+      const isProduceQuery = category === 'fruit' || category === 'veg';
+      const fallbackCandidates = await gatherCandidates(q, null, q, {
+        isBrandedQuery: true,
+        fdcDepth: isProduceQuery ? 100 : undefined,
+      });
 
       // Detect likely typos by using the curated FDC candidates as the
       // dictionary: a fuzzy-eligible query token that no FDC name contains
@@ -307,9 +314,6 @@ export async function GET(req: NextRequest) {
         }
         return false;
       };
-
-      const category = mapUsdaToCategory(q);
-      const isProduceQuery = category === 'fruit' || category === 'veg';
 
       // FDC/fatsecret and OFF scores live on different scales
       // (computePositionScore and the fs lane's positionScore ~0–1.5 vs
