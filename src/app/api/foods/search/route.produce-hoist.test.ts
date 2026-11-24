@@ -62,4 +62,19 @@ describe('/api/foods/search produce hoist reads the USDA category', () => {
     const body = await response.json();
     expect(body.data[0].id).toBe('fdc_171327');
   });
+
+  test('only produce queries pass fdcDepth to the gather', async () => {
+    gatherCandidates.mockResolvedValue([]);
+    const call = (s: string) =>
+      GET(
+        new NextRequest(
+          `http://localhost:3000/api/foods/search?s=${s}&local=true&api_key=adminAPI_dev_key_bypass`,
+        ),
+      );
+    await call('onion');
+    expect(gatherCandidates.mock.calls[0][3].fdcDepth).toBe(100);
+    gatherCandidates.mockClear();
+    await call('chicken%20breast');
+    expect(gatherCandidates.mock.calls[0][3].fdcDepth).toBeUndefined();
+  });
 });
