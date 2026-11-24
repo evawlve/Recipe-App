@@ -28,6 +28,7 @@ import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import { isPourOntoSecondFood, restoreLeadingPour } from '@/lib/parse/loose-measures';
 import { maskKeptDishNames } from '@/lib/nlp/kept-dish-names';
 import { cookingStateFor } from '@/lib/nlp/cooking-state';
+import { displayFdcName } from '@/lib/search/display-fdc-name';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
   MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
@@ -835,7 +836,9 @@ export async function POST(req: NextRequest) {
 
         return {
           rawText,
-          foodName: mapped.foodName,
+          // s465 A3b: a USDA winner is named the way /api/foods/search names it ("Onions, raw"). Wire only:
+          // cookingStateFor(), the MEL, the cache and subtraction keep `mapped.foodName`.
+          foodName: details.source === 'fdc' ? displayFdcName(details.name) : mapped.foodName,
           brandName: mapped.brandName ?? null,
           foodId: mapped.foodId,
           source: standardSource,
