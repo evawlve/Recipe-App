@@ -36,6 +36,9 @@ process.env.DEV_API_KEY = 'test-barcode-key';
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 
+jest.mock('@/lib/db', () => ({
+  prisma: { offFood: { findUnique: jest.fn().mockResolvedValue(null) } },
+}));
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

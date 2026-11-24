@@ -20,11 +20,11 @@ function barcodeForms(code: string): string[] {
  */
 export async function findLocalOffBarcode(
   code: string,
-): Promise<{ barcode: string; nutrientsPer100g: unknown } | null> {
+): Promise<{ barcode: string; nutrientsPer100g: unknown; corruptReason: string | null } | null> {
   for (const barcode of barcodeForms(code)) {
     const row = await prisma.offFood.findUnique({
       where: { barcode },
-      select: { barcode: true, nutrientsPer100g: true },
+      select: { barcode: true, nutrientsPer100g: true, corruptReason: true },
     });
     if (row) return row;
   }
