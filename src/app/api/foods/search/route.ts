@@ -5,6 +5,7 @@ import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
 import { toClientSource, toWireSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
+import { displayFdcName } from '@/lib/search/display-fdc-name';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -499,7 +500,10 @@ export async function GET(req: NextRequest) {
 
         const item: any = {
           id: c.id,
-          name: c.name,
+          name:
+            c.source === 'fdc' && typeof c.rawData?.description === 'string'
+              ? displayFdcName(c.rawData.description)
+              : c.name,
           brand: c.brandName ?? null,
           // Whitelisted, never raw — see src/lib/attribution.ts. Keeps the historical
           // `off`/`usda` spellings this lane has always sent; an unrecognised corpus value
