@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { toClientSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
+import { pickBarcodeAnswer } from '@/lib/barcode/brand-agree';
 import { logger } from '@/lib/logger';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import {
@@ -140,24 +141,43 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // 1b. Our own Open Food Facts mirror, BEFORE OFF's live API. Reached when FatSecret
-      //     has no hit or its hit resolved to nothing. A local read is ~0.05 ms and cannot
-      //     be throttled; the live call is 0.2-4 s and answers null on a 429, which used to
-      //     turn a barcode we hold into a 404. Read-only: it writes nothing under any policy.
-      if (!details) {
-        const local = await findLocalOffBarcode(trimmedCode);
-        if (local) {
-          if (local.nutrientsPer100g === null) {
-            // An existing null-panel row: resolveFoodDetails() would floor its macros to 0.
-            offPanelUnusable = true;
-          } else {
-            const localId = `off_${local.barcode}`;
-            const resolved = await resolveFoodDetails(localId);
-            if (resolved.name) {
-              foodId = localId;
-              details = resolved;
-            }
+      // 1b. Our own Open Food Facts mirror, BEFORE OFF's live API. A local read is ~0.05 ms and
+      //     cannot be throttled; the live call is 0.2-4 s and answers null on a 429, which used
+      //     to turn a barcode we hold into a 404. Read-only: it writes nothing under any policy.
+      //     Since C5a-1 it ALSO runs when FatSecret answered, so the two can be compared: when
+      //     they name different brands the scan serves OUR row and offers FatSecret's as
+      //     `alternate` (pickBarcodeAnswer). A FatSecret hit never reaches the live-OFF leg and
+      //     never sets offPanelUnusable.
+      let offLocal: { foodId: string; details: ResolvedDetails; corrupt: boolean } | null = null;
+      const local = await findLocalOffBarcode(trimmedCode);
+      if (local) {
+        if (local.nutrientsPer100g === null) {
+          // An existing null-panel row: resolveFoodDetails() would floor its macros to 0.
+          if (!details) offPanelUnusable = true;
+        } else {
+          const localId = `off_${local.barcode}`;
+          const resolved = await resolveFoodDetails(localId);
+          if (resolved.name) {
+            offLocal = { foodId: localId, details: resolved, corrupt: local.corruptReason != null };
           }
+        }
+      }
+
+      let alternate: ReturnType<typeof payloadFor> | null = null;
+      if (offLocal) {
+        if (!details) {
+          foodId = offLocal.foodId;
+          details = offLocal.details;
+        } else if (
+          foodId &&
+          pickBarcodeAnswer(
+            { name: details.name, brandName: details.brandName },
+            { name: offLocal.details.name, brandName: offLocal.details.brandName, corrupt: offLocal.corrupt },
+          ) === 'off'
+        ) {
+          alternate = payloadFor(foodId, details);
+          foodId = offLocal.foodId;
+          details = offLocal.details;
         }
       }
 
@@ -244,86 +264,8 @@ export async function GET(req: NextRequest) {
       }
 
       const responsePayload = {
-        id: foodId,
-        name: details.name,
-        brand: details.brandName,
-        // THE CHOKEPOINT. Until this line the route emitted `details.source` raw — it
-        // imported neither `toClientSource()` nor a whitelist of its own, making it the
-        // fourth `source` emitter and the only one with no guard (the other three:
-        // `foods/search` and `foods/[id]` via `toClientSource()`, `nlp/parse` via its own
-        // `STANDARD_SOURCES`). Attribution is a legal boundary in BOTH directions, so an
-        // unguarded emitter is a defect whether or not it is currently emitting a wrong
-        // value.
-        //
-        // It was safe only by the PRODUCER's discipline, and that discipline is not
-        // compiler-enforced. `resolveFoodDetails()` builds `source` as a plain
-        // `let source = 'ai_estimated'` — inferred `string` — and launders it at the
-        // return with `source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated'`.
-        // MEASURED 2026-09-21, not reasoned: adding an assignment of an unlisted value
-        // (`source = 'fatsecret-cache-PROBE'`) to that function typechecks CLEAN — 0 errors
-        // under this repo's own tsconfig, against a 0-error control on the same tree. So a
-        // new branch there reaches the licensed badge unfiltered and no gate sees it.
-        // (That function already carries FIVE assignment statements over the initializer
-        // for FOUR distinct values — `fatsecret` is assigned twice, the second time by
-        // backend #443's deferred-hit recovery — so the probe was the sixth statement, not
-        // the fifth. The count of statements is not the claim; the count of VALUES is.)
-        //
-        // ONE RESIDUAL, recorded so it is not re-litigated as a defect. The floor is
-        // right for THIS field, but the value travels on into a field with a DIFFERENT
-        // constraint: mobile `toDbSource()` maps it into `food_log_items.source`, which is
-        // NULLABLE with a four-value CHECK. There `null` is the honest floor, and playbook
-        // §14 says so explicitly — so for a future fifth provider value this route would
-        // turn a silent "no claim" into a positive AI-origin claim one layer downstream.
-        // Blast radius today is ZERO (byte-neutral, measured), and widening
-        // `BarcodeLookupResponse.source` to nullable is a cross-repo wire change, not this
-        // row's. Named here rather than discovered later.
-        //
-        // WHY THE `?? 'ai_estimated'` FLOOR, and not a bare `toClientSource()` returning
-        // `null`. `BarcodeLookupResponse.source` is typed NON-NULLABLE in the wire contract
-        // (`plans/v1/api-contract.md`, "API Response Types": the four-value union, with the
-        // note "it is never null"), so `null` here is a contract violation, not a quieter
-        // claim. The playbook settles the general rule — "pick the floor that makes no
-        // claim WITHIN the constraint the field actually has" (§14) — and `ai_estimated` is
-        // the only non-badging member of that union, which is exactly the floor
-        // `/api/nlp/parse` already uses for the same field shape.
-        //
-        // BYTE-NEUTRAL TODAY on every branch: the four values `resolveFoodDetails()` can
-        // return are all `ALIASES` identities, so each round-trips to itself. What changes
-        // is only what a FUTURE fifth value does — it floors instead of shipping. And
-        // `toClientSource()` is strictly stronger than copying `STANDARD_SOURCES` here: it
-        // also folds the legitimate alias spellings (`usda` → `fdc`, `off` →
-        // `openfoodfacts`, `ai_generated` → `ai_estimated`), which an `includes()` test
-        // would floor to `ai_estimated` and so silently DROP a true FDC or OFF credit; and
-        // its null-prototype lookup rejects `constructor` / `__proto__`.
-        source: toClientSource(details.source) ?? 'ai_estimated',
-        nutritionPer100g: details.nutritionPer100g,
-        servingOptions: details.servingOptions,
-        // TRUE when resolveFoodDetails recovered this record's nutrition from a
-        // serving row because its per-100g panel was empty — a FatSecret record
-        // with per-serving macros and no weight. The figures are then a
-        // self-consistency term computed against an INVENTED weight (kcal / 2.0),
-        // not a density, and `servingOptions` here is the fabricated metric set
-        // rather than the record's own portion. Surfaced because
-        // recoverMacroOnlyServing()'s header requires the pair to travel together
-        // and this route, unlike /api/nlp/parse, has no mapper result carrying
-        // `servingTier` to derive it from.
-        //
-        // Omitted (not `false`) when the panel is real, so existing responses stay
-        // byte-identical. NOT a portion fix: this route still offers a fabricated
-        // `100 g` for these records, and a consumer that trusts it would log ~200
-        // kcal for any of them. Wire the flag into the UI before giving this route
-        // a client. Owner of the class:
-        // sync-docs/reports/2026-08-15_the-search-lane-billed-zero-on-chain-records.md (mobile).
-        ...(details.portionEstimated ? { portionEstimated: true as const } : {}),
-        // Passed through from resolveFoodDetails(), which can set it on exactly one
-        // branch — the macro-only recovery above, where the tier is known and is a
-        // BORROWED_OR_DEFAULTED member, so the value here is always `'borrowed'` and
-        // travels with `portionEstimated`. This route has no mapper result and so
-        // no other `servingTier` to read; a barcode hit that resolved through its
-        // own label ships no field, which is "no claim", not "own weight". Same
-        // omit-when-absent rule as the flag above. Owner of the field:
-        // serving-ai-tiers.ts, `portionProvenanceForTier()`.
-        ...(details.portionProvenance ? { portionProvenance: details.portionProvenance } : {}),
+        ...payloadFor(foodId, details),
+        ...(alternate ? { alternate } : {}),
       };
 
       return withReceipt(NextResponse.json(responsePayload), noSave);
@@ -332,6 +274,98 @@ export async function GET(req: NextRequest) {
     console.error('Barcode lookup error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+/**
+ * The one wire shape for a barcode answer. Both the primary and `alternate` come from here, so
+ * they cannot drift and both floor `source` through the same chokepoint. `alternate` never nests.
+ */
+function payloadFor(
+  foodId: string,
+  details: Awaited<ReturnType<typeof import('@/lib/nlp/resolve-payload').resolveFoodDetails>>,
+) {
+  return {
+    id: foodId,
+    name: details.name,
+    brand: details.brandName,
+    // THE CHOKEPOINT. Until this line the route emitted `details.source` raw — it
+    // imported neither `toClientSource()` nor a whitelist of its own, making it the
+    // fourth `source` emitter and the only one with no guard (the other three:
+    // `foods/search` and `foods/[id]` via `toClientSource()`, `nlp/parse` via its own
+    // `STANDARD_SOURCES`). Attribution is a legal boundary in BOTH directions, so an
+    // unguarded emitter is a defect whether or not it is currently emitting a wrong
+    // value.
+    //
+    // It was safe only by the PRODUCER's discipline, and that discipline is not
+    // compiler-enforced. `resolveFoodDetails()` builds `source` as a plain
+    // `let source = 'ai_estimated'` — inferred `string` — and launders it at the
+    // return with `source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated'`.
+    // MEASURED 2026-09-21, not reasoned: adding an assignment of an unlisted value
+    // (`source = 'fatsecret-cache-PROBE'`) to that function typechecks CLEAN — 0 errors
+    // under this repo's own tsconfig, against a 0-error control on the same tree. So a
+    // new branch there reaches the licensed badge unfiltered and no gate sees it.
+    // (That function already carries FIVE assignment statements over the initializer
+    // for FOUR distinct values — `fatsecret` is assigned twice, the second time by
+    // backend #443's deferred-hit recovery — so the probe was the sixth statement, not
+    // the fifth. The count of statements is not the claim; the count of VALUES is.)
+    //
+    // ONE RESIDUAL, recorded so it is not re-litigated as a defect. The floor is
+    // right for THIS field, but the value travels on into a field with a DIFFERENT
+    // constraint: mobile `toDbSource()` maps it into `food_log_items.source`, which is
+    // NULLABLE with a four-value CHECK. There `null` is the honest floor, and playbook
+    // §14 says so explicitly — so for a future fifth provider value this route would
+    // turn a silent "no claim" into a positive AI-origin claim one layer downstream.
+    // Blast radius today is ZERO (byte-neutral, measured), and widening
+    // `BarcodeLookupResponse.source` to nullable is a cross-repo wire change, not this
+    // row's. Named here rather than discovered later.
+    //
+    // WHY THE `?? 'ai_estimated'` FLOOR, and not a bare `toClientSource()` returning
+    // `null`. `BarcodeLookupResponse.source` is typed NON-NULLABLE in the wire contract
+    // (`plans/v1/api-contract.md`, "API Response Types": the four-value union, with the
+    // note "it is never null"), so `null` here is a contract violation, not a quieter
+    // claim. The playbook settles the general rule — "pick the floor that makes no
+    // claim WITHIN the constraint the field actually has" (§14) — and `ai_estimated` is
+    // the only non-badging member of that union, which is exactly the floor
+    // `/api/nlp/parse` already uses for the same field shape.
+    //
+    // BYTE-NEUTRAL TODAY on every branch: the four values `resolveFoodDetails()` can
+    // return are all `ALIASES` identities, so each round-trips to itself. What changes
+    // is only what a FUTURE fifth value does — it floors instead of shipping. And
+    // `toClientSource()` is strictly stronger than copying `STANDARD_SOURCES` here: it
+    // also folds the legitimate alias spellings (`usda` → `fdc`, `off` →
+    // `openfoodfacts`, `ai_generated` → `ai_estimated`), which an `includes()` test
+    // would floor to `ai_estimated` and so silently DROP a true FDC or OFF credit; and
+    // its null-prototype lookup rejects `constructor` / `__proto__`.
+    source: toClientSource(details.source) ?? 'ai_estimated',
+    nutritionPer100g: details.nutritionPer100g,
+    servingOptions: details.servingOptions,
+    // TRUE when resolveFoodDetails recovered this record's nutrition from a
+    // serving row because its per-100g panel was empty — a FatSecret record
+    // with per-serving macros and no weight. The figures are then a
+    // self-consistency term computed against an INVENTED weight (kcal / 2.0),
+    // not a density, and `servingOptions` here is the fabricated metric set
+    // rather than the record's own portion. Surfaced because
+    // recoverMacroOnlyServing()'s header requires the pair to travel together
+    // and this route, unlike /api/nlp/parse, has no mapper result carrying
+    // `servingTier` to derive it from.
+    //
+    // Omitted (not `false`) when the panel is real, so existing responses stay
+    // byte-identical. NOT a portion fix: this route still offers a fabricated
+    // `100 g` for these records, and a consumer that trusts it would log ~200
+    // kcal for any of them. Wire the flag into the UI before giving this route
+    // a client. Owner of the class:
+    // sync-docs/reports/2026-08-15_the-search-lane-billed-zero-on-chain-records.md (mobile).
+    ...(details.portionEstimated ? { portionEstimated: true as const } : {}),
+    // Passed through from resolveFoodDetails(), which can set it on exactly one
+    // branch — the macro-only recovery above, where the tier is known and is a
+    // BORROWED_OR_DEFAULTED member, so the value here is always `'borrowed'` and
+    // travels with `portionEstimated`. This route has no mapper result and so
+    // no other `servingTier` to read; a barcode hit that resolved through its
+    // own label ships no field, which is "no claim", not "own weight". Same
+    // omit-when-absent rule as the flag above. Owner of the field:
+    // serving-ai-tiers.ts, `portionProvenanceForTier()`.
+    ...(details.portionProvenance ? { portionProvenance: details.portionProvenance } : {}),
+  };
 }
 
 /**

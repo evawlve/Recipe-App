@@ -108,13 +108,64 @@ describe('/api/foods/barcode reads the local OffFood mirror before OFF live', ()
     expect(getOffProductByBarcode).toHaveBeenCalledTimes(0);
   });
 
-  test('(e) a FatSecret hit with a FatSecretFood row is served without touching OffFood', async () => {
+  const fsHit = () =>
     lookupFatSecretBarcode.mockResolvedValue({ foodId: '95103', name: 'x', brandName: null, source: 'fatsecret', servings: [] });
-    mockOffRows['0038000138416'] = offRow('0038000138416');
+
+  test('(e) FatSecret and OFF name different brands: OUR row leads, FatSecret rides as alternate', async () => {
+    fsHit();
+    mockOffRows['0038000138416'] = offRow('0038000138416'); // brand Lucerne vs Pringles
     const res = await call('038000138416');
     expect(res.status).toBe(200);
-    expect((await res.json()).id).toBe('fs_95103');
-    expect(mockOffFindUnique).toHaveBeenCalledTimes(0);
+    const body = await res.json();
+    expect(body.id).toBe('off_0038000138416');
+    expect(body.source).toBe('openfoodfacts');
+    expect(body.alternate.id).toBe('fs_95103');
+    expect(body.alternate.source).toBe('fatsecret');
+    expect(body.alternate.brand).toBe('Pringles');
+    expect(body.alternate.servingOptions.length).toBeGreaterThan(0);
+    expect(body.alternate.nutritionPer100g.kcal100).toBe(536);
+    expect(body.alternate.alternate).toBeUndefined();
+    expect(hydrateOffCandidate).toHaveBeenCalledTimes(0);
+    expect(getOffProductByBarcode).toHaveBeenCalledTimes(0);
+  });
+
+  test('(e2) the brands agree: FatSecret leads and the response has no alternate key', async () => {
+    fsHit();
+    mockOffRows['0038000138416'] = { ...offRow('0038000138416'), brandName: 'Pringles' };
+    const body = await (await call('038000138416')).json();
+    expect(body.id).toBe('fs_95103');
+    expect('alternate' in body).toBe(false);
+  });
+
+  test('(e3) a null-panel OFF row never competes: FatSecret leads, no alternate', async () => {
+    fsHit();
+    mockOffRows['0038000138416'] = offRow('0038000138416', null);
+    const body = await (await call('038000138416')).json();
+    expect(body.id).toBe('fs_95103');
+    expect('alternate' in body).toBe(false);
+  });
+
+  test('(e4) a corrupt OFF row never leads over FatSecret', async () => {
+    fsHit();
+    mockOffRows['0038000138416'] = { ...offRow('0038000138416'), corruptReason: 'panel_scale_divided' };
+    const body = await (await call('038000138416')).json();
+    expect(body.id).toBe('fs_95103');
+    expect('alternate' in body).toBe(false);
+  });
+
+  test('(e5) a corrupt OFF row still answers a FatSecret miss, as before', async () => {
+    mockOffRows['0038000138416'] = { ...offRow('0038000138416'), corruptReason: 'panel_scale_divided' };
+    const body = await (await call('038000138416')).json();
+    expect(body.id).toBe('off_0038000138416');
+    expect('alternate' in body).toBe(false);
+  });
+
+  test('(e6) a blank OFF brand: FatSecret leads', async () => {
+    fsHit();
+    mockOffRows['0038000138416'] = { ...offRow('0038000138416'), brandName: null };
+    const body = await (await call('038000138416')).json();
+    expect(body.id).toBe('fs_95103');
+    expect('alternate' in body).toBe(false);
   });
 
   test('(f) a throttled OFF live API (null) no longer 404s a barcode we hold', async () => {
