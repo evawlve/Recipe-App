@@ -285,6 +285,7 @@ export async function GET(req: NextRequest) {
       const { isProduceHoistCategory } = await import('@/ops/usda/fdc-category');
       const { queryTokenCoverage, coverageTokens, findMisspelledTokens } =
         await import('@/lib/search/query-token-coverage');
+      const { fdcHeadMatchesQuery } = await import('@/lib/search/fdc-head-match');
       // Produce queries fetch the USDA lane deep (the raw food can sit past the
       // first 16 rows); only this route passes fdcDepth, so /api/nlp/parse is unaffected.
       const category = mapUsdaToCategory(q);
@@ -391,6 +392,14 @@ export async function GET(req: NextRequest) {
             isProduceHoistCategory((b.rawData as { foodCategory?: unknown } | undefined)?.foodCategory);
           if (aFdcMatch && !bFdcMatch) return -1;
           if (bFdcMatch && !aFdcMatch) return 1;
+          // Both hoisted: the row whose head IS the query ("Raspberries, raw") sorts
+          // before one that only mentions it ("Raspberry juice concentrate").
+          if (aFdcMatch && bFdcMatch) {
+            const aHead = fdcHeadMatchesQuery(q, (a.rawData as { description?: unknown } | undefined)?.description);
+            const bHead = fdcHeadMatchesQuery(q, (b.rawData as { description?: unknown } | undefined)?.description);
+            if (aHead && !bHead) return -1;
+            if (bHead && !aHead) return 1;
+          }
         }
 
         // 2. Prioritize candidates that have macro data over those that have zero macros
