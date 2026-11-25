@@ -259,6 +259,21 @@ function mapFdcHitToCandidate(hit: any, query: string, position: number, targetB
     };
 }
 
+// Household-portion count of an FDC row: Typesense stores servings as a JSON string,
+// Postgres returns an array. Used only to break depth-sort priority ties.
+function fdcPortionCount(servings: unknown): number {
+    if (Array.isArray(servings)) return servings.length;
+    if (typeof servings === 'string') {
+        try {
+            const parsed = JSON.parse(servings);
+            return Array.isArray(parsed) ? parsed.length : 0;
+        } catch {
+            return 0;
+        }
+    }
+    return 0;
+}
+
 async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string, fdcDepth?: number): Promise<UnifiedCandidate[]> {
     try {
         const { searchTypesense } = await import('../search/typesense-client');
@@ -269,9 +284,10 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
                 .map((hit: any, fetchIndex: number) => ({
                     hit,
                     fetchIndex,
+                    portions: fdcPortionCount(hit.servings),
                     priority: depthPriority(query, hit.description, computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand, singularizeSearchToken)),
                 }))
-                .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex));
+                .sort((a, b) => (b.priority - a.priority) || (b.portions - a.portions) || (a.fetchIndex - b.fetchIndex));
             const mappedHits = ordered
                 .map((o, index) => mapFdcHitToCandidate(o.hit, query, index, targetBrand))
                 .slice(0, limit)
@@ -315,9 +331,10 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
                 .map((food, fetchIndex) => ({
                     food,
                     fetchIndex,
+                    portions: fdcPortionCount(food.servings),
                     priority: depthPriority(query, food.description, computeFdcPriorityScore(query, food.description, food.brandName ?? null, targetBrand, singularizeSearchToken)),
                 }))
-                .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex))
+                .sort((a, b) => (b.priority - a.priority) || (b.portions - a.portions) || (a.fetchIndex - b.fetchIndex))
                 .map(o => o.food)
             : results;
 

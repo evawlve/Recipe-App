@@ -117,3 +117,103 @@ describe('gatherCandidates fdcDepth: raw first (s466 A5)', () => {
     expect(ids(apples)).toEqual(['fdc_1', 'fdc_2']);
   });
 });
+
+describe('depth tie-break by portions (s468)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const hitP = (fdcId: number, description: string, n: number) => ({
+    ...hit(fdcId, description),
+    servings: Array.from({ length: n }, () => ({ description: 'x', grams: 1 })),
+  });
+  const first = async (q: string) =>
+    (await gatherCandidates(q, null, q, { skipOff: true, fdcDepth: 100 }))[0].id;
+
+  const tomatoRows = () => [
+    hitP(170502, 'Tomatoes, orange, raw', 2),
+    hitP(170457, 'Tomatoes, red, ripe, raw, year round average', 13),
+    hitP(170456, 'Tomatoes, green, raw', 5),
+  ];
+  const pepperRows = () => [
+    hitP(169394, 'Pepper, banana, raw', 4),
+    hitP(170497, 'Peppers, hot chili, green, raw', 2),
+    hitP(170427, 'Peppers, sweet, green, raw', 8),
+    hitP(170108, 'Peppers, sweet, red, raw', 7),
+  ];
+  const zucchiniRaw = () => hitP(169291, 'Squash, summer, zucchini, includes skin, raw', 6);
+  const appleRows = () => [
+    hitP(171689, 'Apples, raw, without skin', 4),
+    hitP(171688, 'Apples, raw, with skin', 7),
+  ];
+
+  test('P1 tomato (Typesense servings as a JSON string)', async () => {
+    searchTypesense.mockResolvedValue(tomatoRows().map(r => ({ ...r, servings: JSON.stringify(r.servings) })));
+    expect(await first('tomato')).toBe('fdc_170457');
+  });
+  test('P2 tomatoes', async () => {
+    searchTypesense.mockResolvedValue(tomatoRows());
+    expect(await first('tomatoes')).toBe('fdc_170457');
+  });
+  test('P3 pepper', async () => {
+    searchTypesense.mockResolvedValue(pepperRows());
+    expect(await first('pepper')).toBe('fdc_170427');
+  });
+  test('P4 peppers', async () => {
+    searchTypesense.mockResolvedValue(pepperRows().slice(1));
+    expect(await first('peppers')).toBe('fdc_170427');
+  });
+  test('P5 zucchini', async () => {
+    searchTypesense.mockResolvedValue([
+      hitP(170534, 'Squash, summer, zucchini, includes skin, cooked, boiled, drained, with salt', 2),
+      hitP(169292, 'Squash, summer, zucchini, includes skin, cooked, boiled, drained, without salt', 2),
+      zucchiniRaw(),
+    ]);
+    expect(await first('zucchini')).toBe('fdc_169291');
+  });
+  test('P6 red pepper', async () => {
+    searchTypesense.mockResolvedValue([
+      hitP(170515, 'Peppers, sweet, red, cooked, boiled, drained, with salt', 3),
+      hitP(170110, 'Peppers, sweet, red, cooked, boiled, drained, without salt', 3),
+      hitP(170108, 'Peppers, sweet, red, raw', 7),
+    ]);
+    expect(await first('red pepper')).toBe('fdc_170108');
+  });
+  test('P7 lettuce', async () => {
+    searchTypesense.mockResolvedValue([
+      hitP(169249, 'Lettuce, green leaf, raw', 4),
+      hitP(169248, 'Lettuce, iceberg (includes crisphead types), raw', 9),
+    ]);
+    expect(await first('lettuce')).toBe('fdc_169248');
+  });
+  test('P8 squash', async () => {
+    searchTypesense.mockResolvedValue([
+      hitP(170489, 'Squash, winter, all varieties, raw', 1),
+      hitP(170487, 'Squash, summer, all varieties, raw', 5),
+      zucchiniRaw(),
+    ]);
+    expect(await first('squash')).toBe('fdc_169291');
+  });
+  test('P9 apple', async () => {
+    searchTypesense.mockResolvedValue(appleRows());
+    expect(await first('apple')).toBe('fdc_171688');
+  });
+  test('P10 apples', async () => {
+    searchTypesense.mockResolvedValue(appleRows());
+    expect(await first('apples')).toBe('fdc_171688');
+  });
+  test('C1 priority still outranks portions', async () => {
+    searchTypesense.mockResolvedValue([hitP(170461, 'Tomato powder', 40), hitP(170502, 'Tomatoes, orange, raw', 2)]);
+    expect(await first('tomato')).toBe('fdc_170502');
+  });
+  test('C2 equal portions fall back to fetch order', async () => {
+    searchTypesense.mockResolvedValue([
+      hitP(170029, 'Potatoes, red, flesh and skin, raw', 4),
+      hitP(170026, 'Potatoes, flesh and skin, raw', 4),
+    ]);
+    expect(await first('potato')).toBe('fdc_170029');
+  });
+  test('P11 Postgres branch (servings as arrays)', async () => {
+    searchTypesense.mockRejectedValue(new Error('down'));
+    require('../../db').prisma.fdcFood.findMany.mockResolvedValue(tomatoRows());
+    expect(await first('tomato')).toBe('fdc_170457');
+  });
+});
