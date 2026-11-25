@@ -105,3 +105,36 @@ describe('/api/foods/search serves USDA names as USDA wrote them', () => {
     expect(body.data[0].name).toBe('raw onions');
   });
 });
+
+describe('/api/foods/search rule 1: a hoisted row whose head is the query sorts first (s466 A5)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('"raspberry": "Raspberries, raw" before "Raspberry juice concentrate"', async () => {
+    const fruit = 'Fruits and Fruit Juices';
+    gatherCandidates.mockResolvedValue([
+      { ...row('fdc_168217', 'Raspberry juice concentrate', 'fdc', 1.5, fruit), rawData: { description: 'Raspberry juice concentrate', foodCategory: fruit } },
+      { ...row('fdc_167755', 'raw raspberries', 'fdc', 1.0, fruit), rawData: { description: 'Raspberries, raw', foodCategory: fruit } },
+    ]);
+    const response = await GET(
+      new NextRequest(
+        'http://localhost:3000/api/foods/search?s=raspberry&local=true&api_key=adminAPI_dev_key_bypass',
+      ),
+    );
+    const body = await response.json();
+    expect(body.data.map((d: any) => d.id)).toEqual(['fdc_167755', 'fdc_168217']);
+  });
+
+  test('a head-matching row is not lifted over a row the hoist does not cover', async () => {
+    const fruit = 'Fruits and Fruit Juices';
+    gatherCandidates.mockResolvedValue([
+      { ...row('fdc_1', 'Raspberry juice concentrate', 'fdc', 1.5, fruit), rawData: { description: 'Raspberry juice concentrate', foodCategory: fruit } },
+      { ...row('fdc_2', 'raw raspberries', 'fdc', 1.0, 'Baked Products'), rawData: { description: 'Raspberries, raw', foodCategory: 'Baked Products' } },
+    ]);
+    const body = await (await GET(
+      new NextRequest(
+        'http://localhost:3000/api/foods/search?s=raspberry&local=true&api_key=adminAPI_dev_key_bypass',
+      ),
+    )).json();
+    expect(body.data[0].id).toBe('fdc_1');
+  });
+});

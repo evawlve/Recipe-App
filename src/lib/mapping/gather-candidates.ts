@@ -14,6 +14,7 @@ import { searchFatSecretLane } from './fatsecret-lane';
 import { countedPieceNoun } from './count-label';
 import { detectGrainCookingContext } from './filter-candidates';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
+import { singularize as singularizeSearchToken } from '../search/dedupe-candidates';
 // Import the LEAF module, not sub-threshold-admission (which re-exports this).
 // sub-threshold-admission pulls simple-rerank -> modifier-constraints, and
 // modifier-constraints imports THIS file — a cycle that leaves
@@ -100,11 +101,26 @@ function fdcTokens(text: string): string[] {
     return text.toLowerCase().split(/[^a-z]+/).filter(Boolean);
 }
 
-/** Priority used by the fdcDepth ordering: processed forms the query did not ask for are capped. */
+/** Cooking words that mark a cooked form; capped in depth mode unless the query names them. */
+const FDC_COOKING_TOKENS = new Set([
+    'cooked', 'boiled', 'microwave', 'microwaved', 'baked', 'roasted', 'fried', 'steamed',
+    'drained', 'stewed', 'braised', 'grilled',
+]);
+/** A ", "-segment that is exactly one of these names a part of the food ("Potatoes, raw, skin"). */
+const FDC_PART_SEGMENTS = new Set(['skin', 'peel']);
+
+/**
+ * Priority used by the fdcDepth ordering: processed and cooked forms the query did not
+ * ask for are capped, and so is a row that is only a part of the food (a ", skin" or
+ * ", peel" segment). "Potatoes, flesh and skin, raw" is the whole food and is not capped.
+ */
 function depthPriority(query: string, description: string, priority: number): number {
     const queryTokens = new Set(fdcTokens(query));
-    const processed = fdcTokens(description).some(t => FDC_PROCESSED_TOKENS.has(t) && !queryTokens.has(t));
-    return processed ? Math.min(priority, FDC_PROCESSED_PRIORITY_CAP) : priority;
+    const descriptionTokens = fdcTokens(description);
+    const processed = descriptionTokens.some(t => FDC_PROCESSED_TOKENS.has(t) && !queryTokens.has(t));
+    const cooked = descriptionTokens.some(t => FDC_COOKING_TOKENS.has(t) && !queryTokens.has(t));
+    const part = description.toLowerCase().split(', ').some(seg => FDC_PART_SEGMENTS.has(seg.trim()));
+    return processed || cooked || part ? Math.min(priority, FDC_PROCESSED_PRIORITY_CAP) : priority;
 }
 
 // ============================================================
@@ -253,7 +269,7 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
                 .map((hit: any, fetchIndex: number) => ({
                     hit,
                     fetchIndex,
-                    priority: depthPriority(query, hit.description, computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand)),
+                    priority: depthPriority(query, hit.description, computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand, singularizeSearchToken)),
                 }))
                 .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex));
             const mappedHits = ordered
@@ -299,7 +315,7 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
                 .map((food, fetchIndex) => ({
                     food,
                     fetchIndex,
-                    priority: depthPriority(query, food.description, computeFdcPriorityScore(query, food.description, food.brandName ?? null, targetBrand)),
+                    priority: depthPriority(query, food.description, computeFdcPriorityScore(query, food.description, food.brandName ?? null, targetBrand, singularizeSearchToken)),
                 }))
                 .sort((a, b) => (b.priority - a.priority) || (a.fetchIndex - b.fetchIndex))
                 .map(o => o.food)
@@ -941,16 +957,27 @@ function detectDietaryModifier(text: string): {
     };
 }
 
-function computeFdcPriorityScore(query: string, foodName: string, brandName?: string | null, targetBrand?: string): number {
+/**
+ * The priority scorer's own singularizer. It strips "-es" whole ("raspberries" ->
+ * "raspberri"), so the depth ordering passes the shared search singularizer instead;
+ * every other caller keeps this one.
+ */
+function fdcPrioritySingularize(word: string): string {
+    if (word.endsWith('oes')) return word.slice(0, -2);
+    if (word.endsWith('es')) return word.slice(0, -2);
+    if (word.endsWith('s')) return word.slice(0, -1);
+    return word;
+}
+
+function computeFdcPriorityScore(
+    query: string,
+    foodName: string,
+    brandName?: string | null,
+    targetBrand?: string,
+    singularize: (word: string) => string = fdcPrioritySingularize,
+): number {
     const queryLower = query.toLowerCase().trim();
     const nameLower = foodName.toLowerCase().trim();
-
-    const singularize = (word: string): string => {
-        if (word.endsWith('oes')) return word.slice(0, -2);
-        if (word.endsWith('es')) return word.slice(0, -2);
-        if (word.endsWith('s')) return word.slice(0, -1);
-        return word;
-    };
 
     const DISH_INDICATORS = ['bread', 'flour', 'pancake', 'cake', 'cookie', 'pie', 'salad', 'soup', 'stew',
         'sauce', 'chip', 'chips', 'snack', 'snacks', 'babyfood', 'baby food', 'toddler',
