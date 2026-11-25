@@ -1,0 +1,3732 @@
+{
+  "chain": "slim-chickens-us",
+  "chainName": "Slim Chickens",
+  "components": [
+    {
+      "key": "slim-chickens-balsamic",
+      "name": "Balsamic",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 6,
+            "cholesterolMg": 0,
+            "fatG": 8,
+            "fiberG": 0,
+            "kcal": 90,
+            "proteinG": 0,
+            "satFatG": 1,
+            "sodiumMg": 285,
+            "sugarG": 6,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "balsamic"
+      ]
+    },
+    {
+      "key": "slim-chickens-blue-cheese",
+      "name": "Blue Cheese",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 2,
+            "cholesterolMg": 23,
+            "fatG": 29,
+            "fiberG": 0,
+            "kcal": 270,
+            "proteinG": 0,
+            "satFatG": 5,
+            "sodiumMg": 330,
+            "sugarG": 2,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "blue cheese"
+      ]
+    },
+    {
+      "key": "slim-chickens-buffalo",
+      "name": "Buffalo",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 0,
+            "cholesterolMg": 0,
+            "fatG": 9,
+            "fiberG": 0,
+            "kcal": 75,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 810,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "buffalo"
+      ]
+    },
+    {
+      "key": "slim-chickens-cayenne-ranch",
+      "name": "Cayenne Ranch",
+      "portions": [
+        {
+          "grams": 36,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 9,
+            "fatG": 16,
+            "fiberG": 0,
+            "kcal": 163,
+            "proteinG": 1,
+            "satFatG": 3,
+            "sodiumMg": 206,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "cayenne ranch"
+      ]
+    },
+    {
+      "key": "slim-chickens-garlic-parmesan",
+      "name": "Garlic Parmesan",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 3,
+            "cholesterolMg": 0,
+            "fatG": 15,
+            "fiberG": 0,
+            "kcal": 150,
+            "proteinG": 0,
+            "satFatG": 2,
+            "sodiumMg": 720,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "garlic parmesan"
+      ]
+    },
+    {
+      "key": "slim-chickens-gravy",
+      "name": "Gravy",
+      "portions": [
+        {
+          "grams": 93,
+          "label": "3.0 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 10,
+            "cholesterolMg": 0,
+            "fatG": 2,
+            "fiberG": 0,
+            "kcal": 57,
+            "proteinG": 0,
+            "satFatG": 1,
+            "sodiumMg": 314,
+            "sugarG": 3,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "gravy"
+      ]
+    },
+    {
+      "key": "slim-chickens-honey-bbq",
+      "name": "Honey BBQ",
+      "portions": [
+        {
+          "grams": 54,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 23,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 90,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 480,
+            "sugarG": 23,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "honey bbq"
+      ]
+    },
+    {
+      "key": "slim-chickens-honey-mustard",
+      "name": "Honey Mustard",
+      "portions": [
+        {
+          "grams": 44,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 9,
+            "cholesterolMg": 15,
+            "fatG": 18,
+            "fiberG": 0,
+            "kcal": 195,
+            "proteinG": 0,
+            "satFatG": 3,
+            "sodiumMg": 203,
+            "sugarG": 9,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "honey mustard"
+      ]
+    },
+    {
+      "key": "slim-chickens-hot",
+      "name": "Hot",
+      "portions": [
+        {
+          "grams": 51,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 8,
+            "cholesterolMg": 0,
+            "fatG": 2,
+            "fiberG": 3,
+            "kcal": 45,
+            "proteinG": 2,
+            "satFatG": 0,
+            "sodiumMg": 930,
+            "sugarG": 0,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "hot"
+      ]
+    },
+    {
+      "key": "slim-chickens-korean-bbq",
+      "name": "Korean BBQ",
+      "portions": [
+        {
+          "grams": 53,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 20,
+            "cholesterolMg": 0,
+            "fatG": 2,
+            "fiberG": 0,
+            "kcal": 105,
+            "proteinG": 2,
+            "satFatG": 0,
+            "sodiumMg": 885,
+            "sugarG": 17,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "korean bbq"
+      ]
+    },
+    {
+      "key": "slim-chickens-lite-italian",
+      "name": "Lite Italian",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 3,
+            "cholesterolMg": 0,
+            "fatG": 5,
+            "fiberG": 0,
+            "kcal": 60,
+            "proteinG": 0,
+            "satFatG": 1,
+            "sodiumMg": 405,
+            "sugarG": 3,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "lite italian"
+      ]
+    },
+    {
+      "key": "slim-chickens-mango-habanero",
+      "name": "Mango Habanero",
+      "portions": [
+        {
+          "grams": 45,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 18,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 75,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 255,
+            "sugarG": 12,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "mango habanero"
+      ]
+    },
+    {
+      "key": "slim-chickens-ranch",
+      "name": "Ranch",
+      "portions": [
+        {
+          "grams": 36,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 1,
+            "cholesterolMg": 9,
+            "fatG": 16,
+            "fiberG": 0,
+            "kcal": 163,
+            "proteinG": 1,
+            "satFatG": 3,
+            "sodiumMg": 206,
+            "sugarG": 1,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "ranch"
+      ]
+    },
+    {
+      "key": "slim-chickens-slim-sauce",
+      "name": "Slim Sauce",
+      "portions": [
+        {
+          "grams": 44,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 6,
+            "cholesterolMg": 15,
+            "fatG": 21,
+            "fiberG": 0,
+            "kcal": 210,
+            "proteinG": 2,
+            "satFatG": 3,
+            "sodiumMg": 270,
+            "sugarG": 5,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "slim sauce"
+      ]
+    },
+    {
+      "key": "slim-chickens-spicy-bbq",
+      "name": "Spicy BBQ",
+      "portions": [
+        {
+          "grams": 54,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 20,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 2,
+            "kcal": 81,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 432,
+            "sugarG": 9,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "spicy bbq"
+      ]
+    },
+    {
+      "key": "slim-chickens-sweet-red-chili",
+      "name": "Sweet Red Chili",
+      "portions": [
+        {
+          "grams": 57,
+          "label": "1.5 fl oz",
+          "panel": {
+            "addedSugarG": null,
+            "carbsG": 30,
+            "cholesterolMg": 0,
+            "fatG": 0,
+            "fiberG": 0,
+            "kcal": 120,
+            "proteinG": 0,
+            "satFatG": 0,
+            "sodiumMg": 600,
+            "sugarG": 27,
+            "transFatG": 0
+          },
+          "sourceId": "nutrition"
+        }
+      ],
+      "removalKeys": [
+        "sweet red chili"
+      ]
+    }
+  ],
+  "country": "US",
+  "items": [
+    {
+      "aliases": [],
+      "key": "slim-chickens-apple-juice-6oz",
+      "name": "Apple Juice",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 9,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 170,
+      "sourceId": "nutrition",
+      "variant": "size=6oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-applesauce",
+      "name": "Applesauce",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 10,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 40,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 9,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 91,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-barq-s-root-beer-12oz",
+      "name": "Barq’s Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 360,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-barq-s-root-beer-20oz",
+      "name": "Barq’s Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 267,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 117,
+        "sugarG": 75,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 600,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-barq-s-root-beer-32oz",
+      "name": "Barq’s Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 120,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 427,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 187,
+        "sugarG": 120,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 960,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-buffalo-tender",
+      "name": "Buffalo Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 21,
+        "fatG": 7,
+        "fiberG": 1,
+        "kcal": 117,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 424,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 52,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-buffalo-tender-bite",
+      "name": "Buffalo Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 46,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 227,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 24,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-buffalo-tender-mac-bowl",
+      "name": "Buffalo Tender Mac Bowl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 118,
+        "cholesterolMg": 125,
+        "fatG": 73,
+        "fiberG": 12,
+        "kcal": 1402,
+        "proteinG": 65,
+        "satFatG": 31,
+        "sodiumMg": 4791,
+        "sugarG": 9,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 734,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-buffalo-wing",
+      "name": "Buffalo Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 20,
+        "fatG": 4,
+        "fiberG": 1,
+        "kcal": 72,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 133,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-cayenne-ranch-chicken-sandwich",
+      "name": "Cayenne Ranch Chicken Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 90,
+        "fatG": 37,
+        "fiberG": 3,
+        "kcal": 655,
+        "proteinG": 32,
+        "satFatG": 9,
+        "sodiumMg": 1092,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 248,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-cayenne-ranch-dry-rub-wing",
+      "name": "Cayenne Ranch Dry Rub Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 20,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 80,
+        "proteinG": 8,
+        "satFatG": 2,
+        "sodiumMg": 281,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-cherry-coke-12oz",
+      "name": "Cherry Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 42,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-cherry-coke-20oz",
+      "name": "Cherry Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 70,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 58,
+        "sugarG": 70,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-cherry-coke-32oz",
+      "name": "Cherry Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 112,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 400,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 93,
+        "sugarG": 112,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-chicken-club-sandwich",
+      "name": "Chicken Club Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 130,
+        "fatG": 42,
+        "fiberG": 2,
+        "kcal": 747,
+        "proteinG": 40,
+        "satFatG": 9,
+        "sodiumMg": 1044,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 265,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-chocolate-brownie-pudding-jar",
+      "name": "Chocolate Brownie Pudding Jar",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 88,
+        "cholesterolMg": 25,
+        "fatG": 26,
+        "fiberG": 1,
+        "kcal": 670,
+        "proteinG": 6,
+        "satFatG": 9,
+        "sodiumMg": 290,
+        "sugarG": 58,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 214,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-chocolate-chip-brownie",
+      "name": "Chocolate Chip Brownie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 58,
+        "cholesterolMg": 25,
+        "fatG": 20,
+        "fiberG": 2,
+        "kcal": 433,
+        "proteinG": 5,
+        "satFatG": 6,
+        "sodiumMg": 225,
+        "sugarG": 32,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 93,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-chocolate-milkshake",
+      "name": "Chocolate Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 112,
+        "cholesterolMg": 80,
+        "fatG": 16,
+        "fiberG": 1,
+        "kcal": 665,
+        "proteinG": 17,
+        "satFatG": 12,
+        "sodiumMg": 454,
+        "sugarG": 101,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 406,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-12oz",
+      "name": "Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-20oz",
+      "name": "Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 233,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 65,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-32oz",
+      "name": "Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 104,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 373,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 120,
+        "sugarG": 104,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-zero-12oz",
+      "name": "Coke Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-zero-20oz",
+      "name": "Coke Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 58,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coke-zero-32oz",
+      "name": "Coke Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 107,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coleslaw-large",
+      "name": "Coleslaw Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 87,
+        "cholesterolMg": 41,
+        "fatG": 39,
+        "fiberG": 19,
+        "kcal": 705,
+        "proteinG": 10,
+        "satFatG": 6,
+        "sodiumMg": 1584,
+        "sugarG": 54,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 905,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-coleslaw-regular",
+      "name": "Coleslaw Regular",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 14,
+        "fatG": 13,
+        "fiberG": 6,
+        "kcal": 235,
+        "proteinG": 3,
+        "satFatG": 2,
+        "sodiumMg": 528,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 302,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-crispy-chicken-sandwich",
+      "name": "Crispy Chicken Sandwich",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 90,
+        "fatG": 33,
+        "fiberG": 2,
+        "kcal": 589,
+        "proteinG": 31,
+        "satFatG": 8,
+        "sodiumMg": 985,
+        "sugarG": 7,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 207,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-diet-coke-12oz",
+      "name": "Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-diet-coke-20oz",
+      "name": "Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 67,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-diet-coke-32oz",
+      "name": "Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 107,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-12oz",
+      "name": "Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 53,
+        "sugarG": 41,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-20oz",
+      "name": "Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 68,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 88,
+        "sugarG": 68,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 615,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-32oz",
+      "name": "Dr Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 108,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 400,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 140,
+        "sugarG": 108,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 984,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-zero-12oz",
+      "name": "Dr Pepper Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 54,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 369,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-zero-20oz",
+      "name": "Dr Pepper Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 90,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 615,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-dr-pepper-zero-32oz",
+      "name": "Dr Pepper Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 140,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 984,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-orange-12oz",
+      "name": "Fanta Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-orange-20oz",
+      "name": "Fanta Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 267,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 100,
+        "sugarG": 73,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-orange-32oz",
+      "name": "Fanta Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 120,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 427,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 160,
+        "sugarG": 117,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-strawberry-12oz",
+      "name": "Fanta Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-strawberry-20oz",
+      "name": "Fanta Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 80,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 300,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 80,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fanta-strawberry-32oz",
+      "name": "Fanta Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 128,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 480,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 120,
+        "sugarG": 128,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-french-fries-large",
+      "name": "French Fries Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 181,
+        "cholesterolMg": 0,
+        "fatG": 65,
+        "fiberG": 15,
+        "kcal": 1367,
+        "proteinG": 15,
+        "satFatG": 12,
+        "sodiumMg": 3434,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 454,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-french-fries-regular",
+      "name": "French Fries Regular",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 62,
+        "cholesterolMg": 0,
+        "fatG": 22,
+        "fiberG": 5,
+        "kcal": 470,
+        "proteinG": 5,
+        "satFatG": 4,
+        "sodiumMg": 1180,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 156,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-mushroom-large",
+      "name": "Fried Mushroom Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 68,
+        "cholesterolMg": 0,
+        "fatG": 51,
+        "fiberG": 4,
+        "kcal": 762,
+        "proteinG": 7,
+        "satFatG": 1,
+        "sodiumMg": 3761,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 227,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-mushroom-regular-side-substitution",
+      "name": "Fried Mushroom Regular (side substitution)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 32,
+        "fiberG": 2,
+        "kcal": 476,
+        "proteinG": 5,
+        "satFatG": 0,
+        "sodiumMg": 2350,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 142,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-okra-large",
+      "name": "Fried Okra Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 68,
+        "cholesterolMg": 0,
+        "fatG": 26,
+        "fiberG": 3,
+        "kcal": 535,
+        "proteinG": 8,
+        "satFatG": 0,
+        "sodiumMg": 934,
+        "sugarG": 5,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 227,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-okra-regular-side-substitution",
+      "name": "Fried Okra Regular (side substitution)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 0,
+        "fatG": 16,
+        "fiberG": 2,
+        "kcal": 335,
+        "proteinG": 5,
+        "satFatG": 0,
+        "sodiumMg": 584,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 142,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-pickles-large",
+      "name": "Fried Pickles Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 59,
+        "cholesterolMg": 0,
+        "fatG": 45,
+        "fiberG": 6,
+        "kcal": 667,
+        "proteinG": 6,
+        "satFatG": 0,
+        "sodiumMg": 4321,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 198,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-pickles-regular-side-substitution",
+      "name": "Fried Pickles Regular (side substitution)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 32,
+        "fiberG": 4,
+        "kcal": 476,
+        "proteinG": 5,
+        "satFatG": 0,
+        "sodiumMg": 3086,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 142,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fried-tender",
+      "name": "Fried Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 95,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 190,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 39,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-black-tea-lemon-12oz",
+      "name": "Fuze Black Tea Lemon",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 24,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 89,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 11,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 360,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-black-tea-lemon-20oz",
+      "name": "Fuze Black Tea Lemon",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 148,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 18,
+        "sugarG": 40,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 600,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-black-tea-lemon-32oz",
+      "name": "Fuze Black Tea Lemon",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 64,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 236,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 28,
+        "sugarG": 64,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 960,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-raspberry-tea-12oz",
+      "name": "Fuze Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 24,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 89,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 96,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 360,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-raspberry-tea-20oz",
+      "name": "Fuze Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 148,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 160,
+        "sugarG": 40,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 600,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-fuze-raspberry-tea-32oz",
+      "name": "Fuze Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 64,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 236,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 256,
+        "sugarG": 64,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 960,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-garden-salad-tray",
+      "name": "Garden Salad Tray",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 13,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 23,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 4,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-garlic-parmesan-tender",
+      "name": "Garlic Parmesan Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 21,
+        "fatG": 7,
+        "fiberG": 1,
+        "kcal": 117,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 296,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 46,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-garlic-parmesan-tender-bite",
+      "name": "Garlic Parmesan Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 14,
+        "fatG": 4,
+        "fiberG": 0,
+        "kcal": 57,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 214,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 24,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-garlic-parmesan-wing",
+      "name": "Garlic Parmesan Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 0,
+        "kcal": 79,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 134,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-grilled-tender",
+      "name": "Grilled Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 27,
+        "fatG": 1,
+        "fiberG": 0,
+        "kcal": 56,
+        "proteinG": 11,
+        "satFatG": 0,
+        "sodiumMg": 227,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 39,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-fruit-punch-12oz",
+      "name": "Hi-C Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 27,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 352,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-fruit-punch-20oz",
+      "name": "Hi-C Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 267,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 44,
+        "sugarG": 74,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 586,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-fruit-punch-32oz",
+      "name": "Hi-C Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 118,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 427,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 71,
+        "sugarG": 118,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 938,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-pink-lemonade-12oz",
+      "name": "Hi-C Pink Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 42,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 355,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-pink-lemonade-20oz",
+      "name": "Hi-C Pink Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 300,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 70,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 591,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hi-c-pink-lemonade-32oz",
+      "name": "Hi-C Pink Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 120,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 480,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 112,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 946,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-honey-bbq-tender",
+      "name": "Honey BBQ Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 6,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 109,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 261,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 47,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-honey-bbq-tender-bite",
+      "name": "Honey BBQ Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 4,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 49,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 178,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 26,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-honey-bbq-wing",
+      "name": "Honey BBQ Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 68,
+        "proteinG": 7,
+        "satFatG": 1,
+        "sodiumMg": 87,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-honey-jalapeno-pimento-wrap-with-fried-tenders",
+      "name": "Honey Jalapeno Pimento Wrap with Fried Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 63,
+        "cholesterolMg": 55,
+        "fatG": 38,
+        "fiberG": 0,
+        "kcal": 730,
+        "proteinG": 37,
+        "satFatG": 13,
+        "sodiumMg": 1090,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 280,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-honey-jalapeno-pimento-wrap-with-grilled-tenders",
+      "name": "Honey Jalapeno Pimento Wrap with Grilled Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 58,
+        "cholesterolMg": 70,
+        "fatG": 32,
+        "fiberG": 0,
+        "kcal": 650,
+        "proteinG": 38,
+        "satFatG": 12,
+        "sodiumMg": 1160,
+        "sugarG": 14,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 279,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hot-tender",
+      "name": "Hot Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 4,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 102,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 327,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 47,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hot-tender-bite",
+      "name": "Hot Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 42,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 245,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 25,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-hot-wing",
+      "name": "Hot Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 1,
+        "kcal": 63,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 158,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-kettle-cooked-potato-chips",
+      "name": "Kettle Cooked Potato Chips",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 12,
+        "fiberG": 2,
+        "kcal": 210,
+        "proteinG": 3,
+        "satFatG": 2,
+        "sodiumMg": 125,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 39,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-key-lime-pie",
+      "name": "Key Lime Pie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 120,
+        "cholesterolMg": 40,
+        "fatG": 33,
+        "fiberG": 0,
+        "kcal": 890,
+        "proteinG": 9,
+        "satFatG": 17,
+        "sodiumMg": 150,
+        "sugarG": 91,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 241,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-korean-bbq-tender",
+      "name": "Korean BBQ Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 111,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 321,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 47,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-korean-bbq-tender-bite",
+      "name": "Korean BBQ Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 51,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 238,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 26,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-korean-bbq-wing",
+      "name": "Korean BBQ Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 151,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-lemon-pepper-dry-rub-wing",
+      "name": "Lemon Pepper Dry Rub Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 20,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 81,
+        "proteinG": 8,
+        "satFatG": 2,
+        "sodiumMg": 278,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-lemonade-12oz",
+      "name": "Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 371,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-lemonade-20oz",
+      "name": "Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 250,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 63,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 618,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-lemonade-32oz",
+      "name": "Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 104,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 400,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 100,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 988,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mac-and-cheese-large",
+      "name": "Mac & Cheese Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 145,
+        "cholesterolMg": 97,
+        "fatG": 58,
+        "fiberG": 11,
+        "kcal": 1333,
+        "proteinG": 57,
+        "satFatG": 34,
+        "sodiumMg": 5075,
+        "sugarG": 12,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 823,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mac-and-cheese-regular",
+      "name": "Mac & Cheese Regular",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 32,
+        "fatG": 19,
+        "fiberG": 4,
+        "kcal": 444,
+        "proteinG": 19,
+        "satFatG": 11,
+        "sodiumMg": 1692,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 274,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mango-habanero-tender",
+      "name": "Mango Habanero Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 106,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 227,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 46,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mango-habanero-tender-bite",
+      "name": "Mango Habanero Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 46,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 144,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 24,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mango-habanero-wing",
+      "name": "Mango Habanero Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 21,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 69,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 68,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mello-yellow-12oz",
+      "name": "Mello Yellow",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 47,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mello-yellow-20oz",
+      "name": "Mello Yellow",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 78,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 283,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 78,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-mello-yellow-32oz",
+      "name": "Mello Yellow",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 125,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 453,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 120,
+        "sugarG": 125,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-nilla-banana-pudding-jar",
+      "name": "NILLA Banana Pudding Jar",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 85,
+        "cholesterolMg": 23,
+        "fatG": 27,
+        "fiberG": 0,
+        "kcal": 602,
+        "proteinG": 5,
+        "satFatG": 17,
+        "sodiumMg": 362,
+        "sugarG": 59,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 221,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-oreo-cheesecake-jar",
+      "name": "OREO Cheesecake Jar",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 82,
+        "cholesterolMg": 50,
+        "fatG": 37,
+        "fiberG": 0,
+        "kcal": 760,
+        "proteinG": 8,
+        "satFatG": 15,
+        "sodiumMg": 530,
+        "sugarG": 56,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": 196,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-oreo-milkshake",
+      "name": "OREO Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 97,
+        "cholesterolMg": 80,
+        "fatG": 21,
+        "fiberG": 1,
+        "kcal": 660,
+        "proteinG": 17,
+        "satFatG": 14,
+        "sodiumMg": 555,
+        "sugarG": 84,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 375,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-organic-valley-1-chocolate-milk-8oz",
+      "name": "Organic Valley 1% Chocolate Milk",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 22,
+        "cholesterolMg": 10,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 8,
+        "satFatG": 2,
+        "sodiumMg": 200,
+        "sugarG": 21,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 236,
+      "sourceId": "nutrition",
+      "variant": "size=8oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-organic-valley-1-white-milk-8oz",
+      "name": "Organic Valley 1% White Milk",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 15,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 8,
+        "satFatG": 2,
+        "sodiumMg": 125,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 236,
+      "sourceId": "nutrition",
+      "variant": "size=8oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-peach-tea-12oz",
+      "name": "Peach Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 122,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 11,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 389,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-peach-tea-20oz",
+      "name": "Peach Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 203,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 18,
+        "sugarG": 52,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 649,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-peach-tea-32oz",
+      "name": "Peach Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 84,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 325,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 29,
+        "sugarG": 84,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 1038,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-plain-tender-bite",
+      "name": "Plain Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 107,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 18,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-plain-wing",
+      "name": "Plain Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 56,
+        "proteinG": 7,
+        "satFatG": 1,
+        "sodiumMg": 31,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 20,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-potato-salad-large",
+      "name": "Potato Salad Large",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 64,
+        "cholesterolMg": 56,
+        "fatG": 68,
+        "fiberG": 4,
+        "kcal": 900,
+        "proteinG": 8,
+        "satFatG": 15,
+        "sodiumMg": 1350,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 425,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-potato-salad-regular",
+      "name": "Potato Salad Regular",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 19,
+        "fatG": 23,
+        "fiberG": 1,
+        "kcal": 300,
+        "proteinG": 3,
+        "satFatG": 5,
+        "sodiumMg": 450,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 142,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-powerade-12oz",
+      "name": "Powerade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 150,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 335,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-powerade-20oz",
+      "name": "Powerade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 133,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 250,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 591,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-powerade-32oz",
+      "name": "Powerade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 213,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 400,
+        "sugarG": null,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 946,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-raspberry-tea-12oz",
+      "name": "Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 122,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 11,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 389,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-raspberry-tea-20oz",
+      "name": "Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 203,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 18,
+        "sugarG": 52,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 649,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-raspberry-tea-32oz",
+      "name": "Raspberry Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 84,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 325,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 29,
+        "sugarG": 84,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 1038,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-side-salad-regular-no-dressing",
+      "name": "Side Salad Regular – No Dressing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 11,
+        "fatG": 4,
+        "fiberG": 1,
+        "kcal": 65,
+        "proteinG": 4,
+        "satFatG": 2,
+        "sodiumMg": 123,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 65,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-slim-s-salad-with-fried-tenders",
+      "name": "Slim's Salad with Fried Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 74,
+        "fatG": 25,
+        "fiberG": 7,
+        "kcal": 499,
+        "proteinG": 39,
+        "satFatG": 7,
+        "sodiumMg": 1043,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 360,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-slim-s-salad-with-grilled-tenders",
+      "name": "Slim's Salad with Grilled Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 93,
+        "fatG": 15,
+        "fiberG": 4,
+        "kcal": 380,
+        "proteinG": 40,
+        "satFatG": 5,
+        "sodiumMg": 1152,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 360,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-slim-s-wrap-with-fried-tenders",
+      "name": "Slim's Wrap with Fried Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 58,
+        "cholesterolMg": 59,
+        "fatG": 32,
+        "fiberG": 4,
+        "kcal": 653,
+        "proteinG": 31,
+        "satFatG": 8,
+        "sodiumMg": 1597,
+        "sugarG": 3,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 228,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-slim-s-wrap-with-grilled-tenders",
+      "name": "Slim's Wrap with Grilled Tenders",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 71,
+        "fatG": 25,
+        "fiberG": 2,
+        "kcal": 570,
+        "proteinG": 32,
+        "satFatG": 7,
+        "sodiumMg": 1669,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 228,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-small-crowd-potato-salad",
+      "name": "Small Crowd Potato Salad",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 170,
+        "cholesterolMg": 150,
+        "fatG": 180,
+        "fiberG": 10,
+        "kcal": 2400,
+        "proteinG": 20,
+        "satFatG": 40,
+        "sodiumMg": 3600,
+        "sugarG": 20,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 1134,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-spicy-bbq-tender",
+      "name": "Spicy BBQ Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 107,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 254,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 47,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-spicy-bbq-tender-bite",
+      "name": "Spicy BBQ Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 47,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 171,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 26,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-spicy-bbq-wing",
+      "name": "Spicy BBQ Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 3,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 66,
+        "proteinG": 7,
+        "satFatG": 1,
+        "sodiumMg": 89,
+        "sugarG": 1,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-12oz",
+      "name": "Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 65,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 258,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-20oz",
+      "name": "Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 63,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 233,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 108,
+        "sugarG": 63,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 430,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-32oz",
+      "name": "Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 101,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 373,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 173,
+        "sugarG": 101,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 688,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-zero-12oz",
+      "name": "Sprite Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 4,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-zero-20oz",
+      "name": "Sprite Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 6,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 16,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 566,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sprite-zero-32oz",
+      "name": "Sprite Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 10,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 26,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 906,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-strawberry-cheesecake-jar",
+      "name": "Strawberry Cheesecake Jar",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 50,
+        "fatG": 27,
+        "fiberG": 1,
+        "kcal": 530,
+        "proteinG": 7,
+        "satFatG": 12,
+        "sodiumMg": 350,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 225,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-strawberry-milkshake",
+      "name": "Strawberry Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 88,
+        "cholesterolMg": 80,
+        "fatG": 16,
+        "fiberG": 1,
+        "kcal": 566,
+        "proteinG": 16,
+        "satFatG": 12,
+        "sodiumMg": 440,
+        "sugarG": 82,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 404,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweet-red-chili-tender",
+      "name": "Sweet Red Chili Tender",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 7,
+        "cholesterolMg": 21,
+        "fatG": 5,
+        "fiberG": 1,
+        "kcal": 113,
+        "proteinG": 11,
+        "satFatG": 1,
+        "sodiumMg": 279,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 47,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweet-red-chili-tender-bite",
+      "name": "Sweet Red Chili Tender Bite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 14,
+        "fatG": 2,
+        "fiberG": 0,
+        "kcal": 53,
+        "proteinG": 5,
+        "satFatG": 1,
+        "sodiumMg": 196,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 26,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweet-red-chili-wing",
+      "name": "Sweet Red Chili Wing",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 5,
+        "cholesterolMg": 20,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 76,
+        "proteinG": 8,
+        "satFatG": 1,
+        "sodiumMg": 131,
+        "sugarG": 4,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 27,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweetened-ice-tea-12oz",
+      "name": "Sweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 122,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 11,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 389,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweetened-ice-tea-20oz",
+      "name": "Sweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 203,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 18,
+        "sugarG": 52,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 649,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-sweetened-ice-tea-32oz",
+      "name": "Sweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 84,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 325,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 29,
+        "sugarG": 84,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 1038,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-syrup",
+      "name": "Syrup",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 300,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 165,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 120,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-tender-mac-bowl",
+      "name": "Tender Mac Bowl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 102,
+        "cholesterolMg": 118,
+        "fatG": 51,
+        "fiberG": 9,
+        "kcal": 1120,
+        "proteinG": 62,
+        "satFatG": 27,
+        "sodiumMg": 3831,
+        "sugarG": 8,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 670,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-texas-toast",
+      "name": "Texas Toast",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 0,
+        "fatG": 3,
+        "fiberG": 0,
+        "kcal": 104,
+        "proteinG": 3,
+        "satFatG": 0,
+        "sodiumMg": 183,
+        "sugarG": 2,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 33,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-unsweetened-ice-tea-12oz",
+      "name": "Unsweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 11,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 359,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-unsweetened-ice-tea-20oz",
+      "name": "Unsweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 18,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 598,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-unsweetened-ice-tea-32oz",
+      "name": "Unsweetened Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 28,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 957,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-vanilla-milkshake",
+      "name": "Vanilla Milkshake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 87,
+        "cholesterolMg": 80,
+        "fatG": 16,
+        "fiberG": 0,
+        "kcal": 563,
+        "proteinG": 16,
+        "satFatG": 12,
+        "sodiumMg": 444,
+        "sugarG": 82,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 366,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-vernor-s-ginger-ale-12oz",
+      "name": "Vernor’s Ginger Ale",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 340,
+      "sourceId": "nutrition",
+      "variant": "size=12oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-vernor-s-ginger-ale-20oz",
+      "name": "Vernor’s Ginger Ale",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 234,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 64,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 567,
+      "sourceId": "nutrition",
+      "variant": "size=20oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-vernor-s-ginger-ale-32oz",
+      "name": "Vernor’s Ginger Ale",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 104,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 374,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 120,
+        "sugarG": 102,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 907,
+      "sourceId": "nutrition",
+      "variant": "size=32oz"
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-waffle-5-4oz-cooked",
+      "name": "Waffle (5.4oz cooked)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 89,
+        "fatG": 14,
+        "fiberG": 1,
+        "kcal": 327,
+        "proteinG": 8,
+        "satFatG": 3,
+        "sodiumMg": 692,
+        "sugarG": 1,
+        "transFatG": 3
+      },
+      "parts": [],
+      "servingG": 153,
+      "sourceId": "nutrition",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "slim-chickens-whipped-butter",
+      "name": "Whipped Butter",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 32,
+        "fatG": 13,
+        "fiberG": 0,
+        "kcal": 106,
+        "proteinG": 0,
+        "satFatG": 8,
+        "sodiumMg": 120,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": 14,
+      "sourceId": "nutrition",
+      "variant": null
+    }
+  ],
+  "route": "html-table",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "contentHash": "4a2cc6f070d52e998ce365b24620e1fd42db7c6ec86186ab566dc2aae610388b",
+      "fetchedAt": "2026-11-25",
+      "generatedAt": null,
+      "id": "nutrition",
+      "kind": "html-table",
+      "landingUrl": null,
+      "sourceDate": null,
+      "url": "https://www.slimchickens.com/nutritional-and-allergen-info/"
+    }
+  ],
+  "spotChecks": [
+    {
+      "addParts": [],
+      "id": "cayenne-ranch-chicken-sandwich-menu",
+      "itemKey": "slim-chickens-cayenne-ranch-chicken-sandwich",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": null,
+        "cholesterolMg": null,
+        "fatG": null,
+        "fiberG": null,
+        "kcal": 650,
+        "proteinG": null,
+        "satFatG": null,
+        "sodiumMg": null,
+        "sugarG": null,
+        "transFatG": null
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.slimchickens.com/menu/craft-sandwiches-and-wraps/"
+    },
+    {
+      "addParts": [],
+      "id": "chicken-club-sandwich-menu",
+      "itemKey": "slim-chickens-chicken-club-sandwich",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": null,
+        "cholesterolMg": null,
+        "fatG": null,
+        "fiberG": null,
+        "kcal": 740,
+        "proteinG": null,
+        "satFatG": null,
+        "sodiumMg": null,
+        "sugarG": null,
+        "transFatG": null
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.slimchickens.com/menu/craft-sandwiches-and-wraps/"
+    },
+    {
+      "addParts": [],
+      "id": "crispy-chicken-sandwich-menu",
+      "itemKey": "slim-chickens-crispy-chicken-sandwich",
+      "observed": {
+        "addedSugarG": null,
+        "carbsG": null,
+        "cholesterolMg": null,
+        "fatG": null,
+        "fiberG": null,
+        "kcal": 590,
+        "proteinG": null,
+        "satFatG": null,
+        "sodiumMg": null,
+        "sugarG": null,
+        "transFatG": null
+      },
+      "observedAt": "2026-11-17",
+      "removeComponentKeys": [],
+      "where": "https://www.slimchickens.com/menu/craft-sandwiches-and-wraps/"
+    }
+  ]
+}
