@@ -48,6 +48,8 @@ export type ChainAdapter = {
   sources: SourceSpec[];
   /** The date the source prints on itself, as YYYY-MM-DD, or null. */
   sourceDate?: (sourceId: string, body: string) => string | null;
+  /** The machine timestamp the source carries (Nutritionix `generatedAt`), as YYYY-MM-DD, or null. Absent -> null. */
+  generatedAt?: (sourceId: string, body: string) => string | null;
   parse: (bodies: Record<string, string>) => ParseResult;
   spotChecks: SpotCheck[];
 };
@@ -78,7 +80,7 @@ export function assembleSnapshot(adapter: ChainAdapter, manifest: FetchManifest,
       url: rec.url,
       landingUrl: spec.landingUrl,
       sourceDate: adapter.sourceDate ? adapter.sourceDate(spec.id, text[spec.id]) : null,
-      generatedAt: null,
+      generatedAt: adapter.generatedAt ? adapter.generatedAt(spec.id, text[spec.id]) : null,
       fetchedAt: rec.fetchedAt.slice(0, 10),
       contentHash: hash,
     };

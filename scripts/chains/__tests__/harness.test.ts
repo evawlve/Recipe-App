@@ -21,6 +21,11 @@ describe('assembleSnapshot', () => {
     const s = assembleSnapshot(adapter, manifest(), { page: body });
     expect(s.sources).toEqual([{ id: 'page', kind: 'html-table', url: 'https://example.test/n', landingUrl: null, sourceDate: '2026-02-01', generatedAt: null, fetchedAt: '2026-11-16', contentHash: sha256(body) }]);
   });
+  it('takes generatedAt from the optional hook, and writes null when the adapter has none', () => {
+    const withHook: ChainAdapter = { ...adapter, generatedAt: () => '2026-11-06' };
+    expect(assembleSnapshot(withHook, manifest(), { page: body }).sources[0].generatedAt).toBe('2026-11-06');
+    expect(assembleSnapshot(adapter, manifest(), { page: body }).sources[0].generatedAt).toBeNull();
+  });
   it('refuses a body whose bytes do not match the manifest', () => {
     expect(() => assembleSnapshot(adapter, manifest(), { page: Buffer.from('changed') })).toThrow(/does not match/);
   });
