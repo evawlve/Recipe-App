@@ -8,6 +8,7 @@ import chickFilA from './chick-fil-a-us';
 import chilis from './chilis-us';
 import firstWatch from './first-watch-us';
 import slimChickens from './slim-chickens-us';
+import tacoJohns from './taco-johns-us';
 
 export const ADAPTERS: Record<string, ChainAdapter> = {
   [applebees.chain]: applebees,
@@ -15,4 +16,5 @@ export const ADAPTERS: Record<string, ChainAdapter> = {
   [chilis.chain]: chilis,
   [firstWatch.chain]: firstWatch,
   [slimChickens.chain]: slimChickens,
+  [tacoJohns.chain]: tacoJohns,
 };
