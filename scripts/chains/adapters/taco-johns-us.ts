@@ -1,5 +1,5 @@
 /**
- * Taco John's (US), ITEMS ONLY: the Nutritionix public file behind Taco John's nutrition calculator
+ * Taco John's (US), items and their default COMPONENTS: the Nutritionix public file behind Taco John's nutrition calculator
  * (www.tacojohns.com/nutrition/ answers 301 to tacojohns.com/nutrition-calculator/), one gzipped JSON,
  * https://nix-vue-inm.s3.amazonaws.com/restaurant/taco-johns/data/menu-latest.json.gz.
  *
@@ -13,43 +13,38 @@
  *  R4 The panel is in the `calculated*` fields ONLY (every base field is 0), each through `fdaRound` (the chain's own
  *     calculator sets useFdaRounding 1). addedSugarG and servingG are null on every row: the label shows neither.
  *  R5 A "less than" band rounds to null; exact ties go to the even multiple (lib/fda-round.ts; UNVERIFIED rule).
- *  R6 Key "taco-johns-" + slugify(cleanName); variant null; aliases, parts, components empty; NO identical-panel
- *     collapse; a duplicate key throws. No atwaterExempt and no SOURCE_ERRORS (0 Atwater failures on this file).
+ *  R6 Key "taco-johns-" + slugify(cleanName); variant null; aliases empty; NO identical-panel collapse; a duplicate
+ *     key throws. No atwaterExempt and no SOURCE_ERRORS (0 Atwater failures on this file).
  *  R7 Spot checks, kcal only (see the brief for where they were observed).
- * Modifiers and components are CHAIN-6b, not here. Nothing imports the menu file.
+ *  R8 (CHAIN-6b, mobile repo s472) Each kept item's `defaultModifiers` become its parts and each modifier used as a
+ *     default becomes ONE component, key "taco-johns-" + slugify(cleanName) (its own namespace: 13 share a slug with an
+ *     item), through lib/nutritionix.ts `defaultParts()`, the code Applebee's ships (CHAIN-5b), unchanged: its header
+ *     holds the formula, the 4 dp contributions, kcalPublished and the throws. On this file one cell of 1,350 does not
+ *     close exactly: Tropicana Orange Juice, whose file kcal 165.0001 labels 170 while its one part, 165.0000 at 4 dp,
+ *     sums to the tie 165 (160); no single precision closes both it and the four drinks' x.5 ties. Its kcalPublished
+ *     is 170. The preview-only protein variants stay left out (R3); the groups' Light / Extra multipliers are later.
+ * Nothing imports the menu file.
  */
 import type { ChainItem, Panel } from '../../../src/lib/chains/snapshot';
 import type { ChainAdapter } from '../lib/adapter';
 import { fdaRound } from '../lib/fda-round';
-import type { FdaRule } from '../lib/fda-round';
+import { NIX_FIELDS, defaultParts } from '../lib/nutritionix';
+import type { NixLink, NixModifier } from '../lib/nutritionix';
 import { decodeEntities, panelOf, slugify } from '../lib/text';
 
 const SOURCE = 'menu';
 const WHERE = 'https://tacojohns.com/nutrition-calculator/';
-
-const FIELDS: Array<[string, keyof Panel, FdaRule]> = [
-  ['calculatedCalories', 'kcal', 'kcal'],
-  ['calculatedTotalFat', 'fatG', 'fat'],
-  ['calculatedSaturatedFat', 'satFatG', 'fat'],
-  ['calculatedTransFat', 'transFatG', 'fat'],
-  ['calculatedCholesterol', 'cholesterolMg', 'chol'],
-  ['calculatedSodium', 'sodiumMg', 'sodium'],
-  ['calculatedTotalCarb', 'carbsG', 'gram'],
-  ['calculatedFiber', 'fiberG', 'gram'],
-  ['calculatedSugars', 'sugarG', 'gram'],
-  ['calculatedProtein', 'proteinG', 'gram'],
-];
 
 type NixItem = {
   id: number | string;
   name: string;
   isActive: number;
   categoryId: number | string;
-  defaultModifiers?: unknown[];
+  defaultModifiers?: NixLink[];
   nutrition?: Record<string, number | null>;
 };
 type NixCategory = { id: number | string; name: string; previewOnly?: unknown };
-type NixFile = { generatedAt?: string; categories?: NixCategory[]; items?: NixItem[] };
+type NixFile = { generatedAt?: string; categories?: NixCategory[]; items?: NixItem[]; modifiers?: NixModifier[] };
 
 function cleanName(raw: string): string {
   return decodeEntities(raw).replace(/[®™]/g, '').replace(/\s+/g, ' ').trim();
@@ -85,21 +80,23 @@ const adapter: ChainAdapter = {
       if (c.previewOnly !== 0 && c.previewOnly !== 1) throw new Error(`taco-johns-us: category "${c.name}" has previewOnly ${String(c.previewOnly)}`);
       preview.set(String(c.id), c.previewOnly === 1);
     }
+    const book = defaultParts('taco-johns-us', 'taco-johns-', data.modifiers, cleanName);
     const items = new Map<string, ChainItem>();
     for (const i of data.items ?? []) {
       const isPreview = preview.get(String(i.categoryId)) === true;
       if (!(i.isActive === 1 && (i.defaultModifiers ?? []).length > 0 && !isPreview)) continue;
       const name = cleanName(i.name);
       const values: Partial<Panel> = { addedSugarG: null };
-      for (const [f, field, rule] of FIELDS) {
+      for (const [f, , field, rule] of NIX_FIELDS) {
         const v = i.nutrition?.[f];
         values[field] = typeof v === 'number' ? fdaRound(rule, v) : null;
       }
       const key = `taco-johns-${slugify(name)}`;
       if (items.has(key)) throw new Error(`taco-johns-us: item ${key} appears twice`);
-      items.set(key, { key, name, aliases: [], variant: null, servingG: null, panel: panelOf(values), sourceId: SOURCE, parts: [] });
+      const parts = book.parts(name, i.defaultModifiers ?? []);
+      items.set(key, { key, name, aliases: [], variant: null, servingG: null, panel: panelOf(values), sourceId: SOURCE, parts });
     }
-    return { items: [...items.values()], components: [] };
+    return { items: [...items.values()], components: book.components() };
   },
   spotChecks: [
     ['meat-and-potato-burrito', 510],
