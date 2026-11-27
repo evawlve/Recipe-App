@@ -27,35 +27,21 @@
  *     item's calculated panel equals fdaRound of its parts' sum, field by field), at 4 dp; addedSugarG null as on the
  *     item. kcalPublished = fdaRound('kcal', unrounded kcal contribution), the value the CUSTOMIZE list shows. A missing
  *     modifier, a quantity other than 1, the same modifier twice in one item, a field that is not a number, or two
- *     modifiers with one key all THROW. The builder parents' drinks are still left out (a later row).
+ *     modifiers with one key all THROW. The builder parents' drinks are still left out (a later row). Since CHAIN-6b
+ *     (mobile repo s472) the part code is lib/nutritionix.ts `defaultParts()`, shared with Taco John's, unchanged.
  * Nothing imports the menu file.
  */
-import type { ChainComponent, ChainItem, ItemPart, Panel } from '../../../src/lib/chains/snapshot';
+import type { ChainItem, Panel } from '../../../src/lib/chains/snapshot';
 import type { ChainAdapter } from '../lib/adapter';
 import { fdaRound } from '../lib/fda-round';
-import type { FdaRule } from '../lib/fda-round';
+import { NIX_FIELDS, defaultParts } from '../lib/nutritionix';
+import type { NixLink, NixModifier } from '../lib/nutritionix';
 import { decodeEntities, panelOf, slugify } from '../lib/text';
 
 const SOURCE = 'menu';
 const CATERING = 'Catering (INM Only)';
 const WHERE = 'https://www.applebees.com/en/nutrition/interactive-menu';
 
-// [item field, modifier field, panel field, rounding rule]
-const FIELDS: Array<[string, string, keyof Panel, FdaRule]> = [
-  ['calculatedCalories', 'calories', 'kcal', 'kcal'],
-  ['calculatedTotalFat', 'totalFat', 'fatG', 'fat'],
-  ['calculatedSaturatedFat', 'saturatedFat', 'satFatG', 'fat'],
-  ['calculatedTransFat', 'transFat', 'transFatG', 'fat'],
-  ['calculatedCholesterol', 'cholesterol', 'cholesterolMg', 'chol'],
-  ['calculatedSodium', 'sodium', 'sodiumMg', 'sodium'],
-  ['calculatedTotalCarb', 'totalCarb', 'carbsG', 'gram'],
-  ['calculatedFiber', 'fiber', 'fiberG', 'gram'],
-  ['calculatedSugars', 'sugars', 'sugarG', 'gram'],
-  ['calculatedProtein', 'protein', 'proteinG', 'gram'],
-];
-const BASIS = 'modifier panel x servingWeightGrams / modifier servingWeight (else x servingSize), 4 dp';
-
-type NixLink = { id: number | string; quantity?: number; servingSize?: number; servingWeightGrams?: number };
 type NixItem = {
   id: number | string;
   name: string;
@@ -64,43 +50,12 @@ type NixItem = {
   defaultModifiers?: NixLink[];
   nutrition?: Record<string, number | null>;
 };
-type NixModifier = { id: number | string; name: string; nutrition?: Record<string, number | null> };
 type NixFile = {
   generatedAt?: string;
   categories?: Array<{ id: number | string; name: string }>;
   items?: NixItem[];
   modifiers?: NixModifier[];
 };
-
-const dp4 = (v: number): number => Math.round(v * 1e4) / 1e4;
-
-/** One default modifier inside one item: the part, from the INM's own sum (R8). */
-function partOf(itemName: string, link: NixLink, mod: NixModifier, componentKey: string): ItemPart {
-  if (link.quantity !== 1) throw new Error(`applebees-us: ${itemName} default ${mod.name} has quantity ${link.quantity}, not 1`);
-  const sw = mod.nutrition?.servingWeight;
-  const grams = link.servingWeightGrams;
-  const f = typeof sw === 'number' && sw > 0 && typeof grams === 'number' ? grams / sw : link.servingSize;
-  if (typeof f !== 'number' || !Number.isFinite(f) || f <= 0) throw new Error(`applebees-us: ${itemName} default ${mod.name} has no serving factor`);
-  const values: Partial<Panel> = { addedSugarG: null };
-  let kcal = 0;
-  for (const [, mf, field] of FIELDS) {
-    const v = mod.nutrition?.[mf];
-    if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`applebees-us: modifier ${mod.name} ${mf} is not a number`);
-    if (field === 'kcal') kcal = v * f;
-    values[field] = dp4(v * f);
-  }
-  return {
-    componentKey,
-    portionLabel: null,
-    quantity: null,
-    grams: typeof grams === 'number' && grams > 0 ? dp4(grams) : null,
-    isDefault: true,
-    kcalPublished: fdaRound('kcal', kcal),
-    contribution: panelOf(values),
-    contributionBasis: BASIS,
-    without: null,
-  };
-}
 
 function cleanName(raw: string): string {
   return decodeEntities(raw).replace(/[®™]/g, '').replace(/\s+/g, ' ').trim();
@@ -134,44 +89,24 @@ const adapter: ChainAdapter = {
     const catNames = new Map<string, string>();
     for (const c of data.categories ?? []) catNames.set(String(c.id), decodeEntities(c.name).trim());
     if (![...catNames.values()].includes(CATERING)) throw new Error(`applebees-us: no category named "${CATERING}"`);
-    const mods = new Map<string, NixModifier>();
-    for (const m of data.modifiers ?? []) mods.set(String(m.id), m);
+    const book = defaultParts('applebees-us', 'applebees-', data.modifiers, cleanName);
     const items = new Map<string, ChainItem>();
-    const components = new Map<string, ChainComponent>();
-    const componentOf = new Map<string, string>(); // component key -> modifier id
     for (const i of data.items ?? []) {
       const catName = catNames.get(String(i.categoryId));
       const isCatering = catName === CATERING;
       if (!(i.isActive === 1 && (i.defaultModifiers ?? []).length > 0 && !isCatering)) continue;
       const name = cleanName(i.name);
       const values: Partial<Panel> = { addedSugarG: null };
-      for (const [f, , field, rule] of FIELDS) {
+      for (const [f, , field, rule] of NIX_FIELDS) {
         const v = i.nutrition?.[f];
         values[field] = typeof v === 'number' ? fdaRound(rule, v) : null;
       }
       const key = `applebees-${slugify(name)}`;
       if (items.has(key)) throw new Error(`applebees-us: item ${key} appears twice`);
-      const parts: ItemPart[] = [];
-      const seen = new Set<string>();
-      for (const link of i.defaultModifiers ?? []) {
-        const id = String(link.id);
-        const mod = mods.get(id);
-        if (!mod) throw new Error(`applebees-us: ${name} default modifier ${id} is not in modifiers`);
-        if (seen.has(id)) throw new Error(`applebees-us: ${name} lists default modifier ${id} twice`);
-        seen.add(id);
-        const modName = cleanName(mod.name);
-        const ck = `applebees-${slugify(modName)}`;
-        const owner = componentOf.get(ck);
-        if (owner !== undefined && owner !== id) throw new Error(`applebees-us: component ${ck} appears twice (modifiers ${owner} and ${id})`);
-        if (owner === undefined) {
-          componentOf.set(ck, id);
-          components.set(ck, { key: ck, name: modName, removalKeys: [modName.toLowerCase()], portions: [] });
-        }
-        parts.push(partOf(name, link, mod, ck));
-      }
+      const parts = book.parts(name, i.defaultModifiers ?? []);
       items.set(key, { key, name, aliases: [], variant: null, servingG: null, panel: panelOf(values), sourceId: SOURCE, parts });
     }
-    return { items: [...items.values()], components: [...components.values()] };
+    return { items: [...items.values()], components: book.components() };
   },
   // Observed 2026-11-26 on applebees.com's own interactive menu list; kcal only, item alone.
   spotChecks: [
