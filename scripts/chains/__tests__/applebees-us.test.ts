@@ -21,8 +21,10 @@ const mod = (id: number, name: string, n: N = {}) => ({
 });
 const MODS = [mod(1, 'Toasted Brioche Bun&reg;'), mod(2, 'Pickle Fries', { calories: 288.57, servingWeight: 0 }), mod(3, 'Lettuce', { calories: 2.1, servingWeight: 20 })];
 const cats = [{ id: 1, name: 'Handcrafted Burgers' }, { id: 2, name: 'Catering (INM Only)' }, { id: 3, name: 'Menu Items (INM Only)' }];
-const file = (items: unknown[], categories: unknown[] = cats, generatedAt = '2026-11-23T14:07:27+00:00', modifiers: unknown[] = MODS) =>
-  JSON.stringify({ generatedAt, categories, items, modifiers });
+const tag = (name: string, modifiers: number[] = [], children: unknown[] = []) => ({ name, modifiers, children });
+const NO_DRINKS = [tag('Beverages'), tag('Alcoholic Beverages')];
+const file = (items: unknown[], categories: unknown[] = cats, generatedAt = '2026-11-23T14:07:27+00:00', modifiers: unknown[] = MODS, tags: unknown[] = NO_DRINKS) =>
+  JSON.stringify({ generatedAt, categories, items, modifiers, tags });
 
 const main = file([
   item(1, 'Classic Burger&reg;', 1, { ...calc(), calories: 5, totalFat: 1 }),
@@ -111,6 +113,51 @@ describe('applebees-us default modifiers (CHAIN-5b)', () => {
   });
 });
 
+describe('applebees-us drinks (CHAIN-5c)', () => {
+  const drink = (id: number, name: string, n: N = {}, over: Record<string, unknown> = {}) => ({
+    ...mod(id, name, { calories: 93.33, totalFat: 0, saturatedFat: 0, transFat: 0, cholesterol: 0, sodium: 46.67, totalCarb: 26, fiber: 0,
+      sugars: 26, addedSugars: 26, protein: 0, servingWeight: 0, servingUnitQuantity: 20, ...n }),
+    ...over,
+  });
+  const DRINKS = [
+    drink(10, 'Coca Cola'), drink(11, 'Coca Cola (To Go)', { calories: 140, totalCarb: 39, sugars: 39 }),
+    drink(12, 'Perfect Margarita', { calories: 260, totalCarb: 30, sugars: 28 }), drink(13, 'Ghost Soda', {}, { isActive: 0 }),
+    drink(14, "Owen's Nitro Infused Espresso", { calories: 30, totalCarb: 15, sugars: 2 }), drink(15, 'Oreo Cookie Shake', { calories: 841.29 }),
+    drink(16, '100% Apple Juice', { calories: 100 }),
+  ];
+  const TAGS = [tag('Beverages', [], [tag('Fountain Drinks', [10, 11, 13]), tag('Non-Alcoholic', [14]), tag('Milkshakes', [15])]),
+    tag('Alcoholic Beverages', [], [tag('Perfect Cocktails', [12])]), tag('Kids Menu', [], [tag('Beverages', [16])])];
+  const shake = item(1, 'Oreo Cookie Shake', 1, calc());
+  const { items, components } = applebees.parse({ menu: file([shake], cats, undefined, [...MODS, ...DRINKS], TAGS) });
+  const byKey = new Map(items.map((i) => [i.key, i]));
+
+  it('makes each modifier on the two drink tiles one item (no other tag): base fields through fdaRound at one serving, no parts, the size in the name', () => {
+    expect([...byKey.keys()].sort()).toEqual(['applebees-coca-cola', 'applebees-coca-cola-to-go', 'applebees-oreo-cookie-shake', 'applebees-perfect-margarita']);
+    expect(byKey.get('applebees-coca-cola')).toEqual({
+      key: 'applebees-coca-cola', name: 'Coca Cola', aliases: [], variant: null, servingG: null, sourceId: 'menu', parts: [],
+      panel: { kcal: 90, proteinG: 0, carbsG: 26, fatG: 0, satFatG: 0, transFatG: 0, cholesterolMg: 0, sodiumMg: 45, fiberG: 0, sugarG: 26, addedSugarG: null },
+    });
+    expect(byKey.get('applebees-coca-cola-to-go')?.panel.kcal).toBe(140);
+    expect(components.map((c) => c.key)).toEqual(['applebees-toasted-brioche-bun']);
+  });
+  it('an Alcoholic Beverages drink is atwaterExempt alcohol, and a Beverages drink carries no exemption', () => {
+    expect(byKey.get('applebees-perfect-margarita')?.atwaterExempt).toBe('alcohol');
+    expect(byKey.get('applebees-coca-cola')).not.toHaveProperty('atwaterExempt');
+  });
+  it('leaves out an inactive drink, a SOURCE_ERRORS drink and a DRINK_IS_ITEM drink, whose item keeps its parts', () => {
+    expect(byKey.has('applebees-ghost-soda')).toBe(false);
+    expect(byKey.has('applebees-owen-s-nitro-infused-espresso')).toBe(false);
+    expect(byKey.get('applebees-oreo-cookie-shake')?.parts).toHaveLength(1);
+  });
+  it('throws on a missing drink tag, a drink not in modifiers, a non-number drink field and an unnamed drink / item clash', () => {
+    const run = (its: unknown[], ms: unknown[], tags: unknown[]) => () => applebees.parse({ menu: file(its, cats, undefined, [...MODS, ...ms], tags) });
+    expect(run([], DRINKS, [tag('Beverages')])).toThrow(/no tag named "Alcoholic Beverages"/);
+    expect(run([], [], TAGS)).toThrow(/drink 10 on tag "Beverages" is not in modifiers/);
+    expect(run([], [drink(10, 'Coca Cola', { sodium: null as unknown as number })], [tag('Beverages', [10]), tag('Alcoholic Beverages')])).toThrow(/drink Coca Cola sodium is not a number/);
+    expect(run([item(1, 'Coca Cola', 1, calc())], [drink(10, 'Coca Cola')], [tag('Beverages', [10]), tag('Alcoholic Beverages')])).toThrow(/item applebees-coca-cola appears twice/);
+  });
+});
+
 describe('applebees-us committed menu closes exactly', () => {
   const snap = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'chains', 'menus', 'applebees-us.json'), 'utf8')) as ChainSnapshot;
   const RULES = { kcal: 'kcal', fatG: 'fat', satFatG: 'fat', transFatG: 'fat', cholesterolMg: 'chol', sodiumMg: 'sodium',
@@ -118,8 +165,9 @@ describe('applebees-us committed menu closes exactly', () => {
 
   it('every item panel is fdaRound of its default parts summed, on all 10 label fields, and every kcalPublished is fdaRound of its kcal', () => {
     const bad: string[] = [];
+    expect(snap.items.filter((it) => it.parts.length > 0)).toHaveLength(163);
     for (const it of snap.items) {
-      if (it.parts.length === 0) bad.push(`${it.key}: no parts`);
+      if (it.parts.length === 0) continue;
       for (const [f, rule] of Object.entries(RULES) as Array<[keyof typeof RULES, (typeof RULES)[keyof typeof RULES]]>) {
         const sum = it.parts.filter((p) => p.isDefault).reduce((a, p) => a + (p.contribution?.[f] ?? NaN), 0);
         if (fdaRound(rule, Math.max(0, sum)) !== it.panel[f]) bad.push(`${it.key} ${f}`);
@@ -127,5 +175,11 @@ describe('applebees-us committed menu closes exactly', () => {
       for (const p of it.parts) if (p.kcalPublished !== fdaRound('kcal', Math.max(0, p.contribution?.kcal ?? NaN))) bad.push(`${it.key} ${p.componentKey} kcalPublished`);
     }
     expect(bad).toEqual([]);
+  });
+  it('the drinks: 203 items without parts, 39 of them atwaterExempt alcohol, no built item exempt', () => {
+    const drinks = snap.items.filter((it) => it.parts.length === 0);
+    expect(drinks).toHaveLength(203);
+    expect(drinks.filter((it) => it.atwaterExempt === 'alcohol')).toHaveLength(39);
+    expect(snap.items.filter((it) => it.atwaterExempt !== undefined)).toHaveLength(39);
   });
 });
