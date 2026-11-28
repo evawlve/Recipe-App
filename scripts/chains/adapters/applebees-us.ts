@@ -1,5 +1,5 @@
 /**
- * Applebee's (US), items, their default COMPONENTS and the drinks: the Nutritionix public file that applebees.com/en/nutrition hands off to
+ * Applebee's (US), items, their default COMPONENTS, the drinks and the Kids Menu tile: the Nutritionix public file that applebees.com/en/nutrition hands off to
  * (the page links /en/nutrition/interactive-menu, which embeds the calculator "Powered by Nutritionix"),
  * one gzipped JSON, https://nix-vue-inm.s3.amazonaws.com/restaurant/applebees/data/menu-latest.json.gz.
  *
@@ -35,11 +35,18 @@
  *     "(To Go)" is the 30 fl oz cup), aliases [], servingG null, parts [] (a drink is one food, not a build), panel =
  *     fdaRound of the MODIFIER's base fields at one serving (a modifier has no calculated* twin), addedSugarG null. Every
  *     "Alcoholic Beverages" drink is atwaterExempt 'alcohol' (ethanol energy is not in P/C/F; Chili's rule). The
- *     builder parents' groups hold 147 of the 166; their other 19 (10 sampler dips, 9 kids shakes / smoothies /
- *     sundaes) are on neither tile and stay out, as do the Kids Menu and Limited Time Offers drink lists. An inactive
+ *     builder parents' groups hold 147 of the 166; of their other 19, the 9 kids shakes / smoothies / sundaes are R10
+ *     and the 10 sampler dips are on no tile and stay out, as does the Limited Time Offers drink list. An inactive
  *     drink is left out; a SOURCE_ERRORS drink is left out, never fixed; a drink whose key is already an item is left
  *     out ONLY when DRINK_IS_ITEM names it (the item, with its parts, stays). A missing tag, a missing modifier, a
  *     field that is not a number, or any other key clash THROWS.
+ *  R10 (CHAIN-5d, mobile repo s472) The KIDS MENU tile: every modifier on the top-level tag "Kids Menu" (its own list
+ *     equals its children's: Beverages 2, Fruit Smoothies, Shakes & Sundaes 9, Sides 5, so 16 on this file) is an
+ *     item by R9's code and R9's rules, after R9's two tiles; none is on the Alcoholic Beverages tile, so none is
+ *     exempt. The tile's 9 items are dishes already (R3). Fries, 1% Milk and Broccoli are also default parts
+ *     elsewhere, so each is both an item and a component under one key (R8: components are their own namespace).
+ *     The Limited Time Offers tile's 8 drinks stay out: 5 of its cocktails fail Atwater and sit on no alcohol tag,
+ *     so they need a named exempt list (a later row), and its Make It Spicy is already an R9 item.
  * Nothing imports the menu file.
  */
 import type { ChainItem, Panel } from '../../../src/lib/chains/snapshot';
@@ -51,7 +58,7 @@ import { decodeEntities, panelOf, slugify } from '../lib/text';
 
 const SOURCE = 'menu';
 const CATERING = 'Catering (INM Only)';
-const DRINK_TAGS = ['Beverages', 'Alcoholic Beverages'];
+const DRINK_TAGS = ['Beverages', 'Alcoholic Beverages', 'Kids Menu']; // R9's two drink tiles, then R10's Kids Menu tile
 const ALCOHOL_TAG = 'Alcoholic Beverages';
 // Left out, never "fixed": a published panel that contradicts itself.
 const SOURCE_ERRORS: Record<string, string> = {

@@ -22,7 +22,7 @@ const mod = (id: number, name: string, n: N = {}) => ({
 const MODS = [mod(1, 'Toasted Brioche Bun&reg;'), mod(2, 'Pickle Fries', { calories: 288.57, servingWeight: 0 }), mod(3, 'Lettuce', { calories: 2.1, servingWeight: 20 })];
 const cats = [{ id: 1, name: 'Handcrafted Burgers' }, { id: 2, name: 'Catering (INM Only)' }, { id: 3, name: 'Menu Items (INM Only)' }];
 const tag = (name: string, modifiers: number[] = [], children: unknown[] = []) => ({ name, modifiers, children });
-const NO_DRINKS = [tag('Beverages'), tag('Alcoholic Beverages')];
+const NO_DRINKS = [tag('Beverages'), tag('Alcoholic Beverages'), tag('Kids Menu')];
 const file = (items: unknown[], categories: unknown[] = cats, generatedAt = '2026-11-23T14:07:27+00:00', modifiers: unknown[] = MODS, tags: unknown[] = NO_DRINKS) =>
   JSON.stringify({ generatedAt, categories, items, modifiers, tags });
 
@@ -126,7 +126,7 @@ describe('applebees-us drinks (CHAIN-5c)', () => {
     drink(16, '100% Apple Juice', { calories: 100 }),
   ];
   const TAGS = [tag('Beverages', [], [tag('Fountain Drinks', [10, 11, 13]), tag('Non-Alcoholic', [14]), tag('Milkshakes', [15])]),
-    tag('Alcoholic Beverages', [], [tag('Perfect Cocktails', [12])]), tag('Kids Menu', [], [tag('Beverages', [16])])];
+    tag('Alcoholic Beverages', [], [tag('Perfect Cocktails', [12])]), tag('Kids Menu'), tag('Limited Time Offers', [], [tag('Beverages', [16])])];
   const shake = item(1, 'Oreo Cookie Shake', 1, calc());
   const { items, components } = applebees.parse({ menu: file([shake], cats, undefined, [...MODS, ...DRINKS], TAGS) });
   const byKey = new Map(items.map((i) => [i.key, i]));
@@ -158,6 +158,37 @@ describe('applebees-us drinks (CHAIN-5c)', () => {
   });
 });
 
+describe('applebees-us Kids Menu tile (CHAIN-5d)', () => {
+  const kid = (id: number, name: string, n: N = {}) => mod(id, name, { calories: 102.48, totalFat: 2.44, saturatedFat: 1.54, transFat: 0, cholesterol: 12.2,
+    sodium: 107.36, totalCarb: 12.2, fiber: 0, sugars: 12.69, addedSugars: 0, protein: 8.22, servingWeight: 244, ...n });
+  const KIDS = [kid(20, '1% Milk'), kid(21, 'Kids Shake - Vanilla', { calories: 528.4, totalFat: 27.1, totalCarb: 60.2, protein: 10.9 }),
+    kid(22, 'Fries', { calories: 401.85, totalFat: 18.4, totalCarb: 53.4, protein: 5.7, servingWeight: 142.75 }), kid(23, 'Strawberry Lemon Poppi', { calories: 35 })];
+  const TAGS = [tag('Beverages'), tag('Alcoholic Beverages'),
+    tag('Kids Menu', [20, 21, 22], [tag('Beverages', [20]), tag('Fruit Smoothies, Shakes &amp; Sundaes', [21]), tag('Sides', [22])]),
+    tag('Limited Time Offers', [], [tag('Beverages', [23])])];
+  const side = item(1, 'Classic Fries Side', 1, calc(), { defaultModifiers: [link(22, 142.75)] });
+  const { items, components } = applebees.parse({ menu: file([side], cats, undefined, [...MODS, ...KIDS], TAGS) });
+  const byKey = new Map(items.map((i) => [i.key, i]));
+
+  it('makes every modifier on the Kids Menu tile one item through fdaRound at one serving, none exempt, and reads no Limited Time Offers drink', () => {
+    expect([...byKey.keys()].sort()).toEqual(['applebees-1-milk', 'applebees-classic-fries-side', 'applebees-fries', 'applebees-kids-shake-vanilla']);
+    expect(byKey.get('applebees-1-milk')).toEqual({
+      key: 'applebees-1-milk', name: '1% Milk', aliases: [], variant: null, servingG: null, sourceId: 'menu', parts: [],
+      panel: { kcal: 100, proteinG: 8, carbsG: 12, fatG: 2.5, satFatG: 1.5, transFatG: 0, cholesterolMg: 10, sodiumMg: 105, fiberG: 0, sugarG: 13, addedSugarG: null },
+    });
+    expect(byKey.get('applebees-kids-shake-vanilla')?.panel.kcal).toBe(530);
+    for (const i of items) expect(i).not.toHaveProperty('atwaterExempt');
+  });
+  it('a Kids side that is also a default part is both an item without parts and a component, under one key', () => {
+    expect(byKey.get('applebees-fries')).toMatchObject({ name: 'Fries', parts: [], panel: { kcal: 400 } });
+    expect(byKey.get('applebees-classic-fries-side')?.parts.map((p) => p.componentKey)).toEqual(['applebees-fries']);
+    expect(components.map((c) => c.key)).toEqual(['applebees-fries']);
+  });
+  it('throws when no tag is named Kids Menu', () => {
+    expect(() => applebees.parse({ menu: file([], cats, undefined, MODS, [tag('Beverages'), tag('Alcoholic Beverages')]) })).toThrow(/no tag named "Kids Menu"/);
+  });
+});
+
 describe('applebees-us committed menu closes exactly', () => {
   const snap = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'chains', 'menus', 'applebees-us.json'), 'utf8')) as ChainSnapshot;
   const RULES = { kcal: 'kcal', fatG: 'fat', satFatG: 'fat', transFatG: 'fat', cholesterolMg: 'chol', sodiumMg: 'sodium',
@@ -176,10 +207,19 @@ describe('applebees-us committed menu closes exactly', () => {
     }
     expect(bad).toEqual([]);
   });
-  it('the drinks: 203 items without parts, 39 of them atwaterExempt alcohol, no built item exempt', () => {
+  it('the drinks and the Kids Menu tile: 219 items without parts, 39 of them atwaterExempt alcohol, no built item exempt', () => {
     const drinks = snap.items.filter((it) => it.parts.length === 0);
-    expect(drinks).toHaveLength(203);
+    expect(drinks).toHaveLength(219);
     expect(drinks.filter((it) => it.atwaterExempt === 'alcohol')).toHaveLength(39);
     expect(snap.items.filter((it) => it.atwaterExempt !== undefined)).toHaveLength(39);
+  });
+  it('the Kids Menu tile: its 16 modifiers are items without parts, none exempt, and 3 of them share a key with a component', () => {
+    const KIDS = ['1-milk', '100-apple-juice', 'applesauce', 'broccoli', 'fries', 'kids-fruit-smoothie-mango', 'kids-fruit-smoothie-pina-colada',
+      'kids-fruit-smoothie-strawberry-blue-tropical-swirl', 'kids-mozzarella-sticks', 'kids-shake-chocolate', 'kids-shake-oreo-cookie',
+      'kids-shake-strawberry', 'kids-shake-vanilla', 'kids-sundae-hot-fudge', 'kids-sundae-strawberry', 'sliced-strawberries-with-vanilla-yogurt'].map((k) => `applebees-${k}`);
+    const byKey = new Map(snap.items.map((it) => [it.key, it]));
+    expect(KIDS.filter((k) => byKey.get(k)?.parts.length === 0 && byKey.get(k)?.atwaterExempt === undefined)).toEqual(KIDS);
+    const comp = new Set(snap.components.map((c) => c.key));
+    expect(KIDS.filter((k) => comp.has(k))).toEqual(['applebees-1-milk', 'applebees-broccoli', 'applebees-fries']);
   });
 });

@@ -1487,6 +1487,50 @@
   "items": [
     {
       "aliases": [],
+      "key": "applebees-1-milk",
+      "name": "1% Milk",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 10,
+        "fatG": 2.5,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 8,
+        "satFatG": 1.5,
+        "sodiumMg": 105,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-100-apple-juice",
+      "name": "100% Apple Juice",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 18,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-12-oz-ribeye",
       "name": "12 oz. Ribeye",
       "panel": {
@@ -2193,6 +2237,28 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-applesauce",
+      "name": "Applesauce",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -5464,6 +5530,28 @@
         "satFatG": 0,
         "sodiumMg": 80,
         "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-broccoli",
+      "name": "Broccoli",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 6,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 3,
+        "kcal": 30,
+        "proteinG": 3,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 2,
         "transFatG": 0
       },
       "parts": [],
@@ -12385,6 +12473,28 @@
     },
     {
       "aliases": [],
+      "key": "applebees-fries",
+      "name": "Fries",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 53,
+        "cholesterolMg": 0,
+        "fatG": 18,
+        "fiberG": 5,
+        "kcal": 400,
+        "proteinG": 6,
+        "satFatG": 3.5,
+        "sodiumMg": 1000,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-fries-basket",
       "name": "Fries Basket",
       "panel": {
@@ -15338,6 +15448,72 @@
     },
     {
       "aliases": [],
+      "key": "applebees-kids-fruit-smoothie-mango",
+      "name": "Kids Fruit Smoothie - Mango",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 210,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-fruit-smoothie-pina-colada",
+      "name": "Kids Fruit Smoothie - Pina Colada",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 360,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 40,
+        "sugarG": 70,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-fruit-smoothie-strawberry-blue-tropical-swirl",
+      "name": "Kids Fruit Smoothie - Strawberry Blue Tropical Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 113,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 460,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 107,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-kids-garlic-mashed-potatoes",
       "name": "Kids Garlic Mashed Potatoes",
       "panel": {
@@ -15539,6 +15715,160 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-mozzarella-sticks",
+      "name": "Kids Mozzarella Sticks",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 30,
+        "cholesterolMg": 25,
+        "fatG": 17,
+        "fiberG": 3,
+        "kcal": 330,
+        "proteinG": 16,
+        "satFatG": 7,
+        "sodiumMg": 970,
+        "sugarG": 5,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-shake-chocolate",
+      "name": "Kids Shake - Chocolate",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 113,
+        "cholesterolMg": 105,
+        "fatG": 27,
+        "fiberG": 2,
+        "kcal": 740,
+        "proteinG": 12,
+        "satFatG": 17,
+        "sodiumMg": 300,
+        "sugarG": 94,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-shake-oreo-cookie",
+      "name": "Kids Shake - Oreo Cookie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 85,
+        "cholesterolMg": 105,
+        "fatG": 33,
+        "fiberG": null,
+        "kcal": 680,
+        "proteinG": 12,
+        "satFatG": 19,
+        "sodiumMg": 340,
+        "sugarG": 58,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-shake-strawberry",
+      "name": "Kids Shake - Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 85,
+        "cholesterolMg": 105,
+        "fatG": 27,
+        "fiberG": 0,
+        "kcal": 620,
+        "proteinG": 11,
+        "satFatG": 17,
+        "sodiumMg": 250,
+        "sugarG": 67,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-shake-vanilla",
+      "name": "Kids Shake - Vanilla",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 105,
+        "fatG": 27,
+        "fiberG": 0,
+        "kcal": 530,
+        "proteinG": 11,
+        "satFatG": 17,
+        "sodiumMg": 220,
+        "sugarG": 44,
+        "transFatG": 0.5
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-sundae-hot-fudge",
+      "name": "Kids Sundae - Hot Fudge",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 45,
+        "fatG": 14,
+        "fiberG": null,
+        "kcal": 330,
+        "proteinG": 4,
+        "satFatG": 10,
+        "sodiumMg": 135,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kids-sundae-strawberry",
+      "name": "Kids Sundae - Strawberry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 45,
+        "fatG": 11,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 3,
+        "satFatG": 7,
+        "sodiumMg": 80,
+        "sugarG": 28,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -20440,6 +20770,28 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sliced-strawberries-with-vanilla-yogurt",
+      "name": "Sliced Strawberries with Vanilla Yogurt",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 18,
+        "cholesterolMg": 5,
+        "fatG": 1.5,
+        "fiberG": null,
+        "kcal": 100,
+        "proteinG": 4,
+        "satFatG": 1,
+        "sodiumMg": 55,
+        "sugarG": 16,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
