@@ -1832,6 +1832,28 @@
     },
     {
       "aliases": [],
+      "key": "applebees-add-dirty-fountain-soda-topping",
+      "name": "Add Dirty Fountain Soda Topping",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 6,
+        "cholesterolMg": 25,
+        "fatG": 6,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 1,
+        "satFatG": 4,
+        "sodiumMg": 20,
+        "sugarG": 6,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-applebee-s-riblets-plate-no-sauce",
       "name": "Applebee's Riblets Plate (no sauce)",
       "panel": {
@@ -2171,6 +2193,52 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-bacardi-pina-colada",
+      "name": "Bacardi Pina Colada",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 78,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 510,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 40,
+        "sugarG": 73,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-backyard-blackberry-lemonade",
+      "name": "Backyard Blackberry Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 32,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 210,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 29,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -2844,6 +2912,50 @@
     },
     {
       "aliases": [],
+      "key": "applebees-barq-s-root-beer",
+      "name": "Barq's Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 30,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-barq-s-root-beer-to-go",
+      "name": "Barq's Root Beer (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-big-classic-bacon-cheeseburger",
       "name": "Big Classic Bacon Cheeseburger",
       "panel": {
@@ -3074,6 +3186,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-blackberry-iced-tea",
+      "name": "Blackberry Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-blackberry-iced-tea-to-go",
+      "name": "Blackberry Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 20,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-blackberry-lemonade",
+      "name": "Blackberry Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 55,
+        "sugarG": 47,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-blackberry-lemonade-to-go",
+      "name": "Blackberry Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 73,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 71,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-blackened-cajun-salmon",
       "name": "Blackened Cajun Salmon",
       "panel": {
@@ -3206,6 +3406,119 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-blue-aloha-mana-margarita",
+      "name": "Blue Aloha Mana Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 350,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-blue-hawaiian-long-island-iced-tea",
+      "name": "Blue Hawaiian Long Island Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 230,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-blue-raspberry-lemonade",
+      "name": "Blue Raspberry Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-blue-raspberry-lemonade-to-go",
+      "name": "Blue Raspberry Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 70,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 68,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-blue-tropical-bacardi-pina-colada-swirl",
+      "name": "Blue Tropical Bacardi Pina Colada Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 101,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 600,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 45,
+        "sugarG": 95,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -3666,6 +3979,28 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-bottled-water",
+      "name": "Bottled Water",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -4661,6 +4996,28 @@
     },
     {
       "aliases": [],
+      "key": "applebees-brain-frost-smoothie-swirl-contains-gelatin",
+      "name": "Brain Frost Smoothie Swirl (contains gelatin)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 149,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 600,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 55,
+        "sugarG": 140,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-breadstick",
       "name": "Breadstick",
       "panel": {
@@ -5006,6 +5363,116 @@
     },
     {
       "aliases": [],
+      "key": "applebees-brewed-hot-tea",
+      "name": "Brewed Hot Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-brewed-iced-tea",
+      "name": "Brewed Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 5,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-brewed-iced-tea-to-go",
+      "name": "Brewed Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 5,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-brisk-raspberry-iced-tea",
+      "name": "Brisk Raspberry Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 45,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 55,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-brisk-raspberry-iced-tea-to-go",
+      "name": "Brisk Raspberry Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 80,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-brownie-bite",
       "name": "Brownie Bite",
       "panel": {
@@ -5092,6 +5559,94 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-bubly-sparkling-water-lime",
+      "name": "Bubly Sparkling Water, Lime",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-bubly-sparkling-water-lime-to-go",
+      "name": "Bubly Sparkling Water, Lime (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-bubly-sparkling-water-orange",
+      "name": "Bubly Sparkling Water, Orange",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-bubly-sparkling-water-orange-to-go",
+      "name": "Bubly Sparkling Water, Orange (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -5742,6 +6297,138 @@
     },
     {
       "aliases": [],
+      "key": "applebees-caffeine-free-coca-cola",
+      "name": "Caffeine Free Coca Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-caffeine-free-coca-cola-to-go",
+      "name": "Caffeine Free Coca Cola (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-caffeine-free-diet-coke",
+      "name": "Caffeine Free Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-caffeine-free-diet-coke-to-go",
+      "name": "Caffeine Free Diet Coke (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-caffeine-free-diet-pepsi",
+      "name": "Caffeine Free Diet Pepsi",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-caffeine-free-diet-pepsi-to-go",
+      "name": "Caffeine Free Diet Pepsi (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-california-grilled-chicken-salad",
       "name": "California Grilled Chicken Salad",
       "panel": {
@@ -5943,6 +6630,29 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-captain-bahama-mama",
+      "name": "Captain Bahama Mama",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": null,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -6173,6 +6883,50 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-cherry-coke",
+      "name": "Cherry Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 28,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-cherry-coke-to-go",
+      "name": "Cherry Coke (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 42,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -7697,6 +8451,28 @@
     },
     {
       "aliases": [],
+      "key": "applebees-chocolate-shake",
+      "name": "Chocolate Shake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 132,
+        "cholesterolMg": 140,
+        "fatG": 35,
+        "fiberG": 2,
+        "kcal": 900,
+        "proteinG": 15,
+        "satFatG": 22,
+        "sodiumMg": 370,
+        "sugarG": 107,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-classic-bone-in-wings-dipping-sauce-bleu-cheese",
       "name": "Classic Bone-In Wings Dipping Sauce - Bleu Cheese",
       "panel": {
@@ -9192,6 +9968,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-coca-cola",
+      "name": "Coca Cola",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-coca-cola-to-go",
+      "name": "Coca Cola (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-coke-zero",
+      "name": "Coke Zero",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-coke-zero-to-go",
+      "name": "Coke Zero (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-crispy-chicken-tender-salad",
       "name": "Crispy Chicken Tender Salad",
       "panel": {
@@ -9652,6 +10516,29 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-crown-whiskey-sour",
+      "name": "Crown Whiskey Sour",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 20,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 180,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-crunchy-onion-rings",
       "name": "Crunchy Onion Rings",
       "panel": {
@@ -9807,6 +10694,228 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-coke",
+      "name": "Diet Coke",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-coke-to-go",
+      "name": "Diet Coke (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-mountain-dew",
+      "name": "Diet Mountain Dew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-mountain-dew-to-go",
+      "name": "Diet Mountain Dew (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-pepsi",
+      "name": "Diet Pepsi",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-pepsi-to-go",
+      "name": "Diet Pepsi (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-sierra-mist",
+      "name": "Diet Sierra Mist",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-diet-sierra-mist-to-go",
+      "name": "Diet Sierra Mist (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-don-julio-reposado-vibe-drop-add-on",
+      "name": "Don Julio Reposado Vibe Drop Add-On",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-don-julio-reposado-vibe-drop-add-on-utah-only",
+      "name": "Don Julio Reposado Vibe Drop Add-On (Utah Only)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -10359,6 +11468,206 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dr-pepper",
+      "name": "Dr. Pepper",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dr-pepper-to-go",
+      "name": "Dr. Pepper (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dragon-fruit-iced-tea",
+      "name": "Dragon Fruit Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dragon-fruit-iced-tea-to-go",
+      "name": "Dragon Fruit Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 20,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dragon-fruit-lemonade",
+      "name": "Dragon Fruit Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 47,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dragon-fruit-lemonade-to-go",
+      "name": "Dragon Fruit Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 71,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-dragon-fruit-margarita-mocktail",
+      "name": "Dragon Fruit Margarita Mocktail",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 55,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 220,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 50,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-espres-so-happy-martini",
+      "name": "Espres-So Happy Martini",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 33,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 23,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-espres-so-happy-martini-w-1800-reposado-tequila",
+      "name": "Espres-So Happy Martini w/ 1800 Reposado Tequila",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 270,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -11032,6 +12341,50 @@
     },
     {
       "aliases": [],
+      "key": "applebees-fresh-brewed-coffee",
+      "name": "Fresh Brewed Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fresh-brewed-decaf-coffee",
+      "name": "Fresh Brewed Decaf Coffee",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-fries-basket",
       "name": "Fries Basket",
       "panel": {
@@ -11095,6 +12448,138 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fruit-punch",
+      "name": "Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 30,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fruit-punch-hi-c",
+      "name": "Fruit Punch, Hi-C",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 28,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fruit-punch-hi-c-to-go",
+      "name": "Fruit Punch, Hi-C (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 75,
+        "sugarG": 41,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fruit-punch-to-go",
+      "name": "Fruit Punch (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 45,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fuze-raspberry-ice-tea",
+      "name": "FUZE Raspberry Ice Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 15,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-fuze-raspberry-ice-tea-to-go",
+      "name": "FUZE Raspberry Ice Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 22,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 22,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -11532,6 +13017,119 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-ginger-ale",
+      "name": "Ginger Ale",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 23,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-ginger-ale-to-go",
+      "name": "Ginger Ale (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 35,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-golden-goose",
+      "name": "Golden Goose",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 340,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 50,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-grey-goose-vibe-drop-add-on",
+      "name": "Grey Goose Vibe Drop Add-On",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-grey-goose-vibe-drop-add-on-utah-only",
+      "name": "Grey Goose Vibe Drop Add-On (Utah Only)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -12021,6 +13619,50 @@
     },
     {
       "aliases": [],
+      "key": "applebees-half-and-half-iced-tea-and-lemonade",
+      "name": "Half & Half Iced Tea & Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 11,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 40,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-half-and-half-iced-tea-and-lemonade-to-go",
+      "name": "Half & Half Iced Tea & Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 16,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 16,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-hand-battered-fish-and-chips",
       "name": "Hand-Battered Fish & Chips",
       "panel": {
@@ -12153,6 +13795,29 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-henny-punch",
+      "name": "Henny Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -12987,6 +14652,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-ibc-diet-root-beer",
+      "name": "IBC Diet Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-ibc-diet-root-beer-to-go",
+      "name": "IBC Diet Root Beer (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-ibc-root-beer",
+      "name": "IBC Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-ibc-root-beer-to-go",
+      "name": "IBC Root Beer (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 40,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 40,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-kids-cheeseburger",
       "name": "Kids Cheeseburger",
       "panel": {
@@ -13792,6 +15545,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-kiwi-iced-tea",
+      "name": "Kiwi Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kiwi-iced-tea-to-go",
+      "name": "Kiwi Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 18,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 16,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kiwi-lemonade",
+      "name": "Kiwi Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 48,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-kiwi-lemonade-to-go",
+      "name": "Kiwi Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 72,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 90,
+        "sugarG": 69,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-lemon-parmesan-chicken",
       "name": "Lemon Parmesan Chicken",
       "panel": {
@@ -13970,6 +15811,138 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-green-tea-with-citrus",
+      "name": "Lipton Green Tea with Citrus",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-green-tea-with-citrus-to-go",
+      "name": "Lipton Green Tea with Citrus (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 20,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 110,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-peach-iced-tea",
+      "name": "Lipton Peach Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-peach-iced-tea-to-go",
+      "name": "Lipton Peach Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 18,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 70,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 110,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-unsweetened-iced-tea",
+      "name": "Lipton Unsweetened Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 70,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-lipton-unsweetened-iced-tea-to-go",
+      "name": "Lipton Unsweetened Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 105,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -14390,6 +16363,404 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-make-it-spicy",
+      "name": "Make It Spicy",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 4,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 20,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 300,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-mango-bacardi-pina-colada-swirl",
+      "name": "Mango Bacardi Pina Colada Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 89,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 550,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 40,
+        "sugarG": 83,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mango-iced-tea",
+      "name": "Mango Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mango-iced-tea-to-go",
+      "name": "Mango Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mango-lemonade",
+      "name": "Mango Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mango-lemonade-to-go",
+      "name": "Mango Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 90,
+        "sugarG": 72,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mango-smoothie",
+      "name": "Mango Smoothie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 55,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mellow-yellow",
+      "name": "Mellow Yellow",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mellow-yellow-to-go",
+      "name": "Mellow Yellow (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-minute-maid-lemonade",
+      "name": "Minute Maid Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-minute-maid-lemonade-light",
+      "name": "Minute Maid Lemonade Light",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 1,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-minute-maid-lemonade-light-to-go",
+      "name": "Minute Maid Lemonade Light (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 5,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-minute-maid-lemonade-to-go",
+      "name": "Minute Maid Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 40,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mocktail-on-the-beach",
+      "name": "Mocktail On The Beach",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": null,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 36,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mountain-dew",
+      "name": "Mountain Dew",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mountain-dew-dark-berry-bash",
+      "name": "Mountain Dew Dark Berry Bash",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 31,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 31,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mountain-dew-dark-berry-bash-to-go",
+      "name": "Mountain Dew Dark Berry Bash (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mountain-dew-to-go",
+      "name": "Mountain Dew (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 46,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-mozzarella-sticks",
       "name": "Mozzarella Sticks",
       "panel": {
@@ -14499,6 +16870,138 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mug-root-beer",
+      "name": "Mug Root Beer",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 29,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-mug-root-beer-to-go",
+      "name": "Mug Root Beer (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 43,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 65,
+        "sugarG": 43,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-not-a-colada",
+      "name": "Not-A-Colada",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 91,
+        "cholesterolMg": 0,
+        "fatG": 8,
+        "fiberG": 2,
+        "kcal": 440,
+        "proteinG": 0,
+        "satFatG": 6,
+        "sodiumMg": 45,
+        "sugarG": 86,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-not-a-colada-with-blue-tropical-swirl",
+      "name": "Not-A-Colada with Blue Tropical Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 105,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 480,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 45,
+        "sugarG": 99,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-not-a-colada-with-mango-swirl",
+      "name": "Not-A-Colada with Mango Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 87,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 410,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 40,
+        "sugarG": 81,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-not-a-colada-with-strawberry-swirl",
+      "name": "Not-A-Colada with Strawberry Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 88,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 420,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 55,
+        "sugarG": 83,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -15218,6 +17721,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-orange-fanta",
+      "name": "Orange Fanta",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 29,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-orange-fanta-to-go",
+      "name": "Orange Fanta (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 44,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 55,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-orange-twister",
+      "name": "Orange Twister",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 35,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 35,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-orange-twister-to-go",
+      "name": "Orange Twister (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 52,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 52,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-oreo-cookie-shake",
       "name": "Oreo Cookie Shake",
       "panel": {
@@ -15626,6 +18217,677 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-passion-fruit-iced-tea",
+      "name": "Passion Fruit Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-passion-fruit-iced-tea-to-go",
+      "name": "Passion Fruit Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-passion-fruit-lemonade",
+      "name": "Passion Fruit Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-passion-fruit-lemonade-to-go",
+      "name": "Passion Fruit Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 72,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-patron-silver-vibe-drop-add-on",
+      "name": "Patron Silver Vibe Drop Add-On",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-patron-silver-vibe-drop-add-on-utah-only",
+      "name": "Patron Silver Vibe Drop Add-On (Utah Only)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-peach-iced-tea",
+      "name": "Peach Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-peach-iced-tea-to-go",
+      "name": "Peach Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-peach-lemonade",
+      "name": "Peach Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-peach-lemonade-to-go",
+      "name": "Peach Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 90,
+        "sugarG": 72,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-pepsi",
+      "name": "Pepsi",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 27,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-pepsi-to-go",
+      "name": "Pepsi (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 41,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 41,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-dragon-fruit-patron-margarita",
+      "name": "Perfect Dragon Fruit Patron Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 360,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 50,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-mango-margarita",
+      "name": "Perfect Mango Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 360,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-mango-patron-margarita",
+      "name": "Perfect Mango Patron Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 370,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-margarita",
+      "name": "Perfect Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 30,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 320,
+        "sugarG": 21,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-patron-margarita",
+      "name": "Perfect Patron Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 270,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 320,
+        "sugarG": 28,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-prickly-pear-margarita",
+      "name": "Perfect Prickly Pear Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 370,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-prickly-pear-patron-margarita",
+      "name": "Perfect Prickly Pear Patron Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 56,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 370,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-strawberry-margarita",
+      "name": "Perfect Strawberry Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 360,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-perfect-strawberry-patron-margarita",
+      "name": "Perfect Strawberry Patron Margarita",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 1,
+        "kcal": 360,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-perrier-sparkling-water",
+      "name": "Perrier Sparkling Water",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-pibb-extra",
+      "name": "Pibb Extra",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-pibb-extra-to-go",
+      "name": "Pibb Extra (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 40,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-pina-colada-smoothie",
+      "name": "Pina Colada Smoothie",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 89,
+        "cholesterolMg": 0,
+        "fatG": 8,
+        "fiberG": 2,
+        "kcal": 430,
+        "proteinG": 0,
+        "satFatG": 6,
+        "sodiumMg": 45,
+        "sugarG": 84,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-prickly-melon-rush",
+      "name": "Prickly Melon Rush",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 60,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 240,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 115,
+        "sugarG": 55,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-prickly-pear-iced-tea",
+      "name": "Prickly Pear Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 14,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 13,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-prickly-pear-iced-tea-to-go",
+      "name": "Prickly Pear Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 21,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-prickly-pear-lemonade",
+      "name": "Prickly Pear Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 50,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 200,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 48,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-prickly-pear-lemonade-to-go",
+      "name": "Prickly Pear Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 75,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 72,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -16069,6 +19331,249 @@
     },
     {
       "aliases": [],
+      "key": "applebees-raspberry-iced-tea",
+      "name": "Raspberry Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 12,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-raspberry-iced-tea-to-go",
+      "name": "Raspberry Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 18,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-raspberry-lemonade",
+      "name": "Raspberry Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 47,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-raspberry-lemonade-to-go",
+      "name": "Raspberry Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 73,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 71,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull",
+      "name": "Red Bull",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 105,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull-coconut-berry",
+      "name": "Red Bull, Coconut Berry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 90,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull-red-edition-watermelon",
+      "name": "Red Bull, Red Edition (Watermelon)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 29,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 105,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull-sugar-free",
+      "name": "Red Bull, Sugar Free",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 2,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 10,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 105,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull-watermelon-lime-ade",
+      "name": "Red Bull Watermelon Lime-ade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 58,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 230,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 100,
+        "sugarG": 55,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-red-bull-yellow-edition-tropical",
+      "name": "Red Bull, Yellow Edition (Tropical)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 135,
+        "sugarG": 27,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-red-sangria",
+      "name": "Red Sangria",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 36,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 230,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 30,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-riblets-sampler",
       "name": "Riblets - Sampler",
       "panel": {
@@ -16109,6 +19614,29 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-rollin-on-the-beach",
+      "name": "Rollin on the Beach",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 54,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 320,
+        "proteinG": null,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 49,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -16345,6 +19873,29 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-shark-bowl",
+      "name": "Shark Bowl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 122,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 610,
+        "proteinG": null,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 116,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-shrimp-n-parmesan-sirloin",
       "name": "Shrimp 'N Parmesan Sirloin",
       "panel": {
@@ -16569,6 +20120,50 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sierra-mist",
+      "name": "Sierra Mist",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 25,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sierra-mist-to-go",
+      "name": "Sierra Mist (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 37,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 37,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -16845,6 +20440,50 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sobe-life-water-yumberry-pomegranate",
+      "name": "Sobe Life Water, Yumberry Pomegranate",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sobe-life-water-yumberry-pomegranate-to-go",
+      "name": "Sobe Life Water, Yumberry Pomegranate (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 0,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -17748,6 +21387,94 @@
     },
     {
       "aliases": [],
+      "key": "applebees-sprite",
+      "name": "Sprite",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 25,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sprite-to-go",
+      "name": "Sprite (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 140,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 65,
+        "sugarG": 38,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-starry",
+      "name": "Starry",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 26,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 26,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-starry-to-go",
+      "name": "Starry (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 39,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 35,
+        "sugarG": 39,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-steamed-broccoli",
       "name": "Steamed Broccoli",
       "panel": {
@@ -17834,6 +21561,29 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-strawberry-bacardi-pina-colada-swirl",
+      "name": "Strawberry Bacardi Pina Colada Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 90,
+        "cholesterolMg": 0,
+        "fatG": 7,
+        "fiberG": 2,
+        "kcal": 560,
+        "proteinG": 0,
+        "satFatG": 5,
+        "sodiumMg": 55,
+        "sugarG": 85,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -18041,6 +21791,314 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-blue-tropical-swirl",
+      "name": "Strawberry Blue Tropical Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 144,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 580,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 50,
+        "sugarG": 137,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-colada-smoothie-swirl",
+      "name": "Strawberry Colada Smoothie Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 98,
+        "cholesterolMg": 0,
+        "fatG": 8,
+        "fiberG": 2,
+        "kcal": 470,
+        "proteinG": 0,
+        "satFatG": 6,
+        "sodiumMg": 55,
+        "sugarG": 93,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-fanta",
+      "name": "Strawberry Fanta",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 30,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 29,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-fanta-to-go",
+      "name": "Strawberry Fanta (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 45,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 44,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-iced-tea",
+      "name": "Strawberry Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 13,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 50,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-iced-tea-to-go",
+      "name": "Strawberry Iced Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 19,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 80,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 17,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-lemonade",
+      "name": "Strawberry Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 49,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 60,
+        "sugarG": 47,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-lemonade-to-go",
+      "name": "Strawberry Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 73,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 280,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 85,
+        "sugarG": 70,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-mango-smoothie-swirl",
+      "name": "Strawberry Mango Smoothie Swirl",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 74,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 290,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 64,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-strawberry-shake",
+      "name": "Strawberry Shake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 104,
+        "cholesterolMg": 140,
+        "fatG": 35,
+        "fiberG": null,
+        "kcal": 780,
+        "proteinG": 14,
+        "satFatG": 22,
+        "sodiumMg": 320,
+        "sugarG": 81,
+        "transFatG": 1
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sugar-free-lemonade",
+      "name": "Sugar Free Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 5,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 95,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sugar-free-lemonade-to-go",
+      "name": "Sugar Free Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 10,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 140,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sun-orchard-lemonade",
+      "name": "Sun Orchard Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sun-orchard-lemonade-to-go",
+      "name": "Sun Orchard Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 36,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -18317,6 +22375,50 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sweet-tea",
+      "name": "Sweet Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 90,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 22,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-sweet-tea-to-go",
+      "name": "Sweet Tea (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 130,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 10,
+        "sugarG": 33,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -19588,6 +23690,29 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-tito-s-bay-breeze",
+      "name": "Tito's Bay Breeze",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 12,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 11,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-tomato-basil-soup",
       "name": "Tomato Basil Soup",
       "panel": {
@@ -19680,6 +23805,73 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-top-shelf-long-island-iced-tea",
+      "name": "Top Shelf Long Island Iced Tea",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 23,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 220,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 19,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-triple-cherry-shirley",
+      "name": "Triple Cherry Shirley",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 190,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 46,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-triple-cherry-shirley-to-go",
+      "name": "Triple Cherry Shirley (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 65,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 260,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 45,
+        "sugarG": 63,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-triple-chocolate-meltdown",
       "name": "Triple Chocolate Meltdown",
       "panel": {
@@ -19766,6 +23958,138 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-lemonade",
+      "name": "Tropicana Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-lemonade-to-go",
+      "name": "Tropicana Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 36,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-light-lemonade",
+      "name": "Tropicana Light Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 5,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 95,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-light-lemonade-to-go",
+      "name": "Tropicana Light Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 10,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 140,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-pink-lemonade",
+      "name": "Tropicana Pink Lemonade",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 25,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 100,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 24,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-tropicana-pink-lemonade-to-go",
+      "name": "Tropicana Pink Lemonade (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 38,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 150,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 25,
+        "sugarG": 36,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -19973,6 +24297,28 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-vanilla-shake",
+      "name": "Vanilla Shake",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 79,
+        "cholesterolMg": 140,
+        "fatG": 35,
+        "fiberG": 0,
+        "kcal": 680,
+        "proteinG": 14,
+        "satFatG": 22,
+        "sodiumMg": 290,
+        "sugarG": 58,
+        "transFatG": 1
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null
@@ -20347,6 +24693,29 @@
     },
     {
       "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-white-peach-sangria",
+      "name": "White Peach Sangria",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 47,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": null,
+        "kcal": 270,
+        "proteinG": null,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 41,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
       "key": "applebees-white-queso-dip-and-chips",
       "name": "White Queso Dip & Chips",
       "panel": {
@@ -20410,6 +24779,142 @@
           "without": null
         }
       ],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-wild-cherry-pepsi",
+      "name": "Wild Cherry Pepsi",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 28,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 110,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 20,
+        "sugarG": 28,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "key": "applebees-wild-cherry-pepsi-to-go",
+      "name": "Wild Cherry Pepsi (To Go)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 42,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 160,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 30,
+        "sugarG": 42,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-woodford-old-fashioned",
+      "name": "Woodford Old Fashioned",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 15,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 170,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 14,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-woodford-reserve-vibe-drop-add-on",
+      "name": "Woodford Reserve Vibe Drop Add-On",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 60,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-woodford-reserve-vibe-drop-add-on-utah-only",
+      "name": "Woodford Reserve Vibe Drop Add-On (Utah Only)",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 0,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 35,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 0,
+        "sugarG": 0,
+        "transFatG": 0
+      },
+      "parts": [],
+      "servingG": null,
+      "sourceId": "menu",
+      "variant": null
+    },
+    {
+      "aliases": [],
+      "atwaterExempt": "alcohol",
+      "key": "applebees-young-wild-and-free-fruit-punch",
+      "name": "Young, Wild & Free Fruit Punch",
+      "panel": {
+        "addedSugarG": null,
+        "carbsG": 34,
+        "cholesterolMg": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "kcal": 230,
+        "proteinG": 0,
+        "satFatG": 0,
+        "sodiumMg": 15,
+        "sugarG": 32,
+        "transFatG": 0
+      },
+      "parts": [],
       "servingG": null,
       "sourceId": "menu",
       "variant": null

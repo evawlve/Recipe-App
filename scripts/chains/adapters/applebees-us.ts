@@ -1,5 +1,5 @@
 /**
- * Applebee's (US), items and their default COMPONENTS: the Nutritionix public file that applebees.com/en/nutrition hands off to
+ * Applebee's (US), items, their default COMPONENTS and the drinks: the Nutritionix public file that applebees.com/en/nutrition hands off to
  * (the page links /en/nutrition/interactive-menu, which embeds the calculator "Powered by Nutritionix"),
  * one gzipped JSON, https://nix-vue-inm.s3.amazonaws.com/restaurant/applebees/data/menu-latest.json.gz.
  *
@@ -8,14 +8,14 @@
  *  R2 One source, no sourceDate; generatedAt is the file's own `generatedAt`, date part (else throw).
  *  R3 Keep `isActive === 1 && defaultModifiers.length > 0 && !isCatering`. Category 'Catering (INM Only)' (the
  *     "(Serves 6-8)" platters and "(30)" wing trays) is left out, and so are the 11 builder parents (Fountain Drinks,
- *     Milkshakes, ...: no default modifiers, calculated 0 means "pick a drink", not a 0 kcal food). "Menu Items (INM
+ *     Milkshakes, ...: no default modifiers, calculated 0 means "pick a drink", not a 0 kcal food; their drinks are R9). "Menu Items (INM
  *     Only)" (wing flavours, rib sauces, dressings) stays. No category with that name = throw: a rename must fail loudly.
  *  R4 The panel is in the `calculated*` fields ONLY (every base field is 0), each through `fdaRound` (the chain's own
  *     calculator sets useFdaRounding 1). addedSugarG and servingG are null on every row: Applebee's label shows neither.
  *  R5 A "less than" band rounds to null (see lib/fda-round.ts, whose tie rule is a choice and UNVERIFIED).
  *  R6 Key "applebees-" + slugify(cleanName); variant null; aliases empty; NO identical-panel collapse; a duplicate
- *     key throws. No atwaterExempt and no SOURCE_ERRORS (0 Atwater failures on this file; the rows with protein under
- *     1 g carry protein null, which the Atwater gate skips).
+ *     key throws. The dishes need no atwaterExempt (0 Atwater failures; the rows with protein under 1 g carry protein
+ *     null, which the Atwater gate skips); the drinks' exemption and their one SOURCE_ERRORS row are R9.
  *  R7 Spot checks are FIRST-PARTY: read on applebees.com's interactive menu on 2026-11-26, kcal only.
  *  R8 (CHAIN-5b, mobile repo s471) Each kept item's `defaultModifiers` become its parts, in file order, and each
  *     modifier used as a default becomes ONE component: key "applebees-" + slugify(cleanName) (its own namespace: 12
@@ -27,8 +27,19 @@
  *     item's calculated panel equals fdaRound of its parts' sum, field by field), at 4 dp; addedSugarG null as on the
  *     item. kcalPublished = fdaRound('kcal', unrounded kcal contribution), the value the CUSTOMIZE list shows. A missing
  *     modifier, a quantity other than 1, the same modifier twice in one item, a field that is not a number, or two
- *     modifiers with one key all THROW. The builder parents' drinks are still left out (a later row). Since CHAIN-6b
+ *     modifiers with one key all THROW. Since CHAIN-6b
  *     (mobile repo s472) the part code is lib/nutritionix.ts `defaultParts()`, shared with Taco John's, unchanged.
+ *  R9 (CHAIN-5c, mobile repo s472) DRINKS, as the INM landing lists them: every modifier on the top-level tag
+ *     "Beverages" or "Alcoholic Beverages" (the tag's own list and every child's; the landing's two drink tiles, 166 and
+ *     39 on this file) becomes ONE item: key "applebees-" + slugify(cleanName), variant null (the size stays in the name:
+ *     "(To Go)" is the 30 fl oz cup), aliases [], servingG null, parts [] (a drink is one food, not a build), panel =
+ *     fdaRound of the MODIFIER's base fields at one serving (a modifier has no calculated* twin), addedSugarG null. Every
+ *     "Alcoholic Beverages" drink is atwaterExempt 'alcohol' (ethanol energy is not in P/C/F; Chili's rule). The
+ *     builder parents' groups hold 147 of the 166; their other 19 (10 sampler dips, 9 kids shakes / smoothies /
+ *     sundaes) are on neither tile and stay out, as do the Kids Menu and Limited Time Offers drink lists. An inactive
+ *     drink is left out; a SOURCE_ERRORS drink is left out, never fixed; a drink whose key is already an item is left
+ *     out ONLY when DRINK_IS_ITEM names it (the item, with its parts, stays). A missing tag, a missing modifier, a
+ *     field that is not a number, or any other key clash THROWS.
  * Nothing imports the menu file.
  */
 import type { ChainItem, Panel } from '../../../src/lib/chains/snapshot';
@@ -40,6 +51,16 @@ import { decodeEntities, panelOf, slugify } from '../lib/text';
 
 const SOURCE = 'menu';
 const CATERING = 'Catering (INM Only)';
+const DRINK_TAGS = ['Beverages', 'Alcoholic Beverages'];
+const ALCOHOL_TAG = 'Alcoholic Beverages';
+// Left out, never "fixed": a published panel that contradicts itself.
+const SOURCE_ERRORS: Record<string, string> = {
+  "Owen's Nitro Infused Espresso": '30 kcal published against 60 from its own carbs (15 g) and no sugar alcohol listed',
+};
+// A drink that is also a kept item: the item, with its parts, stays. Any clash NOT named here throws.
+const DRINK_IS_ITEM: Record<string, string> = {
+  'Oreo Cookie Shake': 'the Desserts item (840 kcal, 4 parts); the Milkshakes row differs from it only in sugar, 72 g vs 71 g',
+};
 const WHERE = 'https://www.applebees.com/en/nutrition/interactive-menu';
 
 type NixItem = {
@@ -50,15 +71,30 @@ type NixItem = {
   defaultModifiers?: NixLink[];
   nutrition?: Record<string, number | null>;
 };
+type NixTag = { name: string; modifiers?: Array<number | string>; children?: NixTag[] };
 type NixFile = {
   generatedAt?: string;
   categories?: Array<{ id: number | string; name: string }>;
   items?: NixItem[];
-  modifiers?: NixModifier[];
+  modifiers?: Array<NixModifier & { isActive?: number }>;
+  tags?: NixTag[];
 };
 
 function cleanName(raw: string): string {
   return decodeEntities(raw).replace(/[®™]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/** The modifier ids a top-level tag lists, its own and every child's, first-seen order, no repeats. */
+function tagModifierIds(tags: NixTag[] | undefined, name: string): string[] {
+  const tag = (tags ?? []).find((t) => decodeEntities(t.name).trim() === name);
+  if (!tag) throw new Error(`applebees-us: no tag named "${name}"`);
+  const ids = new Set<string>();
+  const addAll = (t: NixTag) => {
+    for (const id of t.modifiers ?? []) ids.add(String(id));
+    for (const c of t.children ?? []) addAll(c);
+  };
+  addAll(tag);
+  return [...ids];
 }
 
 function readFile(body: string): NixFile {
@@ -105,6 +141,31 @@ const adapter: ChainAdapter = {
       if (items.has(key)) throw new Error(`applebees-us: item ${key} appears twice`);
       const parts = book.parts(name, i.defaultModifiers ?? []);
       items.set(key, { key, name, aliases: [], variant: null, servingG: null, panel: panelOf(values), sourceId: SOURCE, parts });
+    }
+    const mods = new Map<string, NixModifier & { isActive?: number }>();
+    for (const m of data.modifiers ?? []) mods.set(String(m.id), m);
+    const alcohol = new Set(tagModifierIds(data.tags, ALCOHOL_TAG));
+    for (const tag of DRINK_TAGS) {
+      for (const id of tagModifierIds(data.tags, tag)) {
+        const m = mods.get(id);
+        if (!m) throw new Error(`applebees-us: drink ${id} on tag "${tag}" is not in modifiers`);
+        const name = cleanName(m.name);
+        if (m.isActive !== 1 || SOURCE_ERRORS[name]) continue;
+        const key = `applebees-${slugify(name)}`;
+        if (items.has(key)) {
+          if (DRINK_IS_ITEM[name]) continue;
+          throw new Error(`applebees-us: item ${key} appears twice`);
+        }
+        const values: Partial<Panel> = { addedSugarG: null };
+        for (const [, mf, field, rule] of NIX_FIELDS) {
+          const v = m.nutrition?.[mf];
+          if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`applebees-us: drink ${name} ${mf} is not a number`);
+          values[field] = fdaRound(rule, v);
+        }
+        const drink: ChainItem = { key, name, aliases: [], variant: null, servingG: null, panel: panelOf(values), sourceId: SOURCE, parts: [] };
+        if (alcohol.has(id)) drink.atwaterExempt = 'alcohol';
+        items.set(key, drink);
+      }
     }
     return { items: [...items.values()], components: book.components() };
   },
